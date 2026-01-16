@@ -1,15 +1,8 @@
 # Claude Code Configuration
 
-Version-controlled configuration for [Claude Code CLI](https://docs.anthropic.com/claude-code).
+My personal version-controlled configuration for [Claude Code CLI](https://docs.anthropic.com/claude-code).
 
 ## Overview
-
-This repository stores Claude Code configuration files, enabling:
-- Backup and disaster recovery for custom hooks and permissions
-- Configuration sync across multiple machines
-- Change tracking for hooks and permissions over time
-- Quick setup of new development environments
-- Rollback capability if configurations break
 
 ## Repository Structure
 
@@ -17,15 +10,10 @@ This repository stores Claude Code configuration files, enabling:
 claude-code-config/
 ├── README.md                          # This file
 ├── CLAUDE.md                          # Self-management instructions for Claude
-├── setup.sh                           # Automated setup script
+├── setup.sh                           # Automated setup script (as of 2026-01-16, not tested)
 ├── settings.json                      # Core configuration (permissions, hooks, model)
 ├── CLAUDE-global.md                   # Global user instructions (symlinked to ~/.claude/CLAUDE.md)
-├── hooks/                             # Custom hook scripts
-│   ├── README.md                      # Hook documentation
-│   ├── normalize-line-endings.py      # Normalizes line endings on Write/Edit
-│   ├── auto-unsandbox-pbcopy.py       # Auto-approves pbcopy commands
-│   ├── gpg-signing-helper.py          # Assists with GPG signing for git commits
-│   └── detect-heredoc-errors.py       # Detects heredoc-related errors
+├── hooks/                             # Custom hooks
 ├── plugins/
 │   └── installed_plugins.json         # Plugin installation list
 └── .gitignore                         # Protects runtime data from commits
@@ -33,32 +21,9 @@ claude-code-config/
 
 ## Setup on a New Machine
 
-1. Clone this repository:
-   ```bash
-   cd ~/Documents/_programming  # or your preferred location
-   git clone https://github.com/Jython1415/claude-code-config.git
-   cd claude-code-config
-   ```
-
-2. Run the setup script:
-   ```bash
-   ./setup.sh
-   ```
-
-   Use `--force` to overwrite existing symlinks:
-   ```bash
-   ./setup.sh --force
-   ```
-
-3. Restart Claude Code:
-   ```bash
-   # If in a Claude session
-   /exit
-   # Then start fresh
-   claude
-   ```
-
-4. Verify configuration loaded correctly by testing hooks work as expected.
+1. Clone this repository.
+2. Run the setup script.
+3. Verify configuration loaded correctly by testing hooks work as expected.
 
 ## What Gets Symlinked
 
@@ -105,3 +70,4 @@ If configuration breaks:
 ## License
 
 MIT License - see [LICENSE](LICENSE)
+
