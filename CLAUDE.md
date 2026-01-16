@@ -42,7 +42,7 @@ docs(hooks): document GPG signing helper behavior
 
 ### Testing Changes
 After making changes:
-1. Restart Claude Code session (`/exit` then `claude --continue`)
+1. Restart Claude Code session (`/exit` then `claude --continue`). The user has to do this.
 2. Verify configuration loads correctly
 3. Test affected features (hooks, permissions)
 4. Check `~/.claude/debug/latest` for errors

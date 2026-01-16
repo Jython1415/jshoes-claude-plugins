@@ -4,7 +4,6 @@ Use `uv run` or `uv run --script` over `python` when running Python files, unles
 
 For temporary Python scripts: use `create_file` to write the script, `uv run` to execute it, then clean up with `rm`
 - Example: `create_file(_temp_script.py)` → `uv run _temp_script.py` → `rm _temp_script.py`
-- Use underscore prefix for temp files (sorts to top, clearly temporary)
 - Works in sandbox mode (unlike heredoc which creates files in `/tmp/`)
 - For temporary Python scripts, use inline dependencies (PEP 723) and run with `uv`
 
