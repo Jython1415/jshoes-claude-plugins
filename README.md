@@ -105,4 +105,3 @@ If configuration breaks:
 ## License
 
 MIT License - see [LICENSE](LICENSE)
-# Test comment
