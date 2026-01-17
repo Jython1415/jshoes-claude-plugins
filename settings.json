@@ -19,7 +19,9 @@
       "Bash(ls:*)",
       "Bash(cat:*)",
       "Bash(grep:*)",
+      "Bash(rg:*)",
       "Bash(find:*)",
+      "Bash(fd:*)",
       "Bash(mdfind:*)",
       "Bash(mkdir:*)",
       "Bash(head:*)",
@@ -120,6 +122,10 @@
         "hooks": [
           {
             "type": "command",
+            "command": "uv run --script /Users/Joshua/.claude/hooks/prefer-modern-tools.py"
+          },
+          {
+            "type": "command",
             "command": "uv run --script /Users/Joshua/.claude/hooks/auto-unsandbox-pbcopy.py"
           }
         ]
@@ -168,10 +174,12 @@
     "excludedCommands": [
       "uv",
       "find",
+      "fd",
       "mdfind",
       "ls",
       "cat",
       "grep",
+      "rg",
       "head",
       "tail",
       "wc",

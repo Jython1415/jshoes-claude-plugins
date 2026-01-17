@@ -7,6 +7,7 @@ Custom hooks for enhancing Claude Code CLI behavior.
 | Hook | Event | Purpose |
 |------|-------|---------|
 | `normalize-line-endings.py` | PreToolUse (Write/Edit) | Converts CRLF/CR to LF |
+| `prefer-modern-tools.py` | PreToolUse (Bash) | Suggests fd/rg instead of find/grep |
 | `auto-unsandbox-pbcopy.py` | PreToolUse (Bash) | Auto-approves and unsandboxes pbcopy |
 | `gpg-signing-helper.py` | PostToolUse/PostToolUseFailure (Bash) | Guides Claude on GPG signing issues |
 | `detect-heredoc-errors.py` | PostToolUse/PostToolUseFailure (Bash) | Provides heredoc workarounds |
@@ -23,6 +24,22 @@ Custom hooks for enhancing Claude Code CLI behavior.
 - Detects CRLF (`\r\n`) or CR (`\r`) in content
 - Converts to LF (`\n`)
 - Auto-approves the operation with normalized content
+
+### prefer-modern-tools.py
+
+**Event**: PreToolUse (Bash)
+
+**Purpose**: Directs Claude to use modern, faster alternatives for common commands when available.
+
+**Behavior**:
+- Detects usage of `find` command → suggests `fd` if available
+- Detects usage of `grep` command → suggests `rg` (ripgrep) if available
+- Checks tool availability dynamically using `which`
+- Provides context-aware guidance with example syntax
+
+**Benefits**:
+- `fd`: Faster file search, simpler syntax, respects .gitignore by default
+- `rg`: Significantly faster grep, respects .gitignore, better output formatting
 
 ### auto-unsandbox-pbcopy.py
 
