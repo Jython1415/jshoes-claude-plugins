@@ -60,6 +60,7 @@ def main():
 - Example: `find . -name "*.py"` → `fd "*.py"` or `fd -e py`
 - `fd` respects .gitignore by default (use -H -I to include hidden/ignored files)
 - For complex patterns, `fd` syntax is more intuitive
+- Use `fd --help` for additional usage guidance
 """)
 
         # Check for grep command usage (but not ripgrep)
@@ -72,6 +73,7 @@ def main():
 - `rg` respects .gitignore by default
 - Better default output formatting with colors and context
 - For literal strings: `rg -F "exact string"`
+- Use `rg --help` for additional usage guidance
 """)
 
         # If we have suggestions, provide them via additionalContext
