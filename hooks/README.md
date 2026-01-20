@@ -131,7 +131,7 @@ Hooks are configured in `settings.json`:
         "matcher": "Write|Edit",
         "hooks": [{
           "type": "command",
-          "command": "uv run --script /Users/Joshua/.claude/hooks/normalize-line-endings.py"
+          "command": "uv run --script ~/.claude/hooks/normalize-line-endings.py"
         }]
       }
     ],
@@ -140,7 +140,7 @@ Hooks are configured in `settings.json`:
         "matcher": "Bash",
         "hooks": [{
           "type": "command",
-          "command": "uv run --script /Users/Joshua/.claude/hooks/gpg-signing-helper.py"
+          "command": "uv run --script ~/.claude/hooks/gpg-signing-helper.py"
         }]
       }
     ]

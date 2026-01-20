@@ -4,7 +4,7 @@
     "swift-lsp@claude-plugins-official": [
       {
         "scope": "user",
-        "installPath": "/Users/Joshua/.claude/plugins/cache/claude-plugins-official/swift-lsp/1.0.0",
+        "installPath": "~/.claude/plugins/cache/claude-plugins-official/swift-lsp/1.0.0",
         "version": "1.0.0",
         "installedAt": "2025-12-29T00:25:31.722Z",
         "lastUpdated": "2025-12-29T00:25:31.722Z",
