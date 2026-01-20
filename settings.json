@@ -113,7 +113,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "uv run --script /Users/Joshua/.claude/hooks/normalize-line-endings.py"
+            "command": "uv run --script ~/.claude/hooks/normalize-line-endings.py"
           }
         ]
       },
@@ -122,11 +122,11 @@
         "hooks": [
           {
             "type": "command",
-            "command": "uv run --script /Users/Joshua/.claude/hooks/prefer-modern-tools.py"
+            "command": "uv run --script ~/.claude/hooks/prefer-modern-tools.py"
           },
           {
             "type": "command",
-            "command": "uv run --script /Users/Joshua/.claude/hooks/auto-unsandbox-pbcopy.py"
+            "command": "uv run --script ~/.claude/hooks/auto-unsandbox-pbcopy.py"
           }
         ]
       }
@@ -137,11 +137,11 @@
         "hooks": [
           {
             "type": "command",
-            "command": "uv run --script /Users/Joshua/.claude/hooks/gpg-signing-helper.py"
+            "command": "uv run --script ~/.claude/hooks/gpg-signing-helper.py"
           },
           {
             "type": "command",
-            "command": "uv run --script /Users/Joshua/.claude/hooks/detect-heredoc-errors.py",
+            "command": "uv run --script ~/.claude/hooks/detect-heredoc-errors.py",
             "timeout": 10
           }
         ]
@@ -153,11 +153,15 @@
         "hooks": [
           {
             "type": "command",
-            "command": "uv run --script /Users/Joshua/.claude/hooks/gpg-signing-helper.py"
+            "command": "uv run --script ~/.claude/hooks/gh-fallback-helper.py"
           },
           {
             "type": "command",
-            "command": "uv run --script /Users/Joshua/.claude/hooks/detect-heredoc-errors.py",
+            "command": "uv run --script ~/.claude/hooks/gpg-signing-helper.py"
+          },
+          {
+            "type": "command",
+            "command": "uv run --script ~/.claude/hooks/detect-heredoc-errors.py",
             "timeout": 10
           }
         ]

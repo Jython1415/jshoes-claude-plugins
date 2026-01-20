@@ -9,6 +9,7 @@ Custom hooks for enhancing Claude Code CLI behavior.
 | `normalize-line-endings.py` | PreToolUse (Write/Edit) | Converts CRLF/CR to LF |
 | `prefer-modern-tools.py` | PreToolUse (Bash) | Suggests fd/rg instead of find/grep |
 | `auto-unsandbox-pbcopy.py` | PreToolUse (Bash) | Auto-approves and unsandboxes pbcopy |
+| `gh-fallback-helper.py` | PostToolUseFailure (Bash) | Guides Claude to use GitHub API when gh CLI unavailable |
 | `gpg-signing-helper.py` | PostToolUse/PostToolUseFailure (Bash) | Guides Claude on GPG signing issues |
 | `detect-heredoc-errors.py` | PostToolUse/PostToolUseFailure (Bash) | Provides heredoc workarounds |
 
@@ -51,6 +52,28 @@ Custom hooks for enhancing Claude Code CLI behavior.
 - Detects commands containing `pbcopy`
 - Auto-approves the permission
 - Sets `dangerouslyDisableSandbox: true`
+
+### gh-fallback-helper.py
+
+**Event**: PostToolUseFailure (Bash)
+
+**Purpose**: Detects when `gh` CLI is unavailable but `GITHUB_TOKEN` environment variable exists, and provides guidance on using the GitHub REST API with curl instead.
+
+**Triggers on**:
+- Command contains `gh`
+- Error contains "command not found" or "not found"
+- `GITHUB_TOKEN` is available in environment
+
+**Guidance provided**:
+- How to use GitHub REST API with curl
+- Common API patterns (list issues, create PR, update PR, search)
+- Token authentication format
+- JSON parsing tips with jq/python
+- Specific conversion example for the failed gh command
+
+**Example patterns**:
+- List issues: `curl -H "Authorization: token $GITHUB_TOKEN" "https://api.github.com/repos/OWNER/REPO/issues"`
+- Create PR: `curl -X POST -H "Authorization: token $GITHUB_TOKEN" "https://api.github.com/repos/OWNER/REPO/pulls" -d '{"title":"...","head":"branch","base":"main"}'`
 
 ### gpg-signing-helper.py
 
@@ -131,7 +154,7 @@ Hooks are configured in `settings.json`:
         "matcher": "Write|Edit",
         "hooks": [{
           "type": "command",
-          "command": "uv run --script /Users/Joshua/.claude/hooks/normalize-line-endings.py"
+          "command": "uv run --script ~/.claude/hooks/normalize-line-endings.py"
         }]
       }
     ],
@@ -140,7 +163,7 @@ Hooks are configured in `settings.json`:
         "matcher": "Bash",
         "hooks": [{
           "type": "command",
-          "command": "uv run --script /Users/Joshua/.claude/hooks/gpg-signing-helper.py"
+          "command": "uv run --script ~/.claude/hooks/gpg-signing-helper.py"
         }]
       }
     ]
