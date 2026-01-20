@@ -153,6 +153,10 @@
         "hooks": [
           {
             "type": "command",
+            "command": "uv run --script ~/.claude/hooks/gh-fallback-helper.py"
+          },
+          {
+            "type": "command",
             "command": "uv run --script ~/.claude/hooks/gpg-signing-helper.py"
           },
           {
