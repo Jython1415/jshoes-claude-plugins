@@ -217,17 +217,22 @@ Hook tests are located in `hooks/tests/` directory:
 
 **Run all hook tests:**
 ```bash
-uv run --script hooks/tests/run_tests.py
+(cd hooks/tests && uv run pytest -v)
 ```
 
 **Run specific hook test:**
 ```bash
 uv run --script hooks/tests/test_detect_cd_pattern.py
 ```
-
-**Run with pytest directly:**
+Or with pytest:
 ```bash
-cd hooks/tests && uv run pytest -v
+(cd hooks/tests && uv run pytest test_detect_cd_pattern.py -v)
+```
+
+**Run tests with specific options:**
+```bash
+(cd hooks/tests && uv run pytest -v -k "subshell")  # Run only tests matching "subshell"
+(cd hooks/tests && uv run pytest --tb=short)        # Short traceback format
 ```
 
 ### Writing Hook Tests
