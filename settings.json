@@ -133,6 +133,15 @@
             "command": "uv run --script ~/.claude/hooks/auto-unsandbox-pbcopy.py"
           }
         ]
+      },
+      {
+        "matcher": "WebFetch|Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "uv run --script ~/.claude/hooks/prefer-gh-for-own-repos.py"
+          }
+        ]
       }
     ],
     "PostToolUse": [
