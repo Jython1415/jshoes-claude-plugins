@@ -7,15 +7,17 @@ Run with:
   uv run pytest -v                           # Verbose output
 """
 import json
+import os
 import subprocess
 import sys
+import tempfile
 from pathlib import Path
 
 # Path to the hook script
 HOOK_PATH = Path(__file__).parent.parent / "suggest-uv-for-missing-deps.py"
 
 
-def run_hook_with_error(tool_name: str, command: str, error: str, use_tool_result: bool = False) -> dict:
+def run_hook_with_error(tool_name: str, command: str, error: str, use_tool_result: bool = False, uv_available: bool = True) -> dict:
     """Helper function to run the hook with error input and return parsed output
 
     Args:
@@ -24,6 +26,7 @@ def run_hook_with_error(tool_name: str, command: str, error: str, use_tool_resul
         error: The error message to include
         use_tool_result: If True, place error in tool_result.error (PostToolUse)
                         If False, place error in top-level error field (PostToolUseFailure)
+        uv_available: Whether uv should be treated as available
     """
     if use_tool_result:
         # PostToolUse format - error in tool_result.error
@@ -40,15 +43,23 @@ def run_hook_with_error(tool_name: str, command: str, error: str, use_tool_resul
             "error": error
         }
 
+    # Use environment variable to control uv availability (no PATH hacks!)
+    env = os.environ.copy()
+    env["HOOK_TEST_UV_AVAILABLE"] = "true" if uv_available else "false"
+
     result = subprocess.run(
         ["uv", "run", "--script", str(HOOK_PATH)],
         input=json.dumps(input_data),
         capture_output=True,
-        text=True
+        text=True,
+        env=env
     )
 
     if result.returncode not in [0, 1]:  # 0 = success, 1 = expected error with {}
         raise RuntimeError(f"Hook failed: {result.stderr}")
+
+    if not result.stdout:
+        raise RuntimeError(f"Hook produced no output. stderr: {result.stderr}")
 
     return json.loads(result.stdout)
 
@@ -433,21 +444,15 @@ class TestSuggestUvForMissingDeps:
         context = output["hookSpecificOutput"]["additionalContext"]
         assert "```" in context
 
-    def test_guidance_explains_benefits(self):
-        """Guidance should explain benefits of uv run"""
+    def test_guidance_provides_options(self):
+        """Guidance should provide multiple options"""
         error_msg = "ModuleNotFoundError: No module named 'pandas'"
         output = run_hook_with_error("Bash", "python script.py", error_msg)
 
         context = output["hookSpecificOutput"]["additionalContext"]
-        assert "Benefits:" in context or "benefit" in context.lower()
-
-    def test_guidance_mentions_sandbox(self):
-        """Guidance should mention sandbox mode"""
-        error_msg = "ModuleNotFoundError: No module named 'pandas'"
-        output = run_hook_with_error("Bash", "python script.py", error_msg)
-
-        context = output["hookSpecificOutput"]["additionalContext"]
-        assert "sandbox" in context.lower()
+        # Should have Quick fix, Reusable, and Alternative options
+        assert "Quick fix" in context or "quick" in context.lower()
+        assert "Reusable" in context or "PEP 723" in context
 
     def test_guidance_provides_alternative(self):
         """Guidance should provide alternative (pip install)"""
@@ -599,12 +604,16 @@ ModuleNotFoundError: No module named 'pandas'"""
         assert "hookSpecificOutput" in output
 
     def test_nested_module_not_found(self):
-        """Nested module import error should trigger and extract name"""
+        """Nested module import error should extract top-level module only"""
         error_msg = "ModuleNotFoundError: No module named 'sklearn.ensemble'"
         output = run_hook_with_error("Bash", "python ml_script.py", error_msg)
 
         assert "hookSpecificOutput" in output
-        assert "sklearn.ensemble" in output["hookSpecificOutput"]["additionalContext"]
+        context = output["hookSpecificOutput"]["additionalContext"]
+        # Should suggest top-level module (pip install sklearn works)
+        assert "sklearn" in context
+        # Should NOT suggest submodule (pip install sklearn.ensemble doesn't exist)
+        assert "sklearn.ensemble" not in context
 
     def test_import_error_with_from_clause_extracts_module(self):
         """ImportError with 'from pandas' should extract pandas"""
@@ -616,6 +625,25 @@ ModuleNotFoundError: No module named 'pandas'"""
         assert "pandas" in context
         # Should show in pip install line
         assert "pip install pandas" in context
+
+    def test_submodule_pandas_io_extracts_pandas(self):
+        """Submodule pandas.io should extract top-level pandas"""
+        error_msg = "ModuleNotFoundError: No module named 'pandas.io'"
+        output = run_hook_with_error("Bash", "python read_data.py", error_msg)
+
+        context = output["hookSpecificOutput"]["additionalContext"]
+        assert "pandas" in context
+        assert "pandas.io" not in context
+
+    def test_deeply_nested_module_extracts_top_level(self):
+        """Deeply nested module should extract only top-level"""
+        error_msg = "ModuleNotFoundError: No module named 'scipy.stats.distributions'"
+        output = run_hook_with_error("Bash", "python stats.py", error_msg)
+
+        context = output["hookSpecificOutput"]["additionalContext"]
+        assert "scipy" in context
+        assert "scipy.stats" not in context
+        assert "scipy.stats.distributions" not in context
 
     def test_import_error_with_from_clause_single_quotes(self):
         """ImportError with from 'module' format should extract module"""
@@ -735,6 +763,51 @@ ModuleNotFoundError: No module named 'numpy'
 
         assert "hookSpecificOutput" in output
         assert "numpy" in output["hookSpecificOutput"]["additionalContext"]
+
+    # uv availability tests
+    def test_uv_available_suggests_uv_run_with(self):
+        """When uv is available, should suggest uv run --with"""
+        error_msg = "ModuleNotFoundError: No module named 'pandas'"
+        output = run_hook_with_error("Bash", "python script.py", error_msg, uv_available=True)
+
+        context = output["hookSpecificOutput"]["additionalContext"]
+        assert "uv run --with pandas" in context
+        assert "Quick fix" in context
+
+    def test_uv_available_suggests_pep723(self):
+        """When uv is available, should suggest PEP 723"""
+        error_msg = "ModuleNotFoundError: No module named 'pandas'"
+        output = run_hook_with_error("Bash", "python script.py", error_msg, uv_available=True)
+
+        context = output["hookSpecificOutput"]["additionalContext"]
+        assert "PEP 723" in context
+        assert "# /// script" in context
+        assert 'dependencies = ["pandas"]' in context
+
+    def test_uv_not_available_suggests_pip(self):
+        """When uv is NOT available, should suggest pip install"""
+        error_msg = "ModuleNotFoundError: No module named 'pandas'"
+        output = run_hook_with_error("Bash", "python script.py", error_msg, uv_available=False)
+
+        context = output["hookSpecificOutput"]["additionalContext"]
+        assert "pip install pandas" in context
+        assert "uv run" not in context  # Should NOT suggest uv commands
+
+    def test_uv_not_available_recommends_venv(self):
+        """When uv is NOT available, should recommend using venv"""
+        error_msg = "ModuleNotFoundError: No module named 'pandas'"
+        output = run_hook_with_error("Bash", "python script.py", error_msg, uv_available=False)
+
+        context = output["hookSpecificOutput"]["additionalContext"]
+        assert "venv" in context
+
+    def test_uv_not_available_mentions_uv_option(self):
+        """When uv is NOT available, should mention uv as an option"""
+        error_msg = "ModuleNotFoundError: No module named 'pandas'"
+        output = run_hook_with_error("Bash", "python script.py", error_msg, uv_available=False)
+
+        context = output["hookSpecificOutput"]["additionalContext"]
+        assert "Try uv" in context or "https://docs.astral.sh/uv/" in context
 
 
 def main():

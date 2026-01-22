@@ -21,6 +21,63 @@ Does NOT trigger on:
 import json
 import sys
 import re
+import subprocess
+import os
+
+# Cache for tool availability (checked once per hook execution)
+_tool_cache = {}
+
+def is_tool_available(tool_name):
+    """Check if a tool is available in PATH."""
+    # Allow test override via environment variable
+    test_override = os.environ.get(f"HOOK_TEST_{tool_name.upper()}_AVAILABLE")
+    if test_override is not None:
+        return test_override.lower() == "true"
+
+    if tool_name not in _tool_cache:
+        try:
+            result = subprocess.run(
+                ["which", tool_name],
+                capture_output=True,
+                timeout=0.1  # Fast timeout
+            )
+            _tool_cache[tool_name] = result.returncode == 0
+        except Exception:
+            _tool_cache[tool_name] = False
+    return _tool_cache[tool_name]
+
+def generate_guidance(missing_module, has_uv):
+    """Generate token-efficient guidance based on uv availability."""
+    pkg = missing_module or "package-name"
+    header = "**MISSING DEPENDENCY DETECTED**"
+
+    if missing_module:
+        header += f"\nThe script requires `{pkg}` which is not installed."
+
+    if has_uv:
+        # Token-efficient uv guidance
+        body = f"""
+
+**Quick fix:** `uv run --with {pkg} script.py`
+
+**Reusable (PEP 723):**
+```python
+# /// script
+# dependencies = ["{pkg}"]
+# ///
+```
+Run: `uv run --script script.py`
+
+**Alternative:** `pip install {pkg}` (use venv)"""
+    else:
+        # Token-efficient pip guidance
+        body = f"""
+
+**Install:** `pip install {pkg}` (venv recommended)
+
+**Try uv:** https://docs.astral.sh/uv/ - faster package manager with PEP 723 support"""
+
+    return header + body
 
 def main():
     input_data = json.load(sys.stdin)
@@ -93,56 +150,18 @@ def main():
 
     missing_module = module_match.group(1) if module_match else None
 
-    # Build the guidance message
-    guidance_parts = ["**MISSING DEPENDENCY DETECTED**"]
+    # Extract top-level module for submodules (e.g., 'sklearn.ensemble' -> 'sklearn')
+    # This ensures package suggestions work (pip install sklearn, not sklearn.ensemble)
+    if missing_module and '.' in missing_module:
+        missing_module = missing_module.split('.')[0]
 
-    if missing_module:
-        guidance_parts.append(f"\nThe script requires `{missing_module}` which is not installed.")
-
-    guidance_parts.append("""
-
-**Consider using `uv run` with PEP 723 inline dependencies:**
-
-1. **Add a PEP 723 header to your Python script:**
-   ```python
-   # /// script
-   # dependencies = [
-   #     "pandas",
-   #     "requests>=2.28.0",
-   # ]
-   # ///
-
-   import pandas as pd
-   # ... rest of your script
-   ```
-
-2. **Run with uv:**
-   ```bash
-   uv run --script script.py
-   ```
-
-**Benefits:**
-- Dependencies are declared inline with the script
-- Works reliably in sandbox mode
-- Creates isolated environment per script (no global installs)
-- Reproducible across environments
-
-**Alternative (not recommended in sandbox mode):**
-If you prefer to use system Python or an activated virtual environment:
-```bash
-pip install""")
-
-    if missing_module:
-        guidance_parts.append(f" {missing_module}")
-    else:
-        guidance_parts.append(" <package-name>")
-
-    guidance_parts.append("\n```")
+    # Check if uv is available
+    has_uv = is_tool_available("uv")
 
     output = {
         "hookSpecificOutput": {
             "hookEventName": "PostToolUseFailure",
-            "additionalContext": "".join(guidance_parts)
+            "additionalContext": generate_guidance(missing_module, has_uv)
         }
     }
 
