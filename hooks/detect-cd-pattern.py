@@ -30,8 +30,17 @@ def main():
     #
     # DO NOT warn about:
     # - (cd dir && cmd) - subshell pattern (this is CORRECT per CLAUDE-global.md)
+    # - Any command wrapped entirely in parentheses (subshell isolation)
 
-    # First check if there's a subshell cd pattern - this is OK
+    # Check if entire command is wrapped in parentheses (subshell)
+    # This is a simple heuristic: starts with ( and ends with matching )
+    stripped = command.strip()
+    if stripped.startswith('(') and stripped.endswith(')'):
+        # Command is in a subshell - cd is isolated, so it's OK
+        print("{}")
+        sys.exit(0)
+
+    # Also check for (cd ...) pattern anywhere in the command
     if re.search(r'\(\s*cd\s+', command):
         print("{}")
         sys.exit(0)
