@@ -31,8 +31,13 @@ try:
             }
         }
         print(json.dumps(output))
+    else:
+        # No action needed, output empty JSON as per hook guidelines
+        print(json.dumps({}))
 
     sys.exit(0)
 
 except Exception:
+    # On error, output empty JSON as per hook guidelines
+    print(json.dumps({}))
     sys.exit(1)

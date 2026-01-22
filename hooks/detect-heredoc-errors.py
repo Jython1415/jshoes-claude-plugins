@@ -63,4 +63,9 @@ IMPORTANT: Heredocs don't work in sandbox mode. Use one of the above alternative
     sys.exit(0)
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except Exception:
+        # On error, output empty JSON as per hook guidelines
+        print(json.dumps({}))
+        sys.exit(1)
