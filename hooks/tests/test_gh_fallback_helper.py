@@ -1,14 +1,10 @@
-#!/usr/bin/env python3
-# /// script
-# dependencies = ["pytest>=7.0.0"]
-# ///
 """
 Unit tests for gh-fallback-helper.py hook
 
 Run with:
-  uv run --script hooks/tests/test_gh_fallback_helper.py
-Or:
-  cd hooks/tests && uv run pytest test_gh_fallback_helper.py -v
+  uv run pytest                              # Run all tests
+  uv run pytest hooks/tests/test_gh_fallback_helper.py  # Run this test file
+  uv run pytest -v                           # Verbose output
 """
 import json
 import subprocess

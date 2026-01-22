@@ -1,14 +1,10 @@
-#!/usr/bin/env python3
-# /// script
-# dependencies = ["pytest>=7.0.0"]
-# ///
 """
 Unit tests for prefer-modern-tools.py hook
 
 Run with:
-  uv run --script hooks/tests/test_prefer_modern_tools.py
-Or:
-  cd hooks/tests && uv run pytest test_prefer_modern_tools.py -v
+  uv run pytest                              # Run all tests
+  uv run pytest hooks/tests/test_prefer_modern_tools.py  # Run this test file
+  uv run pytest -v                           # Verbose output
 
 Note: Some tests depend on fd and rg being installed on the system.
 The hook only suggests tools that are actually available via `which`.
