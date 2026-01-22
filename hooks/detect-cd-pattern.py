@@ -47,7 +47,7 @@ def main():
 
     # Now check for non-subshell cd patterns (the BAD ones)
     cd_patterns = [
-        r'(?:^|;|\||&&)\s*cd\s+',  # cd at start or after separator (but not in subshell)
+        r'(?:^|;|\||&&)\s*cd(?:\s+|$)',  # cd at start or after separator (with args or standalone)
     ]
 
     has_cd = any(re.search(pattern, command) for pattern in cd_patterns)

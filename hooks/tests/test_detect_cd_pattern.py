@@ -185,11 +185,7 @@ class TestDetectCdPattern:
     def test_cd_with_no_args(self):
         """cd with no arguments (goes to home) should trigger warning"""
         output = run_hook("Bash", "cd")
-        # This might not match current regex - let's see
-        # Current pattern requires \s+ after cd, so standalone "cd" won't match
-        # This is actually a bug we should fix!
-        # For now, document the behavior
-        pass  # TODO: This is a gap - standalone 'cd' should probably warn
+        assert "hookSpecificOutput" in output, "cd with no args should trigger (changes to home)"
 
     def test_cd_with_double_dot(self):
         """cd .. should trigger warning"""
