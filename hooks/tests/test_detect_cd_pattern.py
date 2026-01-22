@@ -187,6 +187,21 @@ class TestDetectCdPattern:
         output = run_hook("Bash", "cd")
         assert "hookSpecificOutput" in output, "cd with no args should trigger (changes to home)"
 
+    def test_cd_no_args_followed_by_semicolon(self):
+        """cd followed by semicolon (no space) should trigger warning"""
+        output = run_hook("Bash", "cd;echo test")
+        assert "hookSpecificOutput" in output, "cd; should trigger"
+
+    def test_cd_no_args_followed_by_ampersand(self):
+        """cd followed by && (no space) should trigger warning"""
+        output = run_hook("Bash", "cd&&echo test")
+        assert "hookSpecificOutput" in output, "cd&& should trigger"
+
+    def test_cd_no_args_followed_by_pipe(self):
+        """cd followed by pipe (no space) should trigger warning"""
+        output = run_hook("Bash", "cd|grep test")
+        assert "hookSpecificOutput" in output, "cd| should trigger"
+
     def test_cd_with_double_dot(self):
         """cd .. should trigger warning"""
         output = run_hook("Bash", "cd ..")
