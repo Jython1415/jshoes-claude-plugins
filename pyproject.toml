@@ -1,0 +1,22 @@
+[project]
+name = "claude-code-hooks"
+version = "0.1.0"
+description = "Custom hooks for Claude Code CLI"
+requires-python = ">=3.11"
+readme = "README.md"
+license = {text = "MIT"}
+
+[dependency-groups]
+dev = [
+    "pytest>=7.0.0",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["hooks/tests"]
+python_files = "test_*.py"
+addopts = "-v --tb=short"
+
+[tool.uv]
+# Hooks use PEP 723 inline dependencies for portability
+# Tests use dependency-groups for standard Python testing practices
+dev-dependencies = []
