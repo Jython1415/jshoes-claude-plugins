@@ -126,6 +126,10 @@
           },
           {
             "type": "command",
+            "command": "uv run --script ~/.claude/hooks/detect-cd-pattern.py"
+          },
+          {
+            "type": "command",
             "command": "uv run --script ~/.claude/hooks/auto-unsandbox-pbcopy.py"
           }
         ]

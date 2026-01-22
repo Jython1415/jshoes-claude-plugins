@@ -8,6 +8,7 @@ Custom hooks for enhancing Claude Code CLI behavior.
 |------|-------|---------|
 | `normalize-line-endings.py` | PreToolUse (Write/Edit) | Converts CRLF/CR to LF |
 | `prefer-modern-tools.py` | PreToolUse (Bash) | Suggests fd/rg instead of find/grep |
+| `detect-cd-pattern.py` | PreToolUse (Bash) | Warns on global cd, allows subshell pattern |
 | `auto-unsandbox-pbcopy.py` | PreToolUse (Bash) | Auto-approves and unsandboxes pbcopy |
 | `gh-fallback-helper.py` | PostToolUseFailure (Bash) | Guides Claude to use GitHub API when gh CLI unavailable |
 | `gpg-signing-helper.py` | PostToolUse/PostToolUseFailure (Bash) | Guides Claude on GPG signing issues |
@@ -41,6 +42,38 @@ Custom hooks for enhancing Claude Code CLI behavior.
 **Benefits**:
 - `fd`: Faster file search, simpler syntax, respects .gitignore by default
 - `rg`: Significantly faster grep, respects .gitignore, better output formatting
+
+### detect-cd-pattern.py
+
+**Event**: PreToolUse (Bash)
+
+**Purpose**: Detects when global `cd` patterns are used and suggests using absolute paths or subshell patterns instead.
+
+**Behavior**:
+- **Warns** on global cd patterns: `cd dir && cmd`, `cd dir; cmd`, standalone `cd dir`
+- **Allows** (silent) subshell pattern: `(cd dir && cmd)` - this is the correct pattern per CLAUDE-global.md
+- Provides guidance on using absolute paths (best) or subshell pattern (acceptable)
+- Explains why global cd changes are problematic
+
+**Triggers on**:
+- `cd dir && cmd` - global directory change
+- `cd dir; cmd` - global directory change with semicolon
+- Standalone `cd dir` at command start or after separators
+
+**Does NOT trigger on**:
+- `(cd dir && cmd)` - subshell pattern (correct usage)
+- Commands without cd
+
+**Benefits**:
+- Prevents global working directory changes that affect the session
+- Encourages explicit absolute paths for clarity
+- Promotes subshell isolation when cd is necessary
+- Better for debugging and command history
+
+**Recommended patterns**:
+- ✅ Best: `pytest /foo/bar/tests` (absolute path)
+- ✅ OK: `(cd /foo/bar && pytest tests)` (subshell isolation)
+- ❌ Bad: `cd /foo/bar && pytest tests` (global change)
 
 ### auto-unsandbox-pbcopy.py
 
@@ -171,11 +204,99 @@ Hooks are configured in `settings.json`:
 }
 ```
 
+## Testing Hooks
+
+### Test Structure
+
+Hook tests are located in `hooks/tests/` directory:
+- Each hook has a corresponding test file: `test_<hookname>.py`
+- Tests use pytest with PEP 723 inline dependencies
+- Tests can be run individually or all together
+
+### Running Tests
+
+**Run all hook tests:**
+```bash
+(cd hooks/tests && uv run pytest -v)
+```
+
+**Run specific hook test:**
+```bash
+uv run --script hooks/tests/test_detect_cd_pattern.py
+```
+Or with pytest:
+```bash
+(cd hooks/tests && uv run pytest test_detect_cd_pattern.py -v)
+```
+
+**Run tests with specific options:**
+```bash
+(cd hooks/tests && uv run pytest -v -k "subshell")  # Run only tests matching "subshell"
+(cd hooks/tests && uv run pytest --tb=short)        # Short traceback format
+```
+
+### Writing Hook Tests
+
+Each test file should:
+1. Use PEP 723 header with `pytest>=7.0.0` dependency
+2. Include a helper function to run the hook with test input
+3. Have comprehensive test cases covering:
+   - Happy path (correct behavior, returns `{}`)
+   - Error cases (warnings/guidance)
+   - Edge cases (spacing, special characters, etc.)
+   - JSON validity
+   - Event name correctness
+
+**Example test structure:**
+```python
+#!/usr/bin/env python3
+# /// script
+# dependencies = ["pytest>=7.0.0"]
+# ///
+import json
+import subprocess
+from pathlib import Path
+
+HOOK_PATH = Path(__file__).parent.parent / "hookname.py"
+
+def run_hook(tool_name: str, command: str) -> dict:
+    """Helper to run hook and return parsed output"""
+    input_data = {
+        "tool_name": tool_name,
+        "tool_input": {"command": command}
+    }
+    result = subprocess.run(
+        ["uv", "run", "--script", str(HOOK_PATH)],
+        input=json.dumps(input_data),
+        capture_output=True,
+        text=True
+    )
+    return json.loads(result.stdout)
+
+class TestMyHook:
+    def test_case_name(self):
+        output = run_hook("Bash", "some command")
+        assert output == {}, "Description of expected behavior"
+```
+
+### Test Coverage for detect-cd-pattern
+
+The `detect-cd-pattern.py` hook has 14 tests covering:
+- ✅ Subshell pattern allowed: `(cd dir && cmd)` → `{}`
+- ✅ Global cd patterns warned: `cd dir && cmd` → warning
+- ✅ Semicolon patterns warned: `cd dir; cmd` → warning
+- ✅ No cd returns empty: `pytest /path` → `{}`
+- ✅ Non-Bash tools ignored: `Read` tool → `{}`
+- ✅ JSON validity in all cases
+- ✅ Correct event name in warnings
+- ✅ Target directory included in guidance
+
 ## Adding New Hooks
 
 1. Create Python script with PEP 723 header
 2. Implement JSON input/output handling
-3. Test manually with sample input
-4. Add to `settings.json` hooks configuration
-5. Document in this README
-6. Restart Claude Code session
+3. Create test file in `hooks/tests/test_<hookname>.py`
+4. Write comprehensive tests and verify they pass
+5. Add to `settings.json` hooks configuration
+6. Document in this README
+7. Restart Claude Code session

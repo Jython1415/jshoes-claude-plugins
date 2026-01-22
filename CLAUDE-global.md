@@ -1,5 +1,3 @@
-Use `(cd <child-dir> && <command>)` over `cd <child-dir>` and then `<command>`
-
 Use `uv run` or `uv run --script` over `python` when running Python files, unless specified otherwise
 
 For temporary Python scripts: use `create_file` to write the script, `uv run` to execute it, then clean up with `rm`
