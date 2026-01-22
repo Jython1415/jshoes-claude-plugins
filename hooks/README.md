@@ -8,6 +8,7 @@ Custom hooks for enhancing Claude Code CLI behavior.
 |------|-------|---------|
 | `normalize-line-endings.py` | PreToolUse (Write/Edit) | Converts CRLF/CR to LF |
 | `prefer-modern-tools.py` | PreToolUse (Bash) | Suggests fd/rg instead of find/grep |
+| `detect-cd-pattern.py` | PreToolUse (Bash) | Discourages cd usage, suggests absolute paths |
 | `auto-unsandbox-pbcopy.py` | PreToolUse (Bash) | Auto-approves and unsandboxes pbcopy |
 | `gh-fallback-helper.py` | PostToolUseFailure (Bash) | Guides Claude to use GitHub API when gh CLI unavailable |
 | `gpg-signing-helper.py` | PostToolUse/PostToolUseFailure (Bash) | Guides Claude on GPG signing issues |
@@ -41,6 +42,33 @@ Custom hooks for enhancing Claude Code CLI behavior.
 **Benefits**:
 - `fd`: Faster file search, simpler syntax, respects .gitignore by default
 - `rg`: Significantly faster grep, respects .gitignore, better output formatting
+
+### detect-cd-pattern.py
+
+**Event**: PreToolUse (Bash)
+
+**Purpose**: Detects when `cd` is used in Bash commands and suggests using absolute paths instead to maintain the current working directory.
+
+**Behavior**:
+- Detects patterns: `(cd dir && cmd)`, `cd dir && cmd`, `cd dir; cmd`
+- Provides guidance on using absolute paths
+- Explains best practices for maintaining working directory
+- Offers command-specific alternatives (e.g., `git -C`, `npm --prefix`)
+
+**Triggers on**:
+- Commands containing `cd` followed by a directory path
+- Both subshell patterns `(cd ...)` and sequential patterns `cd ... &&`
+
+**Benefits**:
+- Maintains consistent working directory throughout session
+- Makes commands more explicit and easier to understand
+- Reduces context-switching and potential errors
+- Better for debugging and command history
+
+**Example guidance**:
+- `cd /foo/bar && pytest tests` → `pytest /foo/bar/tests`
+- `(cd src && npm build)` → `npm build --prefix /path/to/src`
+- `cd project && git status` → `git -C /path/to/project status`
 
 ### auto-unsandbox-pbcopy.py
 
