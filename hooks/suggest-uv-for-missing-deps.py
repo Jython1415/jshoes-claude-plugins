@@ -24,9 +24,6 @@ import re
 import subprocess
 import os
 
-# Cache for tool availability (checked once per hook execution)
-_tool_cache = {}
-
 def is_tool_available(tool_name):
     """Check if a tool is available in PATH."""
     # Allow test override via environment variable
@@ -34,17 +31,11 @@ def is_tool_available(tool_name):
     if test_override is not None:
         return test_override.lower() == "true"
 
-    if tool_name not in _tool_cache:
-        try:
-            result = subprocess.run(
-                ["which", tool_name],
-                capture_output=True,
-                timeout=0.1  # Fast timeout
-            )
-            _tool_cache[tool_name] = result.returncode == 0
-        except Exception:
-            _tool_cache[tool_name] = False
-    return _tool_cache[tool_name]
+    try:
+        result = subprocess.run(["which", tool_name], capture_output=True)
+        return result.returncode == 0
+    except Exception:
+        return False
 
 def generate_guidance(missing_module, has_uv):
     """Generate token-efficient guidance based on uv availability."""

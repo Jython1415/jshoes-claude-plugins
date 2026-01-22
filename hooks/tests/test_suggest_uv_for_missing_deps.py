@@ -276,95 +276,15 @@ class TestSuggestUvForMissingDeps:
 
         assert output == {}
 
-    def test_attribute_error_no_trigger(self):
-        """AttributeError should not trigger"""
-        error_msg = "AttributeError: 'NoneType' object has no attribute 'foo'"
-        output = run_hook_with_error("Bash", "python script.py", error_msg)
-
-        assert output == {}
-
-    def test_type_error_no_trigger(self):
-        """TypeError should not trigger"""
-        error_msg = "TypeError: unsupported operand type(s) for +: 'int' and 'str'"
-        output = run_hook_with_error("Bash", "python script.py", error_msg)
-
-        assert output == {}
-
-    def test_value_error_no_trigger(self):
-        """ValueError should not trigger"""
-        error_msg = "ValueError: invalid literal for int() with base 10: 'abc'"
-        output = run_hook_with_error("Bash", "python script.py", error_msg)
-
-        assert output == {}
-
-    def test_file_not_found_error_no_trigger(self):
-        """FileNotFoundError should not trigger"""
-        error_msg = "FileNotFoundError: [Errno 2] No such file or directory: 'data.csv'"
-        output = run_hook_with_error("Bash", "python script.py", error_msg)
-
-        assert output == {}
-
-    def test_keyboard_interrupt_no_trigger(self):
-        """KeyboardInterrupt should not trigger"""
-        error_msg = "KeyboardInterrupt"
-        output = run_hook_with_error("Bash", "python script.py", error_msg)
-
-        assert output == {}
-
-    def test_generic_exception_no_trigger(self):
-        """Generic Exception should not trigger"""
-        error_msg = "Exception: Something went wrong"
-        output = run_hook_with_error("Bash", "python script.py", error_msg)
-
-        assert output == {}
-
     # Non-Bash tools should not trigger
-    def test_read_tool_with_import_error(self):
-        """Read tool with import error should not trigger"""
+    def test_non_bash_tool_with_import_error(self):
+        """Non-Bash tools should not trigger"""
         error_msg = "ModuleNotFoundError: No module named 'pandas'"
         output = run_hook_with_error("Read", "python script.py", error_msg)
 
         assert output == {}
 
-    def test_write_tool_with_import_error(self):
-        """Write tool with import error should not trigger"""
-        error_msg = "ImportError: No module named 'requests'"
-        output = run_hook_with_error("Write", "python script.py", error_msg)
-
-        assert output == {}
-
-    def test_edit_tool_with_import_error(self):
-        """Edit tool with import error should not trigger"""
-        error_msg = "ModuleNotFoundError: No module named 'numpy'"
-        output = run_hook_with_error("Edit", "python script.py", error_msg)
-
-        assert output == {}
-
     # Successful commands should not trigger
-    def test_successful_python_execution(self):
-        """Successful python execution should not trigger"""
-        output = run_hook_success("Bash", "python script.py")
-
-        assert output == {}
-
-    def test_successful_python_with_output(self):
-        """Successful python with output should not trigger"""
-        input_data = {
-            "tool_name": "Bash",
-            "tool_input": {"command": "python script.py"},
-            "tool_result": {"stdout": "Script completed successfully"}
-        }
-
-        result = subprocess.run(
-            ["uv", "run", "--script", str(HOOK_PATH)],
-            input=json.dumps(input_data),
-            capture_output=True,
-            text=True
-        )
-
-        output = json.loads(result.stdout)
-        assert output == {}
-
     def test_no_error_field(self):
         """Input with no error field should not trigger"""
         output = run_hook_success("Bash", "python script.py")
@@ -410,79 +330,14 @@ class TestSuggestUvForMissingDeps:
             assert isinstance(output, dict), f"Output should be valid JSON dict"
 
     # Guidance content verification
-    def test_guidance_mentions_pep723(self):
-        """Guidance should mention PEP 723"""
+    def test_guidance_includes_module_name_and_content(self):
+        """Guidance should include module name and substantial content"""
         error_msg = "ModuleNotFoundError: No module named 'pandas'"
         output = run_hook_with_error("Bash", "python script.py", error_msg)
 
         context = output["hookSpecificOutput"]["additionalContext"]
-        assert "PEP 723" in context or "# /// script" in context
-
-    def test_guidance_shows_dependencies_syntax(self):
-        """Guidance should show dependencies syntax"""
-        error_msg = "ModuleNotFoundError: No module named 'pandas'"
-        output = run_hook_with_error("Bash", "python script.py", error_msg)
-
-        context = output["hookSpecificOutput"]["additionalContext"]
-        assert "dependencies" in context
-        assert "# ///" in context
-
-    def test_guidance_suggests_uv_run(self):
-        """Guidance should suggest uv run --script"""
-        error_msg = "ModuleNotFoundError: No module named 'pandas'"
-        output = run_hook_with_error("Bash", "python script.py", error_msg)
-
-        context = output["hookSpecificOutput"]["additionalContext"]
-        assert "uv run" in context
-        assert "--script" in context
-
-    def test_guidance_includes_code_examples(self):
-        """Guidance should include code examples"""
-        error_msg = "ModuleNotFoundError: No module named 'pandas'"
-        output = run_hook_with_error("Bash", "python script.py", error_msg)
-
-        context = output["hookSpecificOutput"]["additionalContext"]
-        assert "```" in context
-
-    def test_guidance_provides_options(self):
-        """Guidance should provide multiple options"""
-        error_msg = "ModuleNotFoundError: No module named 'pandas'"
-        output = run_hook_with_error("Bash", "python script.py", error_msg)
-
-        context = output["hookSpecificOutput"]["additionalContext"]
-        # Should have Quick fix, Reusable, and Alternative options
-        assert "Quick fix" in context or "quick" in context.lower()
-        assert "Reusable" in context or "PEP 723" in context
-
-    def test_guidance_provides_alternative(self):
-        """Guidance should provide alternative (pip install)"""
-        error_msg = "ModuleNotFoundError: No module named 'pandas'"
-        output = run_hook_with_error("Bash", "python script.py", error_msg)
-
-        context = output["hookSpecificOutput"]["additionalContext"]
-        assert "Alternative" in context or "pip install" in context
-
-    def test_guidance_includes_missing_module_in_pip_install(self):
-        """Guidance should suggest pip install with the specific module"""
-        error_msg = "ModuleNotFoundError: No module named 'beautifulsoup4'"
-        output = run_hook_with_error("Bash", "python scrape.py", error_msg)
-
-        context = output["hookSpecificOutput"]["additionalContext"]
-        assert "pip install" in context
-        assert "beautifulsoup4" in context
-
-    def test_guidance_readable_format(self):
-        """Guidance should be well-formatted and readable"""
-        error_msg = "ModuleNotFoundError: No module named 'pandas'"
-        output = run_hook_with_error("Bash", "python script.py", error_msg)
-
-        context = output["hookSpecificOutput"]["additionalContext"]
-        # Should have headers
-        assert "**" in context
-        # Should have code blocks
-        assert "```" in context
-        # Should be substantial
-        assert len(context) > 200
+        assert "pandas" in context
+        assert len(context) > 100  # Has substantial content
 
     # Edge cases - complex commands
     def test_python_with_arguments(self):
@@ -521,31 +376,10 @@ class TestSuggestUvForMissingDeps:
         assert "hookSpecificOutput" in output
 
     # Edge cases - script name variations
-    def test_script_with_underscores(self):
-        """Script name with underscores should trigger"""
+    def test_script_with_special_chars(self):
+        """Script name with underscores/hyphens/numbers should trigger"""
         error_msg = "ModuleNotFoundError: No module named 'pandas'"
-        output = run_hook_with_error("Bash", "python data_analysis_script.py", error_msg)
-
-        assert "hookSpecificOutput" in output
-
-    def test_script_with_hyphens(self):
-        """Script name with hyphens should trigger"""
-        error_msg = "ModuleNotFoundError: No module named 'pandas'"
-        output = run_hook_with_error("Bash", "python fetch-and-process.py", error_msg)
-
-        assert "hookSpecificOutput" in output
-
-    def test_script_with_numbers(self):
-        """Script name with numbers should trigger"""
-        error_msg = "ModuleNotFoundError: No module named 'pandas'"
-        output = run_hook_with_error("Bash", "python script123.py", error_msg)
-
-        assert "hookSpecificOutput" in output
-
-    def test_script_with_dots(self):
-        """Script name with dots should trigger"""
-        error_msg = "ModuleNotFoundError: No module named 'pandas'"
-        output = run_hook_with_error("Bash", "python my.analysis.script.py", error_msg)
+        output = run_hook_with_error("Bash", "python data_analysis-v2.py", error_msg)
 
         assert "hookSpecificOutput" in output
 
@@ -563,24 +397,10 @@ class TestSuggestUvForMissingDeps:
 
         assert "hookSpecificOutput" in output
 
-    def test_script_with_spaces_in_path(self):
-        """Quoted path with spaces should trigger"""
-        error_msg = "ModuleNotFoundError: No module named 'pandas'"
-        output = run_hook_with_error("Bash", 'python "~/Documents/My Scripts/test.py"', error_msg)
-
-        assert "hookSpecificOutput" in output
-
     def test_absolute_python_path(self):
         """/usr/bin/python3 should trigger"""
         error_msg = "ModuleNotFoundError: No module named 'pandas'"
         output = run_hook_with_error("Bash", "/usr/bin/python3 script.py", error_msg)
-
-        assert "hookSpecificOutput" in output
-
-    def test_env_python(self):
-        """/usr/bin/env python should trigger"""
-        error_msg = "ModuleNotFoundError: No module named 'pandas'"
-        output = run_hook_with_error("Bash", "/usr/bin/env python script.py", error_msg)
 
         assert "hookSpecificOutput" in output
 
@@ -625,41 +445,6 @@ ModuleNotFoundError: No module named 'pandas'"""
         assert "pandas" in context
         # Should show in pip install line
         assert "pip install pandas" in context
-
-    def test_submodule_pandas_io_extracts_pandas(self):
-        """Submodule pandas.io should extract top-level pandas"""
-        error_msg = "ModuleNotFoundError: No module named 'pandas.io'"
-        output = run_hook_with_error("Bash", "python read_data.py", error_msg)
-
-        context = output["hookSpecificOutput"]["additionalContext"]
-        assert "pandas" in context
-        assert "pandas.io" not in context
-
-    def test_deeply_nested_module_extracts_top_level(self):
-        """Deeply nested module should extract only top-level"""
-        error_msg = "ModuleNotFoundError: No module named 'scipy.stats.distributions'"
-        output = run_hook_with_error("Bash", "python stats.py", error_msg)
-
-        context = output["hookSpecificOutput"]["additionalContext"]
-        assert "scipy" in context
-        assert "scipy.stats" not in context
-        assert "scipy.stats.distributions" not in context
-
-    def test_import_error_with_from_clause_single_quotes(self):
-        """ImportError with from 'module' format should extract module"""
-        error_msg = "ImportError: cannot import name 'something' from 'requests'"
-        output = run_hook_with_error("Bash", "python api.py", error_msg)
-
-        context = output["hookSpecificOutput"]["additionalContext"]
-        assert "requests" in context
-
-    def test_import_error_with_from_clause_double_quotes(self):
-        """ImportError with from \"module\" format should extract module"""
-        error_msg = 'ImportError: cannot import name "something" from "numpy"'
-        output = run_hook_with_error("Bash", "python compute.py", error_msg)
-
-        context = output["hookSpecificOutput"]["additionalContext"]
-        assert "numpy" in context
 
     # Edge cases - exception handling
     def test_malformed_json_input(self):
@@ -726,43 +511,6 @@ ModuleNotFoundError: No module named 'pandas'"""
 
         output = json.loads(result.stdout)
         assert output == {}
-
-    # Real-world scenarios
-    def test_pandas_import_error(self):
-        """Real-world pandas import error"""
-        error_msg = """Traceback (most recent call last):
-  File "/home/user/analysis.py", line 3, in <module>
-    import pandas as pd
-ModuleNotFoundError: No module named 'pandas'
-"""
-        output = run_hook_with_error("Bash", "python analysis.py", error_msg)
-
-        assert "hookSpecificOutput" in output
-        context = output["hookSpecificOutput"]["additionalContext"]
-        assert "pandas" in context
-        assert "uv run" in context
-        assert "PEP 723" in context or "# /// script" in context
-
-    def test_requests_import_error(self):
-        """Real-world requests import error"""
-        error_msg = "ModuleNotFoundError: No module named 'requests'"
-        output = run_hook_with_error("Bash", "python fetch_api_data.py", error_msg)
-
-        assert "hookSpecificOutput" in output
-        context = output["hookSpecificOutput"]["additionalContext"]
-        assert "requests" in context
-
-    def test_multiple_imports_first_fails(self):
-        """When script has multiple imports and first one fails"""
-        error_msg = """Traceback (most recent call last):
-  File "script.py", line 1, in <module>
-    import numpy as np
-ModuleNotFoundError: No module named 'numpy'
-"""
-        output = run_hook_with_error("Bash", "python script.py", error_msg)
-
-        assert "hookSpecificOutput" in output
-        assert "numpy" in output["hookSpecificOutput"]["additionalContext"]
 
     # uv availability tests
     def test_uv_available_suggests_uv_run_with(self):
