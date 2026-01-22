@@ -95,13 +95,13 @@ Custom hooks for enhancing Claude Code CLI behavior.
 
 **Behavior**:
 - Detects when WebFetch or Bash (curl) is used to access GitHub URLs for Jython1415's repositories
-- Checks if `gh` CLI is available using `which gh`
+- Checks if `gh` CLI is available using system PATH lookup (cross-platform)
 - If `gh` is available, provides guidance to use it instead
 - Includes 60-second cooldown mechanism to avoid duplicate suggestions when Claude intentionally uses fetch back-to-back
 - After cooldown expires, suggestions resume if behavior reverts to fetch/curl
 
 **Triggers on**:
-- WebFetch with URLs containing `github.com/Jython1415/` or `api.github.com/repos/Jython1415/`
+- WebFetch with URLs containing `github.com/Jython1415/`, `api.github.com/repos/Jython1415/`, or `raw.githubusercontent.com/Jython1415/`
 - Bash commands with curl accessing the above URLs
 
 **Does NOT trigger when**:
@@ -121,10 +121,17 @@ Custom hooks for enhancing Claude Code CLI behavior.
 - List PRs: `gh pr list --repo Jython1415/repo`
 - Get JSON: `gh issue view 10 --json title,body,comments --repo Jython1415/repo`
 
-**Cooldown mechanism**:
-- State stored in `~/.claude/hook-state/prefer-gh-cooldown`
+**State management**:
+- Cooldown state stored in: `~/.claude/hook-state/prefer-gh-cooldown`
+- Contains Unix timestamp of last suggestion
+- Safe to delete if behavior needs to be reset
 - Prevents duplicate suggestions when Claude uses fetch multiple times consecutively
 - Allows suggestions to resume after 60 seconds if behavior reverts
+
+**Limitations**:
+- Only detects WebFetch and curl commands (not wget or other HTTP clients)
+- Curl command parsing is best-effort; complex commands with multiple URLs may not be detected correctly
+- Owner matching is case-sensitive ("Jython1415" only, not "jython1415")
 
 ### gh-fallback-helper.py
 

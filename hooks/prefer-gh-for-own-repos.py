@@ -15,7 +15,7 @@ behavior reverts after a while.
 """
 import json
 import sys
-import subprocess
+import shutil
 import os
 import time
 from pathlib import Path
@@ -34,12 +34,7 @@ STATE_FILE = STATE_DIR / "prefer-gh-cooldown"
 def is_gh_available():
     """Check if gh CLI is available in PATH."""
     try:
-        result = subprocess.run(
-            ["which", "gh"],
-            capture_output=True,
-            timeout=1
-        )
-        return result.returncode == 0
+        return shutil.which("gh") is not None
     except Exception:
         return False
 
@@ -63,16 +58,18 @@ def record_suggestion():
     try:
         STATE_DIR.mkdir(parents=True, exist_ok=True)
         STATE_FILE.write_text(str(time.time()))
-    except Exception:
-        pass  # Ignore errors in state management
+    except Exception as e:
+        # Log but don't fail - cooldown is nice-to-have, not critical
+        print(f"Warning: Could not record cooldown state: {e}", file=sys.stderr)
 
 
-def extract_repo_info(url):
-    """Extract owner/repo from GitHub URL if it matches target owner."""
+def matches_target_owner(url):
+    """Check if URL matches GitHub repos owned by target owner."""
     # Check various GitHub URL patterns
     patterns = [
         f"github.com/{TARGET_OWNER}/",
         f"api.github.com/repos/{TARGET_OWNER}/",
+        f"raw.githubusercontent.com/{TARGET_OWNER}/",  # Raw file access
     ]
 
     for pattern in patterns:
@@ -120,7 +117,7 @@ def main():
                         break
 
         # If no URL found or doesn't match target owner, exit
-        if not url_to_check or not extract_repo_info(url_to_check):
+        if not url_to_check or not matches_target_owner(url_to_check):
             print("{}")
             sys.exit(0)
 
@@ -168,7 +165,9 @@ The `gh` CLI is available and provides a more direct interface.
         print(json.dumps(output))
         sys.exit(0)
 
-    except Exception:
+    except Exception as e:
+        # Log to stderr for debugging
+        print(f"Error in prefer-gh-for-own-repos hook: {e}", file=sys.stderr)
         # Always output valid JSON on error
         print("{}")
         sys.exit(1)

@@ -268,6 +268,24 @@ class TestPreferGhForOwnRepos:
         )
         assert "hookSpecificOutput" in output2, "Should suggest again after cooldown expires"
 
+    def test_corrupted_cooldown_file(self):
+        """Hook should handle corrupted cooldown file gracefully"""
+        # Create a corrupted cooldown file
+        state_dir = Path.home() / ".claude" / "hook-state"
+        state_file = state_dir / "prefer-gh-cooldown"
+        state_dir.mkdir(parents=True, exist_ok=True)
+        state_file.write_text("not-a-number-corrupted-data")
+
+        # Hook should still work and suggest (cooldown check fails gracefully)
+        output = run_hook(
+            "WebFetch",
+            {"url": f"https://github.com/{TARGET_OWNER}/repo/issues/1"},
+            gh_available=True,
+            clear_cooldown=False  # Don't clear, let it deal with corruption
+        )
+        # Should still suggest since cooldown check fails on corrupted data
+        assert "hookSpecificOutput" in output, "Should suggest even with corrupted state file"
+
     # ========== Other tool types ==========
 
     def test_non_webfetch_non_bash_tool(self):
@@ -355,6 +373,7 @@ class TestPreferGhForOwnRepos:
             f"https://github.com/{TARGET_OWNER}/repo",
             f"https://api.github.com/repos/{TARGET_OWNER}/repo/issues",
             f"https://api.github.com/repos/{TARGET_OWNER}/repo/pulls/5",
+            f"https://raw.githubusercontent.com/{TARGET_OWNER}/repo/main/README.md",
         ]
         for url in test_urls:
             output = run_hook("WebFetch", {"url": url}, gh_available=True)
