@@ -8,7 +8,7 @@ Custom hooks for enhancing Claude Code CLI behavior.
 |------|-------|---------|
 | `normalize-line-endings.py` | PreToolUse (Write/Edit) | Converts CRLF/CR to LF |
 | `prefer-modern-tools.py` | PreToolUse (Bash) | Suggests fd/rg instead of find/grep |
-| `detect-cd-pattern.py` | PreToolUse (Bash) | Discourages cd usage, suggests absolute paths |
+| `detect-cd-pattern.py` | PreToolUse (Bash) | Warns on global cd, allows subshell pattern |
 | `auto-unsandbox-pbcopy.py` | PreToolUse (Bash) | Auto-approves and unsandboxes pbcopy |
 | `gh-fallback-helper.py` | PostToolUseFailure (Bash) | Guides Claude to use GitHub API when gh CLI unavailable |
 | `gpg-signing-helper.py` | PostToolUse/PostToolUseFailure (Bash) | Guides Claude on GPG signing issues |
@@ -47,28 +47,33 @@ Custom hooks for enhancing Claude Code CLI behavior.
 
 **Event**: PreToolUse (Bash)
 
-**Purpose**: Detects when `cd` is used in Bash commands and suggests using absolute paths instead to maintain the current working directory.
+**Purpose**: Detects when global `cd` patterns are used and suggests using absolute paths or subshell patterns instead.
 
 **Behavior**:
-- Detects patterns: `(cd dir && cmd)`, `cd dir && cmd`, `cd dir; cmd`
-- Provides guidance on using absolute paths
-- Explains best practices for maintaining working directory
-- Offers command-specific alternatives (e.g., `git -C`, `npm --prefix`)
+- **Warns** on global cd patterns: `cd dir && cmd`, `cd dir; cmd`, standalone `cd dir`
+- **Allows** (silent) subshell pattern: `(cd dir && cmd)` - this is the correct pattern per CLAUDE-global.md
+- Provides guidance on using absolute paths (best) or subshell pattern (acceptable)
+- Explains why global cd changes are problematic
 
 **Triggers on**:
-- Commands containing `cd` followed by a directory path
-- Both subshell patterns `(cd ...)` and sequential patterns `cd ... &&`
+- `cd dir && cmd` - global directory change
+- `cd dir; cmd` - global directory change with semicolon
+- Standalone `cd dir` at command start or after separators
+
+**Does NOT trigger on**:
+- `(cd dir && cmd)` - subshell pattern (correct usage)
+- Commands without cd
 
 **Benefits**:
-- Maintains consistent working directory throughout session
-- Makes commands more explicit and easier to understand
-- Reduces context-switching and potential errors
+- Prevents global working directory changes that affect the session
+- Encourages explicit absolute paths for clarity
+- Promotes subshell isolation when cd is necessary
 - Better for debugging and command history
 
-**Example guidance**:
-- `cd /foo/bar && pytest tests` → `pytest /foo/bar/tests`
-- `(cd src && npm build)` → `npm build --prefix /path/to/src`
-- `cd project && git status` → `git -C /path/to/project status`
+**Recommended patterns**:
+- ✅ Best: `pytest /foo/bar/tests` (absolute path)
+- ✅ OK: `(cd /foo/bar && pytest tests)` (subshell isolation)
+- ❌ Bad: `cd /foo/bar && pytest tests` (global change)
 
 ### auto-unsandbox-pbcopy.py
 

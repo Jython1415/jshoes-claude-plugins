@@ -22,16 +22,23 @@ def main():
     tool_input = input_data.get("tool_input", {})
     command = tool_input.get("command", "")
 
-    # Patterns to detect cd usage:
-    # 1. (cd dir && cmd) - subshell pattern
-    # 2. cd dir && cmd - sequential pattern
-    # 3. cd dir; cmd - semicolon pattern
-    # 4. standalone cd dir
+    # Patterns to detect WRONG cd usage (non-subshell):
+    # Only warn about:
+    # 1. cd dir && cmd - sequential pattern (global directory change)
+    # 2. cd dir; cmd - semicolon pattern (global directory change)
+    # 3. standalone cd dir
+    #
+    # DO NOT warn about:
+    # - (cd dir && cmd) - subshell pattern (this is CORRECT per CLAUDE-global.md)
 
-    # Check for cd patterns
+    # First check if there's a subshell cd pattern - this is OK
+    if re.search(r'\(\s*cd\s+', command):
+        print("{}")
+        sys.exit(0)
+
+    # Now check for non-subshell cd patterns (the BAD ones)
     cd_patterns = [
-        r'\(\s*cd\s+',           # (cd ...
-        r'(?:^|;|\||&&)\s*cd\s+',  # cd at start or after separator
+        r'(?:^|;|\||&&)\s*cd\s+',  # cd at start or after separator (but not in subshell)
     ]
 
     has_cd = any(re.search(pattern, command) for pattern in cd_patterns)
@@ -48,31 +55,31 @@ def main():
     output = {
         "hookSpecificOutput": {
             "hookEventName": "PreToolUse",
-            "additionalContext": f"""CD PATTERN DETECTED: The command uses `cd` to change directories.
+            "additionalContext": f"""GLOBAL CD DETECTED: The command uses `cd` which changes the working directory globally.
 
-**Best Practice**: Maintain your current working directory and use absolute paths instead.
+**Best Practice**: Use absolute paths or subshell pattern instead.
 
-**Why avoid cd?**
-- Preserves current working directory throughout the session
-- Makes commands more explicit and easier to understand
-- Reduces context-switching and potential errors
-- Better for command history and debugging
+**Why avoid global cd?**
+- Changes working directory for the entire session
+- Can cause confusion and errors in subsequent commands
+- Makes command history harder to follow
 
-**Recommended Approach**:
-Instead of: `cd {target_dir} && <command>`
-Use: `<command> /absolute/path/to/target`
+**Recommended Approaches**:
 
-**Examples**:
-❌ Bad:  `cd /foo/bar && pytest tests`
-✅ Good: `pytest /foo/bar/tests`
+1. **Use absolute paths** (best):
+   ✅ `pytest /foo/bar/tests`
+   ✅ `npm build --prefix /path/to/src`
+   ✅ `git -C /path/to/project status`
 
-❌ Bad:  `(cd src && npm build)`
-✅ Good: `npm build --prefix /path/to/src` (or run from src directory)
+2. **Use subshell pattern** (if cd is necessary):
+   ✅ `(cd {target_dir} && <command>)`
 
-❌ Bad:  `cd project && git status`
-✅ Good: `git -C /path/to/project status`
+   The subshell `()` ensures the directory change is isolated and doesn't affect the session.
 
-**Note**: Only use `cd` if the user explicitly requests it, or if the tool/command requires being run from a specific directory without an alternative."""
+**Your command**:
+❌ Current: `cd {target_dir} && ...`
+✅ Better:  Use absolute paths with the command
+✅ OK:     `(cd {target_dir} && ...)` (subshell keeps change isolated)"""
         }
     }
 
