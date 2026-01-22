@@ -10,6 +10,7 @@ Custom hooks for enhancing Claude Code CLI behavior.
 | `prefer-modern-tools.py` | PreToolUse (Bash) | Suggests fd/rg instead of find/grep |
 | `detect-cd-pattern.py` | PreToolUse (Bash) | Warns on global cd, allows subshell pattern |
 | `auto-unsandbox-pbcopy.py` | PreToolUse (Bash) | Auto-approves and unsandboxes pbcopy |
+| `prefer-gh-for-own-repos.py` | PreToolUse (WebFetch/Bash) | Suggests gh CLI for Jython1415's repositories |
 | `gh-fallback-helper.py` | PostToolUseFailure (Bash) | Guides Claude to use GitHub API when gh CLI unavailable |
 | `gpg-signing-helper.py` | PostToolUse/PostToolUseFailure (Bash) | Guides Claude on GPG signing issues |
 | `detect-heredoc-errors.py` | PostToolUse/PostToolUseFailure (Bash) | Provides heredoc workarounds |
@@ -85,6 +86,52 @@ Custom hooks for enhancing Claude Code CLI behavior.
 - Detects commands containing `pbcopy`
 - Auto-approves the permission
 - Sets `dangerouslyDisableSandbox: true`
+
+### prefer-gh-for-own-repos.py
+
+**Event**: PreToolUse (WebFetch, Bash)
+
+**Purpose**: Suggests using `gh` CLI when Claude tries to access GitHub repositories owned by Jython1415 via WebFetch or curl.
+
+**Behavior**:
+- Detects when WebFetch or Bash (curl) is used to access GitHub URLs for Jython1415's repositories
+- Checks if `gh` CLI is available using system PATH lookup (cross-platform)
+- If `gh` is available, provides guidance to use it instead
+- Includes 60-second cooldown mechanism to avoid duplicate suggestions when Claude intentionally uses fetch back-to-back
+- After cooldown expires, suggestions resume if behavior reverts to fetch/curl
+
+**Triggers on**:
+- WebFetch with URLs containing `github.com/Jython1415/`, `api.github.com/repos/Jython1415/`, or `raw.githubusercontent.com/Jython1415/`
+- Bash commands with curl accessing the above URLs
+
+**Does NOT trigger when**:
+- `gh` CLI is not available (falls back to API access)
+- Within 60-second cooldown period since last suggestion
+- Accessing repositories owned by other users
+- Using non-GitHub URLs
+
+**Benefits**:
+- `gh` CLI provides a more direct interface for GitHub operations
+- Better integration with GitHub authentication
+- Simpler syntax for common operations
+- Acknowledges that API access might be intentional for specific use cases
+
+**Example suggestions**:
+- View issue: `gh issue view 10 --repo Jython1415/repo`
+- List PRs: `gh pr list --repo Jython1415/repo`
+- Get JSON: `gh issue view 10 --json title,body,comments --repo Jython1415/repo`
+
+**State management**:
+- Cooldown state stored in: `~/.claude/hook-state/prefer-gh-cooldown`
+- Contains Unix timestamp of last suggestion
+- Safe to delete if behavior needs to be reset
+- Prevents duplicate suggestions when Claude uses fetch multiple times consecutively
+- Allows suggestions to resume after 60 seconds if behavior reverts
+
+**Limitations**:
+- Only detects WebFetch and curl commands (not wget or other HTTP clients)
+- Curl command parsing is best-effort; complex commands with multiple URLs may not be detected correctly
+- Owner matching is case-sensitive ("Jython1415" only, not "jython1415")
 
 ### gh-fallback-helper.py
 
@@ -290,6 +337,21 @@ The `detect-cd-pattern.py` hook has 14 tests covering:
 - ✅ JSON validity in all cases
 - ✅ Correct event name in warnings
 - ✅ Target directory included in guidance
+
+### Test Coverage for prefer-gh-for-own-repos
+
+The `prefer-gh-for-own-repos.py` hook has 37 tests covering:
+- ✅ WebFetch detection: GitHub URLs for Jython1415 repos trigger suggestion
+- ✅ Bash/curl detection: curl commands with GitHub API URLs trigger suggestion
+- ✅ Owner filtering: Only Jython1415's repos trigger (case-sensitive)
+- ✅ gh availability: No suggestion when gh CLI unavailable
+- ✅ Cooldown mechanism: Duplicate suggestions prevented within 60 seconds
+- ✅ Cooldown expiry: Suggestions resume after cooldown period
+- ✅ Non-matching tools: Read, Edit, Glob don't trigger
+- ✅ Edge cases: Empty URLs, missing fields, malformed URLs handled
+- ✅ URL patterns: Various GitHub URL formats detected correctly
+- ✅ JSON validity and event name correctness
+- ✅ Suggestion content: Mentions gh commands, owner, and examples
 
 ## Adding New Hooks
 
