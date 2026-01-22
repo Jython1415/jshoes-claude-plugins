@@ -176,6 +176,10 @@
             "type": "command",
             "command": "uv run --script ~/.claude/hooks/detect-heredoc-errors.py",
             "timeout": 10
+          },
+          {
+            "type": "command",
+            "command": "uv run --script ~/.claude/hooks/suggest-uv-for-missing-deps.py"
           }
         ]
       }

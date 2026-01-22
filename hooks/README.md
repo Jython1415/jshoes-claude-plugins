@@ -14,6 +14,7 @@ Custom hooks for enhancing Claude Code CLI behavior.
 | `gh-fallback-helper.py` | PostToolUseFailure (Bash) | Guides Claude to use GitHub API when gh CLI unavailable |
 | `gpg-signing-helper.py` | PostToolUse/PostToolUseFailure (Bash) | Guides Claude on GPG signing issues |
 | `detect-heredoc-errors.py` | PostToolUse/PostToolUseFailure (Bash) | Provides heredoc workarounds |
+| `suggest-uv-for-missing-deps.py` | PostToolUseFailure (Bash) | Suggests uv run with PEP 723 for import errors |
 
 ## Hook Details
 
@@ -180,6 +181,53 @@ Custom hooks for enhancing Claude Code CLI behavior.
 1. Multiple `-m` flags for git commits
 2. ANSI-C quoting (`$'...'`) for inline strings
 3. Write tool to create files first
+
+### suggest-uv-for-missing-deps.py
+
+**Event**: PostToolUseFailure (Bash)
+
+**Purpose**: Detects Python import/module errors and suggests using `uv run` with PEP 723 inline dependencies.
+
+**Triggers on**:
+- `ModuleNotFoundError: No module named 'package'`
+- `ImportError: cannot import name ...`
+- `No module named 'package'`
+
+**Detection criteria**:
+- Only triggers on actual import/module errors
+- Only triggers for Python script execution (e.g., `python script.py`, `python "my script.py"`)
+- Supports quoted paths with spaces
+- Does NOT trigger for:
+  - `python -m module` (module execution)
+  - `python -c "code"` (one-liners)
+  - `python --version`, `--help` (utility commands)
+  - `python -S script.py` (flags before script - intentional limitation)
+  - Other Python errors (SyntaxError, NameError, etc.)
+  - Non-Bash tools
+
+**Guidance provided**:
+1. How to add PEP 723 header with inline dependencies
+2. How to run with `uv run --script`
+3. Benefits of using uv run (sandbox compatibility, reproducibility)
+4. Alternative: `pip install` for system Python usage
+
+**Example**:
+When `python analyze.py` fails with `ModuleNotFoundError: No module named 'pandas'`, the hook suggests:
+```python
+# /// script
+# dependencies = ["pandas", "requests>=2.28.0"]
+# ///
+
+import pandas as pd
+# ... rest of script
+```
+Then run with: `uv run --script analyze.py`
+
+**Benefits**:
+- Zero false positives (only triggers on actual dependency errors)
+- Educates at the right moment (when problem occurs)
+- Provides actionable guidance with code examples
+- Supports sandbox mode workflows
 
 ## Development Guidelines
 
