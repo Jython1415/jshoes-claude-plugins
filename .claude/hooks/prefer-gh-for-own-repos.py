@@ -3,15 +3,51 @@
 # dependencies = []
 # ///
 """
-Suggest using `gh` CLI when working with Jython1415's repositories.
+prefer-gh-for-own-repos: Suggest using `gh` CLI when working with Jython1415's repositories.
 
-This hook detects when Claude tries to use WebFetch or curl to access
-GitHub API for repositories owned by Jython1415, and suggests using `gh`
-CLI instead when it's available.
+Event: PreToolUse (WebFetch, Bash)
 
-Includes cooldown mechanism to avoid duplicate suggestions when Claude
-intentionally uses fetch back-to-back, but will suggest again if the
-behavior reverts after a while.
+Purpose: Suggests using `gh` CLI when Claude tries to access GitHub repositories owned by Jython1415 via WebFetch or curl.
+
+Behavior:
+- Detects when WebFetch or Bash (curl) is used to access GitHub URLs for Jython1415's repositories
+- Checks if `gh` CLI is available using system PATH lookup (cross-platform)
+- If `gh` is available, provides guidance to use it instead
+- Includes 60-second cooldown mechanism to avoid duplicate suggestions when Claude intentionally uses fetch back-to-back
+- After cooldown expires, suggestions resume if behavior reverts to fetch/curl
+
+Triggers on:
+- WebFetch with URLs containing `github.com/Jython1415/`, `api.github.com/repos/Jython1415/`, or `raw.githubusercontent.com/Jython1415/`
+- Bash commands with curl accessing the above URLs
+
+Does NOT trigger when:
+- `gh` CLI is not available (falls back to API access)
+- Within 60-second cooldown period since last suggestion
+- Accessing repositories owned by other users
+- Using non-GitHub URLs
+
+Benefits:
+- `gh` CLI provides a more direct interface for GitHub operations
+- Better integration with GitHub authentication
+- Simpler syntax for common operations
+- Acknowledges that API access might be intentional for specific use cases
+
+Example suggestions:
+- View issue: `gh issue view 10 --repo Jython1415/repo`
+- List PRs: `gh pr list --repo Jython1415/repo`
+- Get JSON: `gh issue view 10 --json title,body,comments --repo Jython1415/repo`
+
+State management:
+- Cooldown state stored in: `~/.claude/hook-state/prefer-gh-cooldown`
+- Contains Unix timestamp of last suggestion
+- Safe to delete if behavior needs to be reset
+- Prevents duplicate suggestions when Claude uses fetch multiple times consecutively
+- Allows suggestions to resume after 60 seconds if behavior reverts
+
+Limitations:
+- Only detects WebFetch and curl commands (not wget or other HTTP clients)
+- Curl command parsing is best-effort; complex commands with multiple URLs may not be detected correctly
+- Owner matching is case-sensitive ("Jython1415" only, not "jython1415")
 """
 import json
 import sys

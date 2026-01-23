@@ -3,12 +3,56 @@
 # dependencies = []
 # ///
 """
-Direct Claude to use modern alternatives when available:
-- fd instead of find
-- rg (ripgrep) instead of grep
+prefer-modern-tools: Direct Claude to use modern alternatives for find and grep.
 
-This hook checks for these commands in Bash tool use and provides
-guidance to use faster, more user-friendly alternatives.
+Event: PreToolUse (Bash)
+
+Purpose: Directs Claude to use modern, faster alternatives for common commands when available,
+improving performance and user experience.
+
+Behavior:
+- Detects usage of `find` command → suggests `fd` if available
+- Detects usage of `grep` command → suggests `rg` (ripgrep) if available
+- Checks tool availability dynamically using `which` command
+- Provides context-aware guidance with example syntax
+- Only triggers if the modern alternative tool is installed
+
+Triggers on:
+- Commands using `find` (e.g., `find . -name "*.py"`, `find /path -type f`)
+- Commands using `grep` (e.g., `grep -r "pattern" .`, `grep -n "text"`)
+- Tools are checked for availability dynamically in user's PATH
+
+Does NOT trigger when:
+- Requested tool not found in PATH (silent, no nagging)
+- Command is empty or missing
+- Non-Bash tools (Read, Edit, Write, etc.)
+- Within `grep` detection: if command already uses `rg` (ripgrep)
+
+Suggestions provided:
+- fd: Faster file search, simpler syntax, respects .gitignore by default
+- rg: Significantly faster grep, respects .gitignore, better output formatting
+
+Benefits:
+- `fd`: Faster file search with more intuitive syntax than find
+  - Respects .gitignore by default (use -H -I to include hidden/ignored files)
+  - Simpler pattern syntax (e.g., `fd "*.py"` instead of `find . -name "*.py"`)
+  - Better performance on large directory trees
+- `rg`: Significantly faster than grep, especially on large codebases
+  - Respects .gitignore by default
+  - Better default output formatting with colors and context
+  - Supports regex patterns with better syntax
+  - Works well with piping and complex commands
+
+Limitations:
+- Only suggests if tool is available (doesn't fail if tool isn't installed)
+- Detection is command-based, not intelligent about context
+- Won't suggest if user explicitly needs standard POSIX find/grep for compatibility
+- Silent if suggested tool isn't in PATH (respects user's environment)
+
+Examples:
+- `find . -name "*.py"` → suggests `fd "*.py"` or `fd -e py`
+- `grep -r "pattern" .` → suggests `rg "pattern"`
+- `find /path -type f -exec` → suggests `fd` with appropriate flags
 """
 import json
 import sys

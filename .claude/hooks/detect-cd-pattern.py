@@ -3,8 +3,41 @@
 # dependencies = []
 # ///
 """
-Detect cd usage patterns and suggest using absolute paths instead.
-Promotes better practices by avoiding directory changes in Bash commands.
+detect-cd-pattern: Detect global cd patterns and suggest using absolute paths or subshell isolation.
+
+Event: PreToolUse (Bash)
+
+Purpose: Detects when global `cd` patterns are used and suggests using absolute paths or subshell patterns instead.
+
+Behavior:
+- Warns on global cd patterns: `cd dir && cmd`, `cd dir; cmd`, standalone `cd dir`
+- Allows (silent) subshell pattern: `(cd dir && cmd)` - this is the correct pattern per CLAUDE-global.md
+- Provides guidance on using absolute paths (best) or subshell pattern (acceptable)
+- Explains why global cd changes are problematic
+
+Triggers on:
+- `cd dir && cmd` - global directory change
+- `cd dir; cmd` - global directory change with semicolon
+- Standalone `cd dir` at command start or after separators
+
+Does NOT trigger on:
+- `(cd dir && cmd)` - subshell pattern (correct usage)
+- Commands without cd
+
+Benefits:
+- Prevents global working directory changes that affect the session
+- Encourages explicit absolute paths for clarity
+- Promotes subshell isolation when cd is necessary
+- Better for debugging and command history
+
+Recommended patterns:
+- Best: `pytest /foo/bar/tests` (absolute path)
+- OK: `(cd /foo/bar && pytest tests)` (subshell isolation)
+- Bad: `cd /foo/bar && pytest tests` (global change)
+
+Limitations:
+- Command pattern detection is regex-based; unusual command structures may not be detected
+- Only monitors Bash tool (not other command execution methods)
 """
 import json
 import sys

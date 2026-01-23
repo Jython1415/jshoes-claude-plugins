@@ -2,7 +2,38 @@
 # /// script
 # dependencies = []
 # ///
-"""Auto-approve pbcopy commands and disable sandbox for them."""
+"""
+auto-unsandbox-pbcopy: Automatically approves pbcopy commands and disables sandbox for them.
+
+Event: PreToolUse (Bash)
+
+Purpose: Automatically approves pbcopy commands and disables sandbox for them, since pbcopy
+requires unsandboxed mode to function.
+
+Behavior:
+- Detects commands containing `pbcopy`
+- Auto-approves the command with permission decision
+- Sets `dangerouslyDisableSandbox: true` to allow pbcopy to work
+- Outputs permission decision with clear reasoning
+
+Triggers on:
+- Bash commands containing `pbcopy` (any part of the command)
+- Examples: `echo "text" | pbcopy`, `cat file | pbcopy`, `pbcopy < file.txt`
+
+Does NOT trigger when:
+- Non-Bash tools (Read, Write, Edit, etc.)
+- Commands that don't contain `pbcopy`
+
+Benefits:
+- Streamlines clipboard operations without manual sandbox approval
+- Enables pbcopy-dependent workflows (e.g., copy command output to clipboard)
+- Provides clear reasoning for the auto-approval
+
+Limitations:
+- Only detects `pbcopy` in command string (case-sensitive)
+- No additional validation of command syntax
+- Only available on macOS (pbcopy is a macOS utility)
+"""
 import json
 import sys
 

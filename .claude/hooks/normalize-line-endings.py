@@ -2,7 +2,40 @@
 # /// script
 # dependencies = []
 # ///
-"""Normalize CRLF/CR line endings to LF in Write/Edit operations."""
+"""
+normalize-line-endings: Automatically normalize line endings to LF (Unix-style).
+
+Event: PreToolUse (Write, Edit)
+
+Purpose: Ensures consistent LF line endings when writing or editing files, converting
+any CRLF (Windows) or CR (old Mac) line endings to LF (Unix-style).
+
+Behavior:
+- Detects CRLF (\\r\\n) or CR (\\r) characters in content
+- Converts all line endings to LF (\\n)
+- Auto-approves the operation with normalized content
+- Returns empty JSON if no line ending conversion needed
+
+Triggers on:
+- Write tool with content containing CRLF or CR
+- Edit tool with content containing CRLF or CR
+
+Does NOT trigger when:
+- Content already uses LF line endings
+- Content is empty or missing
+- Tool is not Write or Edit
+
+Benefits:
+- Ensures consistent line endings across the codebase
+- Prevents issues with diff tools that are sensitive to line endings
+- Avoids merge conflicts caused by line ending differences
+- Maintains Unix-style conventions in version control
+
+Limitations:
+- Only handles the three common line ending types (CRLF, CR, LF)
+- Does not warn about the conversion (happens silently)
+- May normalize intentional line endings if they were mixed-style
+"""
 import json
 import sys
 

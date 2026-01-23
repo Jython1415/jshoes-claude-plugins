@@ -3,20 +3,64 @@
 # dependencies = []
 # ///
 """
-Detect Python import/module errors and suggest using uv run with PEP 723.
-Only triggers when there's an actual dependency problem.
+suggest-uv-for-missing-deps: Detect Python import/module errors and suggest using uv run with PEP 723.
+
+Event: PostToolUseFailure (Bash)
+
+Purpose: Detects Python import/module errors and suggests using `uv run` with PEP 723 inline dependencies
+as a solution for missing dependencies.
+
+Behavior:
+- Detects Python ModuleNotFoundError, ImportError, and "No module named" errors
+- Only triggers on actual dependency problems (zero false positives)
+- Extracts the missing module name from error output when possible
+- Suggests appropriate solution based on uv availability
+- Provides PEP 723 header format for reusable scripts
+- Gracefully handles quoted paths with spaces
 
 Triggers on:
-- ModuleNotFoundError, ImportError, "No module named" errors
-- Direct script execution: python script.py, python3 /path/to/script.py
-- Quoted paths: python "my script.py", python 'test.py'
+- `ModuleNotFoundError: No module named 'package'`
+- `ImportError: cannot import name ...`
+- `No module named 'package'`
+- Direct script execution: `python script.py`, `python3 /path/to/script.py`
+- Quoted paths with spaces: `python "my script.py"`, `python 'test.py'`
 
-Does NOT trigger on:
-- python -m module (module execution)
-- python -c "code" (one-liners)
-- python --version, --help (utility commands)
-- python -S script.py (flags before script - intentional limitation)
-- Non-import errors (SyntaxError, NameError, etc.)
+Does NOT trigger when:
+- `python -m module` (module execution)
+- `python -c "code"` (one-liners)
+- `python --version`, `--help` (utility commands)
+- `python -S script.py` (flags before script - intentional limitation)
+- Other Python errors (SyntaxError, NameError, etc.)
+- Non-Bash tools
+
+Guidance provided:
+1. Quick fix using `uv run --with package` if uv is available
+2. Reusable solution with PEP 723 header format
+3. Alternative pip install method for system Python
+4. Link to uv documentation if uv is not available
+
+Example:
+When `python analyze.py` fails with `ModuleNotFoundError: No module named 'pandas'`, the hook suggests:
+```python
+# /// script
+# dependencies = ["pandas"]
+# ///
+```
+Then run with: `uv run --script analyze.py`
+
+Benefits:
+- Zero false positives (only triggers on actual dependency errors)
+- Educates at the right moment (when problem occurs)
+- Provides actionable guidance with code examples
+- Supports sandbox mode workflows
+- Works with both uv and pip-based approaches
+- Token-efficient guidance based on available tools
+
+Limitations:
+- Only monitors Bash tool (not direct Python execution from other tools)
+- Module name extraction is regex-based; complex error formats may not be parsed correctly
+- Flags before script (e.g., `python -S script.py`) are not supported
+- Only handles direct script execution, not module imports from interactive prompts
 """
 import json
 import sys
