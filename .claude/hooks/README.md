@@ -7,6 +7,7 @@ Custom hooks for enhancing Claude Code CLI behavior.
 | Hook | Event | Purpose |
 |------|-------|---------|
 | `normalize-line-endings.py` | PreToolUse (Write/Edit) | Converts CRLF/CR to LF |
+| `gh-authorship-attribution.py` | PreToolUse (Bash) | Ensures proper attribution for AI-assisted GitHub contributions |
 | `prefer-modern-tools.py` | PreToolUse (Bash) | Suggests fd/rg instead of find/grep |
 | `detect-cd-pattern.py` | PreToolUse (Bash) | Warns on global cd, allows subshell pattern |
 | `auto-unsandbox-pbcopy.py` | PreToolUse (Bash) | Auto-approves and unsandboxes pbcopy |

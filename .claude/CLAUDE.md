@@ -16,3 +16,54 @@ If a task will take more than 5–8 tool calls, then prefer to hand it off to a 
 If you create any temporary new files, scripts, or helper files for iteration, clean up these files by removing them at the end of the task.
 
 Take ownership over the tasks in the repositories and projects you manage, responding in ways that lessen the user's mental overhead.
+
+## Testing Philosophy for Hooks
+
+When writing tests for hooks in this repository:
+
+### Test Behavior, Not Content
+
+**DO**:
+- Verify that guidance is presented when expected
+- Test trigger conditions (what activates the hook)
+- Validate JSON output structure
+- Check that hook activates/deactivates correctly
+
+**DON'T**:
+- Validate specific strings or phrases in guidance text
+- Check for particular examples in output
+- Assert on exact wording or formatting
+- Test content that may evolve over time
+
+### Rationale
+
+Guidance messages should be improvable without breaking tests. Tests should validate that hooks work correctly, not freeze the specific content of their messages.
+
+### Examples
+
+❌ **Bad Test** (brittle, tests content):
+```python
+def test_guidance_includes_examples():
+    output = run_hook("Bash", 'git commit -m "Test"')
+    context = output["hookSpecificOutput"]["additionalContext"]
+    assert "Co-authored-by" in context  # Breaks if wording changes
+    assert "claude.ai/code" in context  # Brittle
+```
+
+✅ **Good Test** (robust, tests behavior):
+```python
+def test_guidance_presented_for_commit():
+    output = run_hook("Bash", 'git commit -m "Test"')
+    assert "hookSpecificOutput" in output  # Hook triggered
+    assert "additionalContext" in output["hookSpecificOutput"]  # Guidance exists
+    assert len(output["hookSpecificOutput"]["additionalContext"]) > 0  # Non-empty
+```
+
+### Test Categories
+
+1. **Trigger Tests**: Verify hook activates on correct inputs
+2. **Non-Trigger Tests**: Verify hook stays silent on incorrect inputs
+3. **Structure Tests**: Validate JSON format and required fields
+4. **Edge Case Tests**: Handle malformed input, missing fields, etc.
+
+This philosophy applies to all hooks in `.claude/hooks/`.
