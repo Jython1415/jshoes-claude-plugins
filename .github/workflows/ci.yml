@@ -23,8 +23,21 @@ jobs:
       with:
         enable-cache: true
 
+    - name: Debug environment
+      run: |
+        echo "Python version:"
+        python --version
+        echo "UV version:"
+        uv --version
+        echo "UV location:"
+        which uv
+        echo "PATH:"
+        echo $PATH
+        echo "Installed packages:"
+        uv pip list
+
     - name: Sync dependencies
       run: uv sync --all-groups
 
     - name: Run tests
-      run: uv run pytest
+      run: uv run pytest -v --tb=short
