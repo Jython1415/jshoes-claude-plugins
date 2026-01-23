@@ -18,6 +18,9 @@ echo "================================"
 echo "Repository: $SCRIPT_DIR"
 echo "Target: $CLAUDE_DIR"
 echo ""
+echo "This setup script creates symlinks for Claude Code CLI."
+echo "For Claude Code Web, configuration in .claude/ is automatically available."
+echo ""
 
 # Create backup
 BACKUP_DIR="$HOME/.claude-backup-$(date +%Y%m%d-%H%M%S)"
@@ -53,10 +56,10 @@ mkdir -p "$CLAUDE_DIR/plugins"
 # Create symlinks
 echo ""
 echo "Creating symlinks..."
-create_symlink "$SCRIPT_DIR/settings.json" "$CLAUDE_DIR/settings.json"
-create_symlink "$SCRIPT_DIR/CLAUDE-global.md" "$CLAUDE_DIR/CLAUDE.md"
-create_symlink "$SCRIPT_DIR/hooks" "$CLAUDE_DIR/hooks"
-create_symlink "$SCRIPT_DIR/plugins/installed_plugins.json" "$CLAUDE_DIR/plugins/installed_plugins.json"
+create_symlink "$SCRIPT_DIR/.claude/settings.json" "$CLAUDE_DIR/settings.json"
+create_symlink "$SCRIPT_DIR/.claude/CLAUDE.md" "$CLAUDE_DIR/CLAUDE.md"
+create_symlink "$SCRIPT_DIR/.claude/hooks" "$CLAUDE_DIR/hooks"
+create_symlink "$SCRIPT_DIR/.claude/plugins/installed_plugins.json" "$CLAUDE_DIR/plugins/installed_plugins.json"
 
 # Verify symlinks
 echo ""
@@ -66,9 +69,15 @@ ls -la "$CLAUDE_DIR" | grep -E '(settings.json|CLAUDE.md|hooks)' || true
 echo ""
 echo "Setup complete!"
 echo ""
-echo "Next steps:"
+echo "Next steps for CLI users:"
 echo "1. Restart Claude Code: /exit then 'claude'"
 echo "2. Verify configuration loaded correctly"
 echo "3. Test hooks are working"
 echo ""
-echo "Backup saved at: $BACKUP_DIR"
+echo "For Claude Code Web users:"
+echo "Configuration in .claude/ is automatically available when you use this repository."
+echo "No additional setup required!"
+echo ""
+if [[ -d "$BACKUP_DIR" ]]; then
+    echo "Backup saved at: $BACKUP_DIR"
+fi

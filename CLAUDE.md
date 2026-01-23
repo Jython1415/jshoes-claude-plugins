@@ -1,12 +1,24 @@
 # Claude Code Configuration Repository
 
-This repository contains version-controlled configuration for Claude Code CLI.
+This repository contains version-controlled configuration for **Claude Code CLI and Web**.
 
 ## Repository Structure
-- `settings.json` - Core configuration (permissions, hooks, model selection)
-- `CLAUDE-global.md` - Global user instructions (symlinked as ~/.claude/CLAUDE.md)
-- `hooks/` - Custom hook scripts
-- `plugins/` - Plugin configuration
+- `.claude/` - Configuration directory (works for both CLI and Web)
+  - `settings.json` - Core configuration (permissions, hooks, model selection)
+  - `CLAUDE.md` - Global user instructions
+  - `hooks/` - Custom hook scripts
+  - `plugins/` - Plugin configuration
+- `setup.sh` - Setup script for CLI (creates symlinks from ~/.claude/ to .claude/)
+
+## How It Works
+
+**For Claude Code Web:**
+- Configuration in `.claude/` is automatically available (project scope)
+- No additional setup required when using this repository
+
+**For Claude Code CLI:**
+- Run `./setup.sh` to create symlinks from `~/.claude/` to `.claude/`
+- Allows version-controlled configuration on your local machine
 
 ## Self-Management Instructions for Claude
 
@@ -16,7 +28,7 @@ When working in this repository, you are managing the user's Claude Code configu
 - Hooks are Python scripts with PEP 723 inline dependency declarations
 - All hooks must output valid JSON (even empty `{}` when no action needed)
 - Use `uv run --script` to execute hooks
-- Test hooks manually before committing: `echo '{"test":"data"}' | uv run --script hooks/hookname.py`
+- Test hooks manually before committing: `echo '{"test":"data"}' | uv run --script .claude/hooks/hookname.py`
 
 ### Hook Development Guidelines
 1. Always include PEP 723 header with dependencies
@@ -24,10 +36,10 @@ When working in this repository, you are managing the user's Claude Code configu
 3. For PostToolUseFailure hooks, check both `error` and `tool_result.error` fields
 4. Use `additionalContext` for guidance, not `decision` in PostToolUseFailure
 5. Test locally before deploying
-6. Document hook behavior in hooks/README.md
+6. Document hook behavior in .claude/hooks/README.md
 
 ### Modifying Settings
-- Edit `settings.json` directly
+- Edit `.claude/settings.json` directly
 - Validate JSON syntax before committing
 - Test permission changes carefully
 - Document why permissions were added/changed in commit messages
