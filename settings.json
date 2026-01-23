@@ -122,6 +122,10 @@
         "hooks": [
           {
             "type": "command",
+            "command": "uv run --script ~/.claude/hooks/gh-web-fallback.py"
+          },
+          {
+            "type": "command",
             "command": "uv run --script ~/.claude/hooks/prefer-modern-tools.py"
           },
           {
