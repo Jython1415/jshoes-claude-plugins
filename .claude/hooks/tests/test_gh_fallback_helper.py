@@ -11,6 +11,8 @@ import subprocess
 import sys
 from pathlib import Path
 
+import pytest
+
 # Path to the hook script
 HOOK_PATH = Path(__file__).parent.parent / "gh-fallback-helper.py"
 
@@ -76,28 +78,27 @@ class TestGhFallbackHelper:
     """Test suite for gh-fallback-helper hook"""
 
     # Basic functionality tests
-    def test_gh_command_not_found_with_token_posttooluse(self):
-        """PostToolUse: gh command not found with GITHUB_TOKEN should provide guidance"""
-        output = run_hook(
-            tool_name="Bash",
-            command="gh issue list",
-            tool_result_error="gh: command not found",
-            github_token="ghp_test123"
-        )
-        assert "hookSpecificOutput" in output, "Should return hook output"
-        assert "additionalContext" in output["hookSpecificOutput"]
-        context = output["hookSpecificOutput"]["additionalContext"]
-        assert "GH CLI NOT FOUND" in context
-        assert "GITHUB_TOKEN DETECTED" in context
+    @pytest.mark.parametrize("error_field,command", [
+        ("tool_result", "gh issue list"),
+        ("top_level", "gh pr create"),
+    ])
+    def test_gh_command_not_found_with_token(self, error_field, command):
+        """gh command not found with GITHUB_TOKEN should provide guidance (both error field locations)"""
+        if error_field == "tool_result":
+            output = run_hook(
+                tool_name="Bash",
+                command=command,
+                tool_result_error="gh: command not found",
+                github_token="ghp_test123"
+            )
+        else:  # top_level
+            output = run_hook(
+                tool_name="Bash",
+                command=command,
+                error="bash: gh: command not found",
+                github_token="ghp_test123"
+            )
 
-    def test_gh_command_not_found_with_token_posttooluse_failure(self):
-        """PostToolUseFailure: gh command not found with GITHUB_TOKEN should provide guidance"""
-        output = run_hook(
-            tool_name="Bash",
-            command="gh pr create",
-            error="bash: gh: command not found",
-            github_token="ghp_test123"
-        )
         assert "hookSpecificOutput" in output, "Should return hook output"
         assert "additionalContext" in output["hookSpecificOutput"]
         context = output["hookSpecificOutput"]["additionalContext"]
@@ -264,38 +265,21 @@ class TestGhFallbackHelper:
         assert "hookSpecificOutput" in output, "Hook triggers on substring match"
 
     # Error field location tests
-    def test_error_in_top_level_field(self):
-        """Should read error from top-level 'error' field (PostToolUseFailure)"""
+    @pytest.mark.parametrize("error_location,command,top_level_error,tool_result_error", [
+        ("top_level", "gh issue list", "gh: command not found", ""),
+        ("tool_result", "gh pr view 123", "", "gh: command not found"),
+        ("both", "gh issue create", "gh: command not found", "some other error"),
+    ])
+    def test_error_field_locations(self, error_location, command, top_level_error, tool_result_error):
+        """Should correctly read error from appropriate field(s)"""
         output = run_hook(
             tool_name="Bash",
-            command="gh issue list",
-            error="gh: command not found",  # Top-level
-            tool_result_error="",  # Not in tool_result
+            command=command,
+            error=top_level_error,
+            tool_result_error=tool_result_error,
             github_token="ghp_test123"
         )
-        assert "hookSpecificOutput" in output, "Should read from top-level error field"
-
-    def test_error_in_tool_result_field(self):
-        """Should read error from tool_result.error field (PostToolUse)"""
-        output = run_hook(
-            tool_name="Bash",
-            command="gh pr view 123",
-            error="",  # Not in top-level
-            tool_result_error="gh: command not found",  # In tool_result
-            github_token="ghp_test123"
-        )
-        assert "hookSpecificOutput" in output, "Should read from tool_result.error field"
-
-    def test_error_in_both_fields_prefers_top_level(self):
-        """When error in both fields, should prefer top-level error"""
-        output = run_hook(
-            tool_name="Bash",
-            command="gh issue create",
-            error="gh: command not found",  # Top-level has it
-            tool_result_error="some other error",  # tool_result has different error
-            github_token="ghp_test123"
-        )
-        assert "hookSpecificOutput" in output, "Should use top-level error when both present"
+        assert "hookSpecificOutput" in output, f"Should read error from {error_location} field"
 
     def test_no_error_fields(self):
         """No error in either field should return {}"""
@@ -309,77 +293,54 @@ class TestGhFallbackHelper:
         assert output == {}, "Should return {} when no error present"
 
     # Output content tests
-    def test_guidance_includes_curl_examples(self):
-        """Guidance should include curl command examples"""
+    @pytest.mark.parametrize("check_type,command,assertions", [
+        ("curl_examples", "gh issue list", [
+            ("curl", "Should include curl examples"),
+            ("Authorization: token $GITHUB_TOKEN", None),
+            ("api.github.com", None),
+        ]),
+        ("list_issues", "gh issue list", [
+            (["List issues", "list issues"], "list issues example"),
+            ("/repos/OWNER/REPO/issues", None),
+        ]),
+        ("create_pr", "gh pr create", [
+            (["pull request", "Create pull request"], "pull request example"),
+            ("/repos/OWNER/REPO/pulls", None),
+            ("POST", None),
+        ]),
+        ("api_docs", "gh api /repos/owner/repo", [
+            ("docs.github.com", "Should include API docs link"),
+        ]),
+        ("token_availability", "gh issue view 1", [
+            (["$GITHUB_TOKEN", "GITHUB_TOKEN"], "token mention"),
+            (["already available", "DETECTED"], "token availability"),
+        ]),
+        ("json_parsing", "gh api /user", [
+            (["jq", "json.tool"], "Should suggest JSON parsing tools"),
+        ]),
+    ])
+    def test_guidance_content(self, check_type, command, assertions):
+        """Guidance should include appropriate content checks"""
         output = run_hook(
             tool_name="Bash",
-            command="gh issue list",
+            command=command,
             error="gh: command not found",
             github_token="ghp_test123"
         )
         context = output["hookSpecificOutput"]["additionalContext"]
-        assert "curl" in context, "Should include curl examples"
-        assert "Authorization: token $GITHUB_TOKEN" in context
-        assert "api.github.com" in context
 
-    def test_guidance_includes_list_issues_example(self):
-        """Guidance should include example for listing issues"""
-        output = run_hook(
-            tool_name="Bash",
-            command="gh issue list",
-            error="gh: command not found",
-            github_token="ghp_test123"
-        )
-        context = output["hookSpecificOutput"]["additionalContext"]
-        assert "List issues" in context or "list issues" in context.lower()
-        assert "/repos/OWNER/REPO/issues" in context
-
-    def test_guidance_includes_create_pr_example(self):
-        """Guidance should include example for creating pull requests"""
-        output = run_hook(
-            tool_name="Bash",
-            command="gh pr create",
-            error="gh: command not found",
-            github_token="ghp_test123"
-        )
-        context = output["hookSpecificOutput"]["additionalContext"]
-        assert "pull request" in context.lower() or "Create pull request" in context
-        assert "/repos/OWNER/REPO/pulls" in context
-        assert "POST" in context
-
-    def test_guidance_includes_api_docs_link(self):
-        """Guidance should include link to GitHub API documentation"""
-        output = run_hook(
-            tool_name="Bash",
-            command="gh api /repos/owner/repo",
-            error="gh: command not found",
-            github_token="ghp_test123"
-        )
-        context = output["hookSpecificOutput"]["additionalContext"]
-        assert "docs.github.com" in context, "Should include API docs link"
-
-    def test_guidance_mentions_token_availability(self):
-        """Guidance should mention that GITHUB_TOKEN is available"""
-        output = run_hook(
-            tool_name="Bash",
-            command="gh issue view 1",
-            error="gh: command not found",
-            github_token="ghp_test123"
-        )
-        context = output["hookSpecificOutput"]["additionalContext"]
-        assert "$GITHUB_TOKEN" in context or "GITHUB_TOKEN" in context
-        assert "already available" in context or "DETECTED" in context
-
-    def test_guidance_includes_json_parsing_tip(self):
-        """Guidance should mention jq or python for JSON parsing"""
-        output = run_hook(
-            tool_name="Bash",
-            command="gh api /user",
-            error="gh: command not found",
-            github_token="ghp_test123"
-        )
-        context = output["hookSpecificOutput"]["additionalContext"]
-        assert "jq" in context or "json.tool" in context, "Should suggest JSON parsing tools"
+        for assertion_item in assertions:
+            if isinstance(assertion_item[0], list):
+                # Multiple options: check if any match
+                search_terms = assertion_item[0]
+                default_msg = assertion_item[1] if assertion_item[1] else f"Should contain one of {search_terms}"
+                found = any(term in context or term.lower() in context.lower() for term in search_terms)
+                assert found, default_msg
+            else:
+                # Single required string
+                search_term = assertion_item[0]
+                default_msg = assertion_item[1] if assertion_item[1] else f"Should contain: {search_term}"
+                assert search_term in context, default_msg
 
     # JSON output format tests
     def test_json_output_valid_with_guidance(self):

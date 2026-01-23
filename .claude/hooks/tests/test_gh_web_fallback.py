@@ -108,64 +108,45 @@ class TestGhWebFallback:
 
     # ========== Command Detection Tests ==========
 
-    def test_gh_command_at_start(self):
-        """Command starting with 'gh' should be detected"""
-        output = run_hook("gh issue list", gh_available=False, token_available=True)
-        assert "hookSpecificOutput" in output, "Should detect gh at start"
-
     @pytest.mark.parametrize("command", [
-        "git status | gh issue view 10",
-        "git status; gh issue list",
-        "cat file || gh pr view 10",
-        "git status && gh pr create",
+        "gh issue list",  # Command starting with gh
+        "git status | gh issue view 10",  # gh after pipe operator
+        "git status; gh issue list",  # gh after semicolon
+        "cat file || gh pr view 10",  # gh after || operator
+        "git status && gh pr create",  # gh after && operator
+        "git pull && gh issue view 5 && echo done",  # gh in middle of chain
     ])
-    def test_gh_command_after_shell_operators(self, command):
-        """gh commands after various shell operators (|, ;, &&, ||) should trigger"""
+    def test_gh_command_detection(self, command):
+        """Test detection of gh commands in various positions and shell operators"""
         output = run_hook(command, gh_available=False, token_available=True)
         assert "hookSpecificOutput" in output, f"Should detect gh in: {command}"
 
-    def test_no_trigger_on_sigh(self):
-        """'sigh' should NOT trigger (not a standalone gh command)"""
-        output = run_hook("echo sigh", gh_available=False, token_available=True)
-        assert output == {}, "Should not trigger on 'sigh'"
-
-    def test_no_trigger_on_high(self):
-        """'high' should NOT trigger (not a standalone gh command)"""
-        output = run_hook("echo high", gh_available=False, token_available=True)
-        assert output == {}, "Should not trigger on 'high'"
-
-    def test_complex_chained_command(self):
-        """Multiple commands with gh in middle should be detected"""
-        output = run_hook("git pull && gh issue view 5 && echo done", gh_available=False, token_available=True)
-        assert "hookSpecificOutput" in output, "Should detect gh in middle of chain"
+    @pytest.mark.parametrize("command", [
+        "echo sigh",  # 'sigh' contains 'gh' but not as standalone command
+        "echo high",  # 'high' ends with 'gh' but not as standalone command
+    ])
+    def test_no_trigger_false_positives(self, command):
+        """Test that partial matches like 'sigh' and 'high' don't trigger"""
+        output = run_hook(command, gh_available=False, token_available=True)
+        assert output == {}, f"Should not trigger on: {command}"
 
     # ========== Environment Detection Tests ==========
 
-    def test_triggers_when_gh_unavailable_token_available(self):
-        """Main success case: gh unavailable, token available"""
-        output = run_hook("gh issue list", gh_available=False, token_available=True)
-        assert "hookSpecificOutput" in output, "Should trigger when gh unavailable and token available"
-        assert "GitHub API" in output["hookSpecificOutput"]["additionalContext"]
-
-    def test_no_trigger_when_gh_available(self):
-        """When gh is available, should not suggest curl"""
-        output = run_hook("gh issue list", gh_available=True, token_available=True)
-        assert output == {}, "Should not suggest when gh is available"
-
-    def test_no_trigger_when_token_unavailable(self):
-        """When GITHUB_TOKEN not available, should not suggest"""
-        output = run_hook("gh issue list", gh_available=False, token_available=False)
-        assert output == {}, "Should not trigger without GITHUB_TOKEN"
-
-    def test_no_trigger_when_both_available(self):
-        """When both gh and token available, prefer-gh hook should handle it"""
-        output = run_hook("gh issue list", gh_available=True, token_available=True)
-        assert output == {}, "Should defer to prefer-gh hook"
-
-    def test_no_trigger_when_neither_available(self):
-        """When neither gh nor token available, should not suggest"""
-        output = run_hook("gh issue list", gh_available=False, token_available=False)
-        assert output == {}, "Should not trigger without either"
+    @pytest.mark.parametrize("gh_available,token_available,should_trigger,description", [
+        (False, True, True, "Main success case: gh unavailable, token available"),
+        (True, True, False, "When gh is available, should not suggest curl"),
+        (False, False, False, "When GITHUB_TOKEN not available, should not suggest"),
+        (True, False, False, "When token unavailable, should not suggest"),
+        (False, False, False, "When neither gh nor token available, should not suggest"),
+    ])
+    def test_environment_availability(self, gh_available, token_available, should_trigger, description):
+        """Test various combinations of gh and token availability"""
+        output = run_hook("gh issue list", gh_available=gh_available, token_available=token_available)
+        if should_trigger:
+            assert "hookSpecificOutput" in output, f"Failed: {description}"
+            assert "GitHub API" in output["hookSpecificOutput"]["additionalContext"], "Should mention GitHub API"
+        else:
+            assert output == {}, f"Failed: {description}"
 
     def test_token_empty_string_treated_as_unavailable(self):
         """Empty GITHUB_TOKEN should be treated as unavailable"""

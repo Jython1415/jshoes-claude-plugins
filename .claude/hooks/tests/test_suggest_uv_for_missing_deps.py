@@ -13,6 +13,8 @@ import sys
 import tempfile
 from pathlib import Path
 
+import pytest
+
 # Path to the hook script
 HOOK_PATH = Path(__file__).parent.parent / "suggest-uv-for-missing-deps.py"
 
@@ -87,30 +89,18 @@ def run_hook_success(tool_name: str, command: str = "echo test") -> dict:
 class TestSuggestUvForMissingDeps:
     """Test suite for suggest-uv-for-missing-deps hook"""
 
-    # PostToolUseFailure tests - ModuleNotFoundError
-    def test_module_not_found_error_triggers(self):
-        """ModuleNotFoundError should trigger hook"""
-        error_msg = "ModuleNotFoundError: No module named 'pandas'"
-        output = run_hook_with_error("Bash", "python script.py", error_msg, use_tool_result=False)
+    # PostToolUseFailure tests - Error trigger tests
+    @pytest.mark.parametrize("error_msg,command,description", [
+        ("ModuleNotFoundError: No module named 'pandas'", "python script.py", "ModuleNotFoundError should trigger hook"),
+        ("ImportError: cannot import name 'DataFrame' from 'pandas'", "python analyze.py", "ImportError should trigger hook"),
+        ("No module named 'requests'", "python fetch_data.py", "'No module named' error should trigger hook"),
+    ])
+    def test_dependency_error_triggers(self, error_msg, command, description):
+        """Dependency errors should trigger hook"""
+        output = run_hook_with_error("Bash", command, error_msg, use_tool_result=False)
 
         assert "hookSpecificOutput" in output
         assert "additionalContext" in output["hookSpecificOutput"]
-        assert "MISSING DEPENDENCY DETECTED" in output["hookSpecificOutput"]["additionalContext"]
-
-    def test_import_error_triggers(self):
-        """ImportError should trigger hook"""
-        error_msg = "ImportError: cannot import name 'DataFrame' from 'pandas'"
-        output = run_hook_with_error("Bash", "python analyze.py", error_msg, use_tool_result=False)
-
-        assert "hookSpecificOutput" in output
-        assert "MISSING DEPENDENCY DETECTED" in output["hookSpecificOutput"]["additionalContext"]
-
-    def test_no_module_named_triggers(self):
-        """'No module named' error should trigger hook"""
-        error_msg = "No module named 'requests'"
-        output = run_hook_with_error("Bash", "python fetch_data.py", error_msg, use_tool_result=False)
-
-        assert "hookSpecificOutput" in output
         assert "MISSING DEPENDENCY DETECTED" in output["hookSpecificOutput"]["additionalContext"]
 
     def test_module_name_extracted_from_error(self):
@@ -167,120 +157,47 @@ class TestSuggestUvForMissingDeps:
         assert "pandas" in output["hookSpecificOutput"]["additionalContext"]
 
     # Script execution detection tests
-    def test_python_script_execution_triggers(self):
-        """python script.py should trigger"""
+    @pytest.mark.parametrize("command,description", [
+        ("python script.py", "python script.py should trigger"),
+        ("python3 script.py", "python3 script.py should trigger"),
+        ("python /home/user/analysis/script.py", "python /path/to/script.py should trigger"),
+        ("python ./scripts/analyze.py", "python ./scripts/analyze.py should trigger"),
+    ])
+    def test_python_script_execution_variants_trigger(self, command, description):
+        """Python script execution should trigger hook"""
         error_msg = "ModuleNotFoundError: No module named 'pandas'"
-        output = run_hook_with_error("Bash", "python script.py", error_msg)
-
-        assert "hookSpecificOutput" in output
-
-    def test_python3_script_execution_triggers(self):
-        """python3 script.py should trigger"""
-        error_msg = "ModuleNotFoundError: No module named 'pandas'"
-        output = run_hook_with_error("Bash", "python3 script.py", error_msg)
-
-        assert "hookSpecificOutput" in output
-
-    def test_python_script_with_absolute_path_triggers(self):
-        """python /path/to/script.py should trigger"""
-        error_msg = "ModuleNotFoundError: No module named 'pandas'"
-        output = run_hook_with_error("Bash", "python /home/user/analysis/script.py", error_msg)
-
-        assert "hookSpecificOutput" in output
-
-    def test_python_script_with_relative_path_triggers(self):
-        """python ./scripts/analyze.py should trigger"""
-        error_msg = "ModuleNotFoundError: No module named 'pandas'"
-        output = run_hook_with_error("Bash", "python ./scripts/analyze.py", error_msg)
+        output = run_hook_with_error("Bash", command, error_msg)
 
         assert "hookSpecificOutput" in output
 
     # Exclude non-script python commands
-    def test_python_module_execution_skipped(self):
-        """python -m should not trigger (different use case)"""
-        error_msg = "ModuleNotFoundError: No module named 'pytest'"
-        output = run_hook_with_error("Bash", "python -m pytest tests/", error_msg)
-
-        assert output == {}
-
-    def test_python_one_liner_skipped(self):
-        """python -c should not trigger (not a script file)"""
-        error_msg = "ModuleNotFoundError: No module named 'json'"
-        output = run_hook_with_error("Bash", "python -c 'import json'", error_msg)
-
-        assert output == {}
-
-    def test_python_version_check_skipped(self):
-        """python --version should not trigger"""
-        error_msg = "ModuleNotFoundError: No module named 'sys'"
-        output = run_hook_with_error("Bash", "python --version", error_msg)
-
-        assert output == {}
-
-    def test_python_help_skipped(self):
-        """python --help should not trigger"""
-        error_msg = "ModuleNotFoundError: No module named 'argparse'"
-        output = run_hook_with_error("Bash", "python --help", error_msg)
-
-        assert output == {}
-
-    def test_python_interactive_skipped(self):
-        """python -i should not trigger"""
-        error_msg = "ModuleNotFoundError: No module named 'readline'"
-        output = run_hook_with_error("Bash", "python -i", error_msg)
-
-        assert output == {}
-
-    def test_which_python_skipped(self):
-        """which python should not trigger"""
-        error_msg = "ModuleNotFoundError: No module named 'os'"
-        output = run_hook_with_error("Bash", "which python", error_msg)
-
-        assert output == {}
-
-    def test_python_in_pipeline_skipped_if_not_script(self):
-        """python -c in a pipeline should not trigger"""
-        error_msg = "ModuleNotFoundError: No module named 'json'"
-        output = run_hook_with_error("Bash", "echo '{}' | python -c 'import json; print(json.loads(input()))'", error_msg)
-
-        assert output == {}
-
-    def test_python_with_flags_before_script_skipped(self):
-        """python -S script.py should not trigger (intentional limitation)"""
+    @pytest.mark.parametrize("command,description", [
+        ("python -m pytest tests/", "python -m should not trigger (different use case)"),
+        ("python -c 'import json'", "python -c should not trigger (not a script file)"),
+        ("python --version", "python --version should not trigger"),
+        ("python --help", "python --help should not trigger"),
+        ("python -i", "python -i should not trigger"),
+        ("which python", "which python should not trigger"),
+        ("echo '{}' | python -c 'import json; print(json.loads(input()))'", "python -c in a pipeline should not trigger"),
+        ("python -S script.py", "python -S script.py should not trigger (intentional limitation)"),
+        ("python -u script.py", "python -u script.py should not trigger (intentional limitation)"),
+    ])
+    def test_non_script_commands_skipped(self, command, description):
+        """Non-script execution patterns should not trigger hook"""
         error_msg = "ModuleNotFoundError: No module named 'pandas'"
-        output = run_hook_with_error("Bash", "python -S script.py", error_msg)
-
-        # This is intentional - flags before script name prevent triggering
-        # to avoid complexity in pattern matching
-        assert output == {}
-
-    def test_python_with_u_flag_before_script_skipped(self):
-        """python -u script.py should not trigger (intentional limitation)"""
-        error_msg = "ModuleNotFoundError: No module named 'pandas'"
-        output = run_hook_with_error("Bash", "python -u script.py", error_msg)
+        output = run_hook_with_error("Bash", command, error_msg)
 
         assert output == {}
 
     # Non-dependency errors should not trigger
-    def test_syntax_error_no_trigger(self):
-        """SyntaxError should not trigger"""
-        error_msg = "SyntaxError: invalid syntax"
-        output = run_hook_with_error("Bash", "python script.py", error_msg)
-
-        assert output == {}
-
-    def test_name_error_no_trigger(self):
-        """NameError should not trigger"""
-        error_msg = "NameError: name 'foo' is not defined"
-        output = run_hook_with_error("Bash", "python script.py", error_msg)
-
-        assert output == {}
-
-    # Non-Bash tools should not trigger
-    def test_non_bash_tool_with_import_error(self):
-        """Non-Bash tools should not trigger"""
-        error_msg = "ModuleNotFoundError: No module named 'pandas'"
-        output = run_hook_with_error("Read", "python script.py", error_msg)
+    @pytest.mark.parametrize("error_msg,tool_name,description", [
+        ("SyntaxError: invalid syntax", "Bash", "SyntaxError should not trigger"),
+        ("NameError: name 'foo' is not defined", "Bash", "NameError should not trigger"),
+        ("ModuleNotFoundError: No module named 'pandas'", "Read", "Non-Bash tools should not trigger"),
+    ])
+    def test_non_dependency_errors_not_trigger(self, error_msg, tool_name, description):
+        """Non-dependency errors and non-Bash tools should not trigger"""
+        output = run_hook_with_error(tool_name, "python script.py", error_msg)
 
         assert output == {}
 
@@ -340,67 +257,31 @@ class TestSuggestUvForMissingDeps:
         assert len(context) > 100  # Has substantial content
 
     # Edge cases - complex commands
-    def test_python_with_arguments(self):
-        """python script.py with arguments should trigger"""
+    @pytest.mark.parametrize("command,description", [
+        ("python script.py --input data.csv --output results.json", "python script.py with arguments should trigger"),
+        ("PYTHONPATH=/custom/path python script.py", "python with env vars should trigger"),
+        ("(cd /tmp && python script.py)", "python in subshell should trigger"),
+        ("python script.py > output.txt", "python with output redirection should trigger"),
+        ("python process.py | grep 'result'", "python script in pipeline should trigger if it's script execution"),
+    ])
+    def test_complex_commands_trigger(self, command, description):
+        """Complex command variations with python scripts should trigger"""
         error_msg = "ModuleNotFoundError: No module named 'pandas'"
-        output = run_hook_with_error("Bash", "python script.py --input data.csv --output results.json", error_msg)
-
-        assert "hookSpecificOutput" in output
-
-    def test_python_with_environment_variables(self):
-        """python with env vars should trigger"""
-        error_msg = "ModuleNotFoundError: No module named 'pandas'"
-        output = run_hook_with_error("Bash", "PYTHONPATH=/custom/path python script.py", error_msg)
-
-        assert "hookSpecificOutput" in output
-
-    def test_python_in_subshell(self):
-        """python in subshell should trigger"""
-        error_msg = "ModuleNotFoundError: No module named 'pandas'"
-        output = run_hook_with_error("Bash", "(cd /tmp && python script.py)", error_msg)
-
-        assert "hookSpecificOutput" in output
-
-    def test_python_with_redirection(self):
-        """python with output redirection should trigger"""
-        error_msg = "ModuleNotFoundError: No module named 'pandas'"
-        output = run_hook_with_error("Bash", "python script.py > output.txt", error_msg)
-
-        assert "hookSpecificOutput" in output
-
-    def test_python_with_pipe(self):
-        """python script in pipeline should trigger if it's script execution"""
-        error_msg = "ModuleNotFoundError: No module named 'pandas'"
-        output = run_hook_with_error("Bash", "python process.py | grep 'result'", error_msg)
+        output = run_hook_with_error("Bash", command, error_msg)
 
         assert "hookSpecificOutput" in output
 
     # Edge cases - script name variations
-    def test_script_with_special_chars(self):
-        """Script name with underscores/hyphens/numbers should trigger"""
+    @pytest.mark.parametrize("command,description", [
+        ("python data_analysis-v2.py", "Script name with underscores/hyphens/numbers should trigger"),
+        ('python "my script.py"', 'python "script.py" with double quotes should trigger'),
+        ("python 'analysis.py'", "python 'script.py' with single quotes should trigger"),
+        ("/usr/bin/python3 script.py", "/usr/bin/python3 should trigger"),
+    ])
+    def test_script_name_variations_trigger(self, command, description):
+        """Script name variations should trigger hook"""
         error_msg = "ModuleNotFoundError: No module named 'pandas'"
-        output = run_hook_with_error("Bash", "python data_analysis-v2.py", error_msg)
-
-        assert "hookSpecificOutput" in output
-
-    def test_script_with_double_quotes(self):
-        """python "script.py" with double quotes should trigger"""
-        error_msg = "ModuleNotFoundError: No module named 'pandas'"
-        output = run_hook_with_error("Bash", 'python "my script.py"', error_msg)
-
-        assert "hookSpecificOutput" in output
-
-    def test_script_with_single_quotes(self):
-        """python 'script.py' with single quotes should trigger"""
-        error_msg = "ModuleNotFoundError: No module named 'pandas'"
-        output = run_hook_with_error("Bash", "python 'analysis.py'", error_msg)
-
-        assert "hookSpecificOutput" in output
-
-    def test_absolute_python_path(self):
-        """/usr/bin/python3 should trigger"""
-        error_msg = "ModuleNotFoundError: No module named 'pandas'"
-        output = run_hook_with_error("Bash", "/usr/bin/python3 script.py", error_msg)
+        output = run_hook_with_error("Bash", command, error_msg)
 
         assert "hookSpecificOutput" in output
 

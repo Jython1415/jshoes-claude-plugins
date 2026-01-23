@@ -11,6 +11,8 @@ import subprocess
 import sys
 from pathlib import Path
 
+import pytest
+
 # Path to the hook script
 HOOK_PATH = Path(__file__).parent.parent / "normalize-line-endings.py"
 
@@ -42,57 +44,50 @@ class TestNormalizeLineEndings:
     """Test suite for normalize-line-endings hook"""
 
     # CRLF normalization tests
-    def test_crlf_single_line_normalized(self):
-        """Content with single CRLF should be normalized to LF"""
-        output = run_hook("Write", "hello\r\nworld")
+    @pytest.mark.parametrize(
+        "tool_name,content,extra_params,expected_output",
+        [
+            ("Write", "hello\r\nworld", {}, "hello\nworld"),
+            ("Write", "line1\r\nline2\r\nline3\r\nline4", {}, "line1\nline2\nline3\nline4"),
+            ("Write", "content\r\n", {}, "content\n"),
+            ("Write", "test\r\ncontent", {"file_path": "/tmp/test.txt"}, "test\ncontent"),
+            ("Edit", "new\r\nstring", {"old_string": "old", "file_path": "/tmp/test.txt"}, "new\nstring"),
+        ],
+        ids=[
+            "crlf_single_line",
+            "crlf_multiple_lines",
+            "crlf_at_end_of_file",
+            "crlf_in_write_operation",
+            "crlf_in_edit_operation",
+        ],
+    )
+    def test_crlf_normalization(self, tool_name, content, extra_params, expected_output):
+        """CRLF content should be normalized to LF"""
+        output = run_hook(tool_name, content, **extra_params)
         assert "hookSpecificOutput" in output, "Should return hook output"
         updated = output["hookSpecificOutput"]["updatedInput"]["content"]
-        assert updated == "hello\nworld", "CRLF should be converted to LF"
+        assert updated == expected_output, "CRLF should be converted to LF"
         assert "\r" not in updated, "No CR characters should remain"
-
-    def test_crlf_multiple_lines_normalized(self):
-        """Content with multiple CRLFs should be normalized to LF"""
-        content = "line1\r\nline2\r\nline3\r\nline4"
-        output = run_hook("Write", content)
-        updated = output["hookSpecificOutput"]["updatedInput"]["content"]
-        assert updated == "line1\nline2\nline3\nline4", "All CRLFs should be converted"
-        assert "\r" not in updated, "No CR characters should remain"
-
-    def test_crlf_at_end_of_file(self):
-        """CRLF at end of file should be normalized"""
-        output = run_hook("Write", "content\r\n")
-        updated = output["hookSpecificOutput"]["updatedInput"]["content"]
-        assert updated == "content\n", "Trailing CRLF should be normalized"
-
-    def test_crlf_in_write_operation(self):
-        """CRLF normalization should work for Write tool"""
-        output = run_hook("Write", "test\r\ncontent", file_path="/tmp/test.txt")
-        assert "hookSpecificOutput" in output
-        updated = output["hookSpecificOutput"]["updatedInput"]["content"]
-        assert updated == "test\ncontent"
-
-    def test_crlf_in_edit_operation(self):
-        """CRLF normalization should work for Edit tool"""
-        output = run_hook("Edit", "new\r\nstring", old_string="old", file_path="/tmp/test.txt")
-        assert "hookSpecificOutput" in output
-        updated = output["hookSpecificOutput"]["updatedInput"]["content"]
-        assert updated == "new\nstring"
 
     # CR-only normalization tests
-    def test_cr_only_single_line_normalized(self):
-        """Content with single CR (no LF) should be normalized to LF"""
-        output = run_hook("Write", "hello\rworld")
+    @pytest.mark.parametrize(
+        "content,expected_output",
+        [
+            ("hello\rworld", "hello\nworld"),
+            ("line1\rline2\rline3", "line1\nline2\nline3"),
+        ],
+        ids=[
+            "cr_only_single_line",
+            "cr_only_multiple_lines",
+        ],
+    )
+    def test_cr_only_normalization(self, content, expected_output):
+        """Content with CR (no LF) should be normalized to LF"""
+        output = run_hook("Write", content)
         assert "hookSpecificOutput" in output
         updated = output["hookSpecificOutput"]["updatedInput"]["content"]
-        assert updated == "hello\nworld", "CR should be converted to LF"
+        assert updated == expected_output, "CR should be converted to LF"
         assert "\r" not in updated, "No CR characters should remain"
-
-    def test_cr_only_multiple_lines_normalized(self):
-        """Content with multiple CRs should be normalized to LF"""
-        content = "line1\rline2\rline3"
-        output = run_hook("Write", content)
-        updated = output["hookSpecificOutput"]["updatedInput"]["content"]
-        assert updated == "line1\nline2\nline3", "All CRs should be converted"
 
     # Mixed line endings tests
     def test_mixed_crlf_and_cr_normalized(self):
@@ -112,52 +107,51 @@ class TestNormalizeLineEndings:
         assert "\r" not in updated, "No CR characters should remain"
 
     # Already-normalized content tests
-    def test_lf_only_no_normalization(self):
-        """Content with only LF should return empty JSON (no action needed)"""
-        output = run_hook("Write", "line1\nline2\nline3")
-        assert output == {}, "LF-only content should not trigger normalization"
-
-    def test_no_line_endings_no_normalization(self):
-        """Single-line content with no line endings should return empty JSON"""
-        output = run_hook("Write", "single line content")
-        assert output == {}, "Content without line endings should not trigger"
-
-    def test_multiple_lf_no_normalization(self):
-        """Content with consecutive LFs should not trigger normalization"""
-        output = run_hook("Write", "line1\n\n\nline2")
-        assert output == {}, "Multiple LFs should not trigger normalization"
+    @pytest.mark.parametrize(
+        "content",
+        [
+            "line1\nline2\nline3",
+            "single line content",
+            "line1\n\n\nline2",
+        ],
+        ids=[
+            "lf_only_no_normalization",
+            "no_line_endings_no_normalization",
+            "multiple_lf_no_normalization",
+        ],
+    )
+    def test_already_normalized_content(self, content):
+        """Already-normalized content should return empty JSON (no action needed)"""
+        output = run_hook("Write", content)
+        assert output == {}, "Already-normalized content should not trigger normalization"
 
     # Empty and edge case content tests
-    def test_empty_content_no_normalization(self):
-        """Empty content should return empty JSON"""
-        output = run_hook("Write", "")
-        assert output == {}, "Empty content should not trigger normalization"
-
-    def test_whitespace_only_no_normalization(self):
-        """Whitespace-only content with LF should return empty JSON"""
-        output = run_hook("Write", "   \n   \n   ")
-        assert output == {}, "Whitespace with LF should not trigger"
-
-    def test_whitespace_only_with_crlf_normalized(self):
-        """Whitespace-only content with CRLF should be normalized"""
-        output = run_hook("Write", "   \r\n   ")
-        assert "hookSpecificOutput" in output
-        updated = output["hookSpecificOutput"]["updatedInput"]["content"]
-        assert updated == "   \n   "
-
-    def test_single_cr_character_normalized(self):
-        """Content with just a single CR should be normalized"""
-        output = run_hook("Write", "\r")
-        assert "hookSpecificOutput" in output
-        updated = output["hookSpecificOutput"]["updatedInput"]["content"]
-        assert updated == "\n"
-
-    def test_single_crlf_sequence_normalized(self):
-        """Content with just CRLF should be normalized"""
-        output = run_hook("Write", "\r\n")
-        assert "hookSpecificOutput" in output
-        updated = output["hookSpecificOutput"]["updatedInput"]["content"]
-        assert updated == "\n"
+    @pytest.mark.parametrize(
+        "content,should_normalize,expected_output",
+        [
+            ("", False, None),
+            ("   \n   \n   ", False, None),
+            ("   \r\n   ", True, "   \n   "),
+            ("\r", True, "\n"),
+            ("\r\n", True, "\n"),
+        ],
+        ids=[
+            "empty_content",
+            "whitespace_only_with_lf",
+            "whitespace_only_with_crlf",
+            "single_cr_character",
+            "single_crlf_sequence",
+        ],
+    )
+    def test_edge_case_content(self, content, should_normalize, expected_output):
+        """Edge case content should be handled appropriately"""
+        output = run_hook("Write", content)
+        if should_normalize:
+            assert "hookSpecificOutput" in output, "Should normalize this content"
+            updated = output["hookSpecificOutput"]["updatedInput"]["content"]
+            assert updated == expected_output, f"Content should be normalized to {repr(expected_output)}"
+        else:
+            assert output == {}, "Should not trigger normalization for this content"
 
     # Binary-looking content tests
     def test_binary_with_cr_still_normalized(self):
@@ -228,37 +222,38 @@ class TestNormalizeLineEndings:
         assert len(updated_input) == 1, "Should only update content field"
 
     # Real-world content tests
-    def test_python_code_with_crlf_normalized(self):
-        """Python code with CRLF should be normalized"""
-        code = "def hello():\r\n    print('world')\r\n    return True\r\n"
-        output = run_hook("Write", code)
+    @pytest.mark.parametrize(
+        "content,expected_output",
+        [
+            (
+                "def hello():\r\n    print('world')\r\n    return True\r\n",
+                "def hello():\n    print('world')\n    return True\n",
+            ),
+            (
+                '{\r\n  "key": "value",\r\n  "number": 42\r\n}',
+                '{\n  "key": "value",\n  "number": 42\n}',
+            ),
+            (
+                "# Title\r\n\r\nParagraph text.\r\n\r\n- List item\r\n",
+                "# Title\n\nParagraph text.\n\n- List item\n",
+            ),
+            (
+                "#!/bin/bash\r\necho 'test'\rcd /tmp\nls -la\r\n",
+                "#!/bin/bash\necho 'test'\ncd /tmp\nls -la\n",
+            ),
+        ],
+        ids=[
+            "python_code_with_crlf",
+            "json_content_with_crlf",
+            "markdown_with_crlf",
+            "shell_script_with_mixed_endings",
+        ],
+    )
+    def test_real_world_content(self, content, expected_output):
+        """Real-world content with line ending issues should be normalized"""
+        output = run_hook("Write", content)
         updated = output["hookSpecificOutput"]["updatedInput"]["content"]
-        expected = "def hello():\n    print('world')\n    return True\n"
-        assert updated == expected
-
-    def test_json_content_with_crlf_normalized(self):
-        """JSON content with CRLF should be normalized"""
-        json_content = '{\r\n  "key": "value",\r\n  "number": 42\r\n}'
-        output = run_hook("Write", json_content)
-        updated = output["hookSpecificOutput"]["updatedInput"]["content"]
-        expected = '{\n  "key": "value",\n  "number": 42\n}'
-        assert updated == expected
-
-    def test_markdown_with_crlf_normalized(self):
-        """Markdown content with CRLF should be normalized"""
-        markdown = "# Title\r\n\r\nParagraph text.\r\n\r\n- List item\r\n"
-        output = run_hook("Write", markdown)
-        updated = output["hookSpecificOutput"]["updatedInput"]["content"]
-        expected = "# Title\n\nParagraph text.\n\n- List item\n"
-        assert updated == expected
-
-    def test_shell_script_with_mixed_endings_normalized(self):
-        """Shell script with mixed line endings should be normalized"""
-        script = "#!/bin/bash\r\necho 'test'\rcd /tmp\nls -la\r\n"
-        output = run_hook("Write", script)
-        updated = output["hookSpecificOutput"]["updatedInput"]["content"]
-        expected = "#!/bin/bash\necho 'test'\ncd /tmp\nls -la\n"
-        assert updated == expected
+        assert updated == expected_output, f"Content should be normalized correctly"
 
     # Error handling tests
     def test_malformed_input_returns_empty_json(self):
