@@ -2,7 +2,7 @@ name: CI
 
 on:
   push:
-    branches: [ main, 'claude/**' ]
+    branches: [ main ]
   pull_request:
     branches: [ main ]
 
@@ -16,11 +16,10 @@ jobs:
     - name: Set up uv
       uses: astral-sh/setup-uv@v7
       with:
-        python-version: '3.11'
         enable-cache: true
 
-    - name: Sync dependencies
-      run: uv sync
+    - name: Install Python 3.11
+      run: uv python install 3.11
 
-    - name: Run tests
-      run: uv run pytest
+    - name: Test
+      run: uv run --frozen pytest
