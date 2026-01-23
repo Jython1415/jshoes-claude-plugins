@@ -3,14 +3,88 @@
 # dependencies = []
 # ///
 """
-Proactively guide Claude to use GitHub API when gh CLI is unavailable
-but GITHUB_TOKEN is available (e.g., Claude Code Web environment).
+gh-web-fallback: Proactively guide to GitHub API when gh CLI is unavailable in Web environments.
 
-This hook detects when Claude attempts to use the `gh` CLI but it's not
-available in the environment. If GITHUB_TOKEN is available, it suggests
-using the GitHub REST API with curl instead.
+Event: PreToolUse (Bash)
 
-Includes cooldown mechanism to avoid duplicate suggestions.
+Purpose: Proactively guides Claude to use the GitHub REST API with curl BEFORE attempting `gh`
+commands in environments where `gh` CLI is unavailable but `GITHUB_TOKEN` is available
+(e.g., Claude Code Web).
+
+Behavior:
+- Detects when Claude attempts to invoke `gh` CLI commands
+- Checks if `gh` CLI is NOT available using system PATH lookup
+- Checks if `GITHUB_TOKEN` environment variable is available
+- If both conditions are met, provides comprehensive guidance on using curl with GitHub API
+- Includes 5-minute cooldown mechanism to avoid repetitive suggestions
+
+Triggers on:
+- Bash commands containing `gh` invocations: `gh issue list`, `git status && gh pr create`, etc.
+- `gh` CLI is NOT available in PATH
+- `GITHUB_TOKEN` is available and non-empty
+
+Does NOT trigger when:
+- `gh` CLI is available (defers to `prefer-gh-for-own-repos.py` for those cases)
+- `GITHUB_TOKEN` is not available (no alternative available)
+- Within 5-minute cooldown period since last suggestion
+- Non-Bash tools
+- Command doesn't contain `gh` invocations
+
+Command detection:
+Uses regex pattern `(?:^|[;&|]\s*)gh\s+` to match:
+- Simple: `gh issue list`
+- Piped: `git status | gh issue view 10`
+- Chained: `git status && gh pr create`
+- OR chains: `cat file || gh pr view 10`
+- But NOT: `sigh`, `high` (gh must be standalone command)
+
+Guidance provided:
+- Environment explanation (gh unavailable, token available)
+- 4 practical curl examples with proper authentication headers:
+  1. View issue/PR
+  2. List issues
+  3. Create pull request
+  4. Check CI status
+- Tips on using `-s` flag and JSON parsing with `jq`
+- Link to GitHub API documentation
+
+Example patterns:
+```bash
+# View issue
+curl -s -H "Authorization: token $GITHUB_TOKEN" \
+  -H "Accept: application/vnd.github.v3+json" \
+  "https://api.github.com/repos/OWNER/REPO/issues/NUMBER"
+
+# Create PR
+curl -X POST -H "Authorization: token $GITHUB_TOKEN" \
+  -H "Accept: application/vnd.github.v3+json" \
+  "https://api.github.com/repos/OWNER/REPO/pulls" \
+  -d '{"title":"PR Title","head":"branch","base":"main","body":"Description"}'
+```
+
+State management:
+- Cooldown state stored in: `~/.claude/hook-state/gh-web-fallback-cooldown`
+- Contains Unix timestamp of last suggestion
+- 300-second (5-minute) cooldown period
+- Gracefully handles corrupted state files
+- Auto-creates state directory as needed
+
+Benefits:
+- Prevents failed `gh` command attempts in Web environments
+- Provides guidance proactively (before failure) rather than reactively
+- Saves a tool call (no fail-then-retry cycle)
+- Works alongside `gh-fallback-helper.py` as defense in depth
+
+Relationship with other hooks:
+- **Complements `prefer-gh-for-own-repos.py`**: When `gh` IS available, that hook suggests using it;
+  when gh is NOT available, this hook suggests the API
+- **Works with `gh-fallback-helper.py`**: This hook provides proactive guidance (PreToolUse);
+  if it's missed or cooldown prevents it, gh-fallback-helper provides reactive guidance (PostToolUseFailure)
+
+Limitations:
+- Cooldown may prevent guidance on subsequent `gh` commands within 5 minutes
+- Command detection is regex-based; unusual command structures may not be detected
+- Only monitors Bash tool (not other command execution methods)
 """
 import json
 import sys

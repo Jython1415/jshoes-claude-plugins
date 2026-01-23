@@ -3,8 +3,59 @@
 # dependencies = []
 # ///
 """
-Detect when gh CLI is unavailable but GITHUB_TOKEN is available.
-Provides guidance on using GitHub API with curl instead.
+gh-fallback-helper: Guide Claude to use GitHub API when gh CLI is unavailable.
+
+Event: PostToolUseFailure (Bash)
+
+Purpose: Detects when a `gh` CLI command fails due to `gh` being unavailable, and provides
+guidance on using the GitHub REST API with curl instead when GITHUB_TOKEN is available.
+
+Behavior:
+- Detects failed `gh` CLI commands (when error contains "command not found" or "not found")
+- Checks if `GITHUB_TOKEN` environment variable is available
+- Provides comprehensive guidance on using GitHub REST API with curl
+- Includes practical examples for common operations (list issues, create PR, update PR, search)
+- Shows how to authenticate using the GITHUB_TOKEN
+- Provides tips for parsing JSON responses with jq or python
+
+Triggers on:
+- Bash command contains `gh`
+- Error output contains "command not found" or "not found"
+- `GITHUB_TOKEN` environment variable is available and non-empty
+
+Does NOT trigger when:
+- `gh` CLI is available and command succeeds
+- `GITHUB_TOKEN` is not available (no alternative can be provided)
+- Command doesn't contain `gh`
+- Non-Bash tools
+- Error is not related to gh unavailability
+
+Guidance provided:
+- 5 practical curl examples with proper authentication headers:
+  1. List issues
+  2. Create pull request
+  3. Get issue/PR details
+  4. Update PR/issue
+  5. Search issues
+- Tips on using `-s` flag and JSON parsing with jq or python
+- Link to GitHub API documentation
+- Example conversion from gh command to curl equivalent
+
+Benefits:
+- Enables GitHub operations when gh CLI is unavailable
+- Provides concrete, copy-paste-ready examples
+- Works alongside gh-web-fallback.py as defense in depth (this hook is reactive, that one is proactive)
+- Educates about GitHub REST API usage
+- Includes authentication and formatting guidance
+
+Limitations:
+- Only detects curl-based workflows (not wget or other HTTP clients)
+- Requires GITHUB_TOKEN to be available
+- Only monitors Bash tool (not direct API operations from other tools)
+
+Relationship with other hooks:
+- **Complements gh-web-fallback.py**: That hook provides proactive guidance (PreToolUse) before
+  gh fails; this hook provides reactive guidance (PostToolUseFailure) after gh fails
 """
 import json
 import sys
