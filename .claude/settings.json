@@ -113,7 +113,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "uv run --script ~/.claude/hooks/normalize-line-endings.py"
+            "command": "uv run --script .claude/hooks/normalize-line-endings.py"
           }
         ]
       },
@@ -122,19 +122,19 @@
         "hooks": [
           {
             "type": "command",
-            "command": "uv run --script ~/.claude/hooks/gh-web-fallback.py"
+            "command": "uv run --script .claude/hooks/gh-web-fallback.py"
           },
           {
             "type": "command",
-            "command": "uv run --script ~/.claude/hooks/prefer-modern-tools.py"
+            "command": "uv run --script .claude/hooks/prefer-modern-tools.py"
           },
           {
             "type": "command",
-            "command": "uv run --script ~/.claude/hooks/detect-cd-pattern.py"
+            "command": "uv run --script .claude/hooks/detect-cd-pattern.py"
           },
           {
             "type": "command",
-            "command": "uv run --script ~/.claude/hooks/auto-unsandbox-pbcopy.py"
+            "command": "uv run --script .claude/hooks/auto-unsandbox-pbcopy.py"
           }
         ]
       },
@@ -143,7 +143,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "uv run --script ~/.claude/hooks/prefer-gh-for-own-repos.py"
+            "command": "uv run --script .claude/hooks/prefer-gh-for-own-repos.py"
           }
         ]
       }
@@ -154,11 +154,11 @@
         "hooks": [
           {
             "type": "command",
-            "command": "uv run --script ~/.claude/hooks/gpg-signing-helper.py"
+            "command": "uv run --script .claude/hooks/gpg-signing-helper.py"
           },
           {
             "type": "command",
-            "command": "uv run --script ~/.claude/hooks/detect-heredoc-errors.py",
+            "command": "uv run --script .claude/hooks/detect-heredoc-errors.py",
             "timeout": 10
           }
         ]
@@ -170,20 +170,20 @@
         "hooks": [
           {
             "type": "command",
-            "command": "uv run --script ~/.claude/hooks/gh-fallback-helper.py"
+            "command": "uv run --script .claude/hooks/gh-fallback-helper.py"
           },
           {
             "type": "command",
-            "command": "uv run --script ~/.claude/hooks/gpg-signing-helper.py"
+            "command": "uv run --script .claude/hooks/gpg-signing-helper.py"
           },
           {
             "type": "command",
-            "command": "uv run --script ~/.claude/hooks/detect-heredoc-errors.py",
+            "command": "uv run --script .claude/hooks/detect-heredoc-errors.py",
             "timeout": 10
           },
           {
             "type": "command",
-            "command": "uv run --script ~/.claude/hooks/suggest-uv-for-missing-deps.py"
+            "command": "uv run --script .claude/hooks/suggest-uv-for-missing-deps.py"
           }
         ]
       }
