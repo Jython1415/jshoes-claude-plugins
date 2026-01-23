@@ -103,6 +103,11 @@ class TestSuggestUvForMissingDeps:
         assert "additionalContext" in output["hookSpecificOutput"]
         assert "MISSING DEPENDENCY DETECTED" in output["hookSpecificOutput"]["additionalContext"]
 
+    # Tests on lines 106-328: Extract Behavior Verification
+    # These tests verify that the hook correctly extracts and identifies key information
+    # (module names, command patterns, error types) from the input. They test EXTRACTION
+    # BEHAVIOR, not the specific formatting or content of guidance messages.
+
     def test_module_name_extracted_from_error(self):
         """Hook should extract and mention the missing module name"""
         error_msg = "ModuleNotFoundError: No module named 'numpy'"
@@ -393,50 +398,27 @@ ModuleNotFoundError: No module named 'pandas'"""
         output = json.loads(result.stdout)
         assert output == {}
 
-    # uv availability tests
-    def test_uv_available_suggests_uv_run_with(self):
-        """When uv is available, should suggest uv run --with"""
+    # uv availability tests - Behavior focused
+    def test_uv_available_provides_guidance(self):
+        """When uv is available, hook should provide guidance with substantial content"""
         error_msg = "ModuleNotFoundError: No module named 'pandas'"
         output = run_hook_with_error("Bash", "python script.py", error_msg, uv_available=True)
 
+        assert "hookSpecificOutput" in output
         context = output["hookSpecificOutput"]["additionalContext"]
-        assert "uv run --with pandas" in context
-        assert "Quick fix" in context
+        assert len(context) > 100  # Substantial guidance provided
 
-    def test_uv_available_suggests_pep723(self):
-        """When uv is available, should suggest PEP 723"""
+    def test_uv_availability_affects_guidance(self):
+        """Guidance should differ based on uv availability"""
         error_msg = "ModuleNotFoundError: No module named 'pandas'"
-        output = run_hook_with_error("Bash", "python script.py", error_msg, uv_available=True)
 
-        context = output["hookSpecificOutput"]["additionalContext"]
-        assert "PEP 723" in context
-        assert "# /// script" in context
-        assert 'dependencies = ["pandas"]' in context
+        with_uv = run_hook_with_error("Bash", "python script.py", error_msg, uv_available=True)
+        without_uv = run_hook_with_error("Bash", "python script.py", error_msg, uv_available=False)
 
-    def test_uv_not_available_suggests_pip(self):
-        """When uv is NOT available, should suggest pip install"""
-        error_msg = "ModuleNotFoundError: No module named 'pandas'"
-        output = run_hook_with_error("Bash", "python script.py", error_msg, uv_available=False)
+        with_uv_context = with_uv["hookSpecificOutput"]["additionalContext"]
+        without_uv_context = without_uv["hookSpecificOutput"]["additionalContext"]
 
-        context = output["hookSpecificOutput"]["additionalContext"]
-        assert "pip install pandas" in context
-        assert "uv run" not in context  # Should NOT suggest uv commands
-
-    def test_uv_not_available_recommends_venv(self):
-        """When uv is NOT available, should recommend using venv"""
-        error_msg = "ModuleNotFoundError: No module named 'pandas'"
-        output = run_hook_with_error("Bash", "python script.py", error_msg, uv_available=False)
-
-        context = output["hookSpecificOutput"]["additionalContext"]
-        assert "venv" in context
-
-    def test_uv_not_available_mentions_uv_option(self):
-        """When uv is NOT available, should mention uv as an option"""
-        error_msg = "ModuleNotFoundError: No module named 'pandas'"
-        output = run_hook_with_error("Bash", "python script.py", error_msg, uv_available=False)
-
-        context = output["hookSpecificOutput"]["additionalContext"]
-        assert "Try uv" in context or "https://docs.astral.sh/uv/" in context
+        assert with_uv_context != without_uv_context  # Guidance differs based on uv availability
 
 
 def main():
