@@ -28,6 +28,7 @@ STATE_FILE = STATE_DIR / "gh-authorship-cooldown"
 # Patterns to detect operations that need attribution
 GIT_COMMIT_PATTERN = r'git\s+commit'
 GITHUB_API_CREATE_PATTERN = r'curl.*(?:POST|PATCH).*github\.com/repos/.*(?:pulls|issues|comments)'
+GH_CLI_PATTERN = r'gh\s+(pr|issue)\s+(create|edit|comment)'
 
 
 def is_git_commit(command):
@@ -52,6 +53,14 @@ def is_github_api_write(command):
         return False
 
 
+def is_gh_cli_write(command):
+    """Check if command is a gh CLI call that creates/updates content."""
+    try:
+        return bool(re.search(GH_CLI_PATTERN, command, re.IGNORECASE))
+    except Exception:
+        return False
+
+
 def has_attribution_in_commit(command):
     """Check if git commit already includes attribution."""
     try:
@@ -72,10 +81,11 @@ def has_attribution_in_commit(command):
 def has_attribution_in_api_body(command):
     """Check if GitHub API request body includes attribution."""
     try:
-        # Look for attribution in the JSON body
+        # Look for attribution in the JSON body or gh CLI --body argument
         attribution_patterns = [
             r'"body"[^}]*(?:Co-authored-by|AI-assisted|claude\.ai/code|Claude)',
-            r'"description"[^}]*(?:Co-authored-by|AI-assisted|claude\.ai/code|Claude)'
+            r'"description"[^}]*(?:Co-authored-by|AI-assisted|claude\.ai/code|Claude)',
+            r'--body\s+"[^"]*(?:Co-authored-by|AI-assisted|claude\.ai/code|Claude)',
         ]
         return any(re.search(pattern, command, re.IGNORECASE) for pattern in attribution_patterns)
     except Exception:
@@ -142,52 +152,27 @@ def main():
                     "hookEventName": "PreToolUse",
                     "additionalContext": """**AUTHORSHIP ATTRIBUTION REMINDER**
 
-When committing code on behalf of the user, consider whether attribution is appropriate.
+Consider adding attribution when committing AI-authored code.
 
-**Principle**: Don't commit code as the user if the user didn't write it.
+**Add Co-authored-by trailer**:
+```bash
+git commit -m "$(cat <<'EOF'
+Your commit message
 
-**Exercise judgment**:
-- If **you (Claude) wrote the code**: Include attribution
-- If **user wrote the code** and you're just writing the commit message: Attribution may not be needed
-- If **collaborative** (user edited your code): Use your judgment
+Co-authored-by: Claude (Anthropic AI) <claude@anthropic.com>
+https://claude.ai/code/session_ID
+EOF
+)"
+```
 
-**If attribution is appropriate**, use one of these approaches:
+**Or add an AI assistance note**:
+```bash
+git commit -m "Your message" -m "AI-assisted with Claude Code"
+```
 
-1. **Add Co-authored-by trailer** (recommended for collaborative work):
-   ```bash
-   git commit -m "$(cat <<'EOF'
-   Your commit message here
+This promotes transparency about AI-assisted contributions. Use your judgment based on who authored the code.
 
-   Co-authored-by: Claude (Anthropic AI) <claude@anthropic.com>
-   https://claude.ai/code/session_ID
-   EOF
-   )"
-   ```
-
-2. **Add AI assistance note** (simpler):
-   ```bash
-   git commit -m "$(cat <<'EOF'
-   Your commit message here
-
-   AI-assisted with Claude Code
-   https://claude.ai/code/session_ID
-   EOF
-   )"
-   ```
-
-3. **Include in commit message body**:
-   ```bash
-   git commit -m "feat: add new feature" -m "Generated with assistance from Claude Code" -m "https://claude.ai/code/session_ID"
-   ```
-
-**Why this matters**:
-- Transparency about who authored the code/content
-- Proper attribution maintains trust in collaborative work
-- Helps distinguish AI-generated vs human-written contributions
-
-**Note**: This is a reminder, not a requirement. Use your judgment based on the situation.
-
-**This reminder will appear once per 10 minutes.**"""
+*This reminder appears once per 10 minutes.*"""
                 }
             }
 
@@ -215,59 +200,69 @@ When committing code on behalf of the user, consider whether attribution is appr
                     "hookEventName": "PreToolUse",
                     "additionalContext": """**AUTHORSHIP ATTRIBUTION REMINDER**
 
-When creating or updating GitHub content (PRs, issues, comments) on behalf of the user, consider whether attribution is appropriate.
+Consider adding attribution when creating/updating GitHub content (PRs, issues, comments) with AI assistance.
 
-**Principle**: Don't create content as the user if the user didn't write it.
-
-**Exercise judgment**:
-- If **you (Claude) drafted the PR/issue/comment**: Include attribution
-- If **user provided the content** and you're formatting the API call: Attribution may not be needed
-- If **you're summarizing user's work**: Use your judgment based on content authorship
-
-**If attribution is appropriate**, add it to the body/description field:
-
-**For Pull Requests**:
-```bash
-curl -X POST -H "Authorization: token $GITHUB_TOKEN" \\
-  -H "Accept: application/vnd.github.v3+json" \\
-  "https://api.github.com/repos/OWNER/REPO/pulls" \\
-  -d '{
-    "title": "Your PR title",
-    "head": "branch-name",
-    "base": "main",
-    "body": "Your PR description here\\n\\n---\\n*This pull request was created with assistance from [Claude Code](https://claude.ai/code/session_ID)*"
-  }'
+**Add attribution to the body/description**:
+```
+"body": "Your content\\n\\n---\\n*Created with assistance from Claude Code*"
 ```
 
-**For Issues**:
+**Example for gh CLI**:
 ```bash
-curl -X POST -H "Authorization: token $GITHUB_TOKEN" \\
-  -H "Accept: application/vnd.github.v3+json" \\
-  "https://api.github.com/repos/OWNER/REPO/issues" \\
-  -d '{
-    "title": "Your issue title",
-    "body": "Issue description\\n\\n---\\n*Created with assistance from [Claude Code](https://claude.ai/code/session_ID)*"
-  }'
+gh pr create --title "Title" --body "Description
+
+---
+*Created with assistance from Claude Code*"
 ```
 
-**For Comments**:
-```bash
-curl -X POST -H "Authorization: token $GITHUB_TOKEN" \\
-  -H "Accept: application/vnd.github.v3+json" \\
-  "https://api.github.com/repos/OWNER/REPO/issues/NUMBER/comments" \\
-  -d '{
-    "body": "Your comment\\n\\n*AI-assisted with Claude Code*"
-  }'
+This promotes transparency about AI-assisted contributions. Use your judgment based on who authored the content.
+
+*This reminder appears once per 10 minutes.*"""
+                }
+            }
+
+            print(json.dumps(output))
+            sys.exit(0)
+
+        # Check if this is a gh CLI write operation
+        if is_gh_cli_write(command):
+            # Check if attribution is already present in command
+            if has_attribution_in_api_body(command):
+                print("{}")
+                sys.exit(0)
+
+            # Check cooldown
+            if is_within_cooldown():
+                print("{}")
+                sys.exit(0)
+
+            # Record this suggestion
+            record_suggestion()
+
+            # Provide guidance for gh CLI attribution
+            output = {
+                "hookSpecificOutput": {
+                    "hookEventName": "PreToolUse",
+                    "additionalContext": """**AUTHORSHIP ATTRIBUTION REMINDER**
+
+Consider adding attribution when creating/updating GitHub content (PRs, issues, comments) with AI assistance.
+
+**Add attribution to the body/description**:
+```
+"body": "Your content\\n\\n---\\n*Created with assistance from Claude Code*"
 ```
 
-**Why this matters**:
-- Transparency about who authored the content
-- Proper attribution maintains trust when acting on user's behalf
-- Helps distinguish AI-drafted vs user-written contributions
+**Example for gh CLI**:
+```bash
+gh pr create --title "Title" --body "Description
 
-**Note**: This is a reminder, not a requirement. Use your judgment based on authorship.
+---
+*Created with assistance from Claude Code*"
+```
 
-**This reminder will appear once per 10 minutes.**"""
+This promotes transparency about AI-assisted contributions. Use your judgment based on who authored the content.
+
+*This reminder appears once per 10 minutes.*"""
                 }
             }
 

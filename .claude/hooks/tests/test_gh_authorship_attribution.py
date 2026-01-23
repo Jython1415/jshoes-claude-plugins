@@ -69,7 +69,7 @@ class TestGitCommitDetection:
         output = run_hook("Bash", 'git commit -m "Add feature"')
         assert "hookSpecificOutput" in output, "Should detect git commit without attribution"
         assert "additionalContext" in output["hookSpecificOutput"]
-        assert "AUTHORSHIP ATTRIBUTION REQUIRED" in output["hookSpecificOutput"]["additionalContext"]
+        assert "AUTHORSHIP ATTRIBUTION REMINDER" in output["hookSpecificOutput"]["additionalContext"]
         assert "Co-authored-by" in output["hookSpecificOutput"]["additionalContext"]
 
     def test_git_commit_with_heredoc_without_attribution(self):
@@ -84,35 +84,22 @@ EOF
         output = run_hook("Bash", command)
         assert "hookSpecificOutput" in output, "Should detect git commit without attribution"
 
-    def test_git_commit_with_coauthored_by_attribution_silent(self):
-        """Git commit with Co-authored-by should not trigger"""
-        command = """git commit -m "$(cat <<'EOF'
+    @pytest.mark.parametrize("command,description", [
+        ("""git commit -m "$(cat <<'EOF'
 Add feature
 
 Co-authored-by: Claude (Anthropic AI) <claude@anthropic.com>
 EOF
 )"
-"""
+""", "Co-authored-by"),
+        ('git commit -m "Add feature" -m "AI-assisted with Claude Code"', "AI-assisted note"),
+        ('git commit -m "Add feature\n\nhttps://claude.ai/code/session_12345"', "session link"),
+        ('git commit -m "Add feature\n\nGenerated with Claude"', "Generated with Claude note"),
+    ])
+    def test_git_commit_with_attribution_silent(self, command, description):
+        """Git commit with various attribution patterns should not trigger"""
         output = run_hook("Bash", command)
-        assert output == {}, "Should not trigger when attribution present"
-
-    def test_git_commit_with_ai_assisted_attribution_silent(self):
-        """Git commit with AI-assisted note should not trigger"""
-        command = 'git commit -m "Add feature" -m "AI-assisted with Claude Code"'
-        output = run_hook("Bash", command)
-        assert output == {}, "Should not trigger when attribution present"
-
-    def test_git_commit_with_session_link_attribution_silent(self):
-        """Git commit with claude.ai/code link should not trigger"""
-        command = 'git commit -m "Add feature\n\nhttps://claude.ai/code/session_12345"'
-        output = run_hook("Bash", command)
-        assert output == {}, "Should not trigger when session link present"
-
-    def test_git_commit_with_generated_note_silent(self):
-        """Git commit with 'Generated with Claude' should not trigger"""
-        command = 'git commit -m "Add feature\n\nGenerated with Claude"'
-        output = run_hook("Bash", command)
-        assert output == {}, "Should not trigger when attribution present"
+        assert output == {}, f"Should not trigger with {description}"
 
     def test_git_commit_case_insensitive_detection(self):
         """Git commit detection should be case-insensitive"""
@@ -145,84 +132,38 @@ EOF
 class TestGitHubAPIDetection:
     """Test GitHub API write operation detection"""
 
-    def test_create_pr_without_attribution_triggers(self):
-        """Creating PR without attribution should trigger"""
-        command = """curl -X POST -H "Authorization: token $GITHUB_TOKEN" \\
-  "https://api.github.com/repos/owner/repo/pulls" \\
-  -d '{"title":"New PR","head":"branch","base":"main","body":"Description"}'
+    @pytest.mark.parametrize("method,endpoint,description", [
+        ("POST", "pulls", "PR creation"),
+        ("POST", "issues", "issue creation"),
+        ("POST", "issues/10/comments", "comment creation"),
+        ("PATCH", "pulls/123", "PR update"),
+        ("PATCH", "issues/456", "issue update"),
+    ])
+    def test_api_operations_without_attribution_trigger(self, method, endpoint, description):
+        """GitHub API write operations without attribution should trigger"""
+        command = f"""curl -X {method} -H "Authorization: token $GITHUB_TOKEN" \\
+  "https://api.github.com/repos/owner/repo/{endpoint}" \\
+  -d '{{"title":"Test","body":"Content"}}'
 """
         output = run_hook("Bash", command)
-        assert "hookSpecificOutput" in output, "Should detect PR creation without attribution"
-        assert "AUTHORSHIP ATTRIBUTION REQUIRED" in output["hookSpecificOutput"]["additionalContext"]
+        assert "hookSpecificOutput" in output, f"Should detect {description} without attribution"
+        if method == "POST" and endpoint == "pulls":
+            assert "AUTHORSHIP ATTRIBUTION REMINDER" in output["hookSpecificOutput"]["additionalContext"]
 
-    def test_create_issue_without_attribution_triggers(self):
-        """Creating issue without attribution should trigger"""
-        command = """curl -X POST -H "Authorization: token $GITHUB_TOKEN" \\
-  "https://api.github.com/repos/owner/repo/issues" \\
-  -d '{"title":"Bug report","body":"Found a bug"}'
-"""
-        output = run_hook("Bash", command)
-        assert "hookSpecificOutput" in output, "Should detect issue creation without attribution"
-
-    def test_create_comment_without_attribution_triggers(self):
-        """Creating comment without attribution should trigger"""
-        command = """curl -X POST \\
-  "https://api.github.com/repos/owner/repo/issues/10/comments" \\
-  -H "Authorization: token $GITHUB_TOKEN" \\
-  -d '{"body":"This is my comment"}'
-"""
-        output = run_hook("Bash", command)
-        assert "hookSpecificOutput" in output, "Should detect comment creation without attribution"
-
-    def test_patch_pr_without_attribution_triggers(self):
-        """Updating PR without attribution should trigger"""
-        command = """curl -X PATCH \\
-  "https://api.github.com/repos/owner/repo/pulls/123" \\
-  -H "Authorization: token $GITHUB_TOKEN" \\
-  -d '{"body":"Updated description"}'
-"""
-        output = run_hook("Bash", command)
-        assert "hookSpecificOutput" in output, "Should detect PR update without attribution"
-
-    def test_patch_issue_without_attribution_triggers(self):
-        """Updating issue without attribution should trigger"""
-        command = """curl -X PATCH \\
-  "https://api.github.com/repos/owner/repo/issues/456" \\
-  -H "Authorization: token $GITHUB_TOKEN" \\
-  -d '{"body":"Updated issue body"}'
-"""
-        output = run_hook("Bash", command)
-        assert "hookSpecificOutput" in output, "Should detect issue update without attribution"
-
-    def test_pr_with_attribution_in_body_silent(self):
-        """PR creation with attribution in body should not trigger"""
-        command = """curl -X POST \\
-  "https://api.github.com/repos/owner/repo/pulls" \\
-  -H "Authorization: token $GITHUB_TOKEN" \\
-  -d '{"title":"New PR","body":"Description\\n\\nAI-assisted with Claude Code"}'
-"""
-        output = run_hook("Bash", command)
-        assert output == {}, "Should not trigger when attribution in body"
-
-    def test_issue_with_claude_link_silent(self):
-        """Issue with claude.ai/code link should not trigger"""
-        command = """curl -X POST \\
+    @pytest.mark.parametrize("body,description", [
+        ("Description\\n\\nAI-assisted with Claude Code", "AI-assisted note"),
+        ("Description\\nhttps://claude.ai/code/session_123", "session link"),
+        ("Comment\\n\\nCo-authored-by: Claude", "Co-authored-by"),
+    ])
+    def test_api_with_attribution_silent(self, body, description):
+        """GitHub API calls with attribution should not trigger"""
+        command = f"""curl -X POST \\
   "https://api.github.com/repos/owner/repo/issues" \\
   -H "Authorization: token $GITHUB_TOKEN" \\
-  -d '{"title":"Bug","body":"Description\\nhttps://claude.ai/code/session_123"}'
+  -d '{{"title":"Test","body":"{body}"}}'
 """
         output = run_hook("Bash", command)
-        assert output == {}, "Should not trigger when session link in body"
-
-    def test_comment_with_coauthored_silent(self):
-        """Comment with Co-authored-by should not trigger"""
-        command = """curl -X POST \\
-  "https://api.github.com/repos/owner/repo/issues/10/comments" \\
-  -H "Authorization: token $GITHUB_TOKEN" \\
-  -d '{"body":"Comment\\n\\nCo-authored-by: Claude"}'
-"""
-        output = run_hook("Bash", command)
-        assert output == {}, "Should not trigger when attribution in comment"
+        assert output == {}, f"Should not trigger with {description}"
 
     def test_get_request_silent(self):
         """GET requests should not trigger (not write operations)"""
@@ -231,6 +172,42 @@ class TestGitHubAPIDetection:
 """
         output = run_hook("Bash", command)
         assert output == {}, "Should not trigger on GET requests"
+
+
+class TestGhCliDetection:
+    """Test gh CLI command detection"""
+
+    @pytest.mark.parametrize("command,description", [
+        ('gh pr create --title "New PR" --body "Description"', "pr create"),
+        ('gh pr edit 123 --body "Updated description"', "pr edit"),
+        ('gh issue create --title "Bug" --body "Issue description"', "issue create"),
+        ('gh issue edit 456 --body "Updated issue"', "issue edit"),
+        ('gh issue comment 789 --body "Comment text"', "issue comment"),
+    ])
+    def test_gh_cli_without_attribution_triggers(self, command, description):
+        """gh CLI write operations without attribution should trigger"""
+        output = run_hook("Bash", command)
+        assert "hookSpecificOutput" in output, f"Should detect {description} without attribution"
+
+    @pytest.mark.parametrize("command,description", [
+        ('gh pr create --title "PR" --body "Description\\n\\nAI-assisted with Claude Code"', "pr with attribution"),
+        ('gh issue create --title "Issue" --body "Text\\nhttps://claude.ai/code/session_123"', "issue with link"),
+    ])
+    def test_gh_cli_with_attribution_silent(self, command, description):
+        """gh CLI operations with attribution should not trigger"""
+        output = run_hook("Bash", command)
+        assert output == {}, f"Should not trigger for {description}"
+
+    @pytest.mark.parametrize("command,description", [
+        ("gh pr list", "pr list"),
+        ("gh pr view 123", "pr view"),
+        ("gh issue list", "issue list"),
+        ("gh issue view 456", "issue view"),
+    ])
+    def test_gh_cli_read_operations_silent(self, command, description):
+        """gh CLI read operations should not trigger"""
+        output = run_hook("Bash", command)
+        assert output == {}, f"Should not trigger for {description}"
 
 
 class TestCooldownMechanism:
@@ -287,50 +264,28 @@ class TestNonTriggeringCommands:
             output = run_hook(tool, 'git commit -m "Test"')
             assert output == {}, f"{tool} should not trigger hook"
 
-    def test_git_status_silent(self):
-        """git status should not trigger"""
-        output = run_hook("Bash", "git status")
-        assert output == {}, "git status should not trigger"
+    @pytest.mark.parametrize("command,description", [
+        ("git status", "git status"),
+        ("git add .", "git add"),
+        ("git push origin main", "git push"),
+        ("git log --oneline", "git log"),
+        ("git diff HEAD~1", "git diff"),
+    ])
+    def test_git_read_commands_silent(self, command, description):
+        """Non-commit git commands should not trigger"""
+        output = run_hook("Bash", command)
+        assert output == {}, f"{description} should not trigger"
 
-    def test_git_add_silent(self):
-        """git add should not trigger"""
-        output = run_hook("Bash", "git add .")
-        assert output == {}, "git add should not trigger"
-
-    def test_git_push_silent(self):
-        """git push should not trigger"""
-        output = run_hook("Bash", "git push origin main")
-        assert output == {}, "git push should not trigger"
-
-    def test_git_log_silent(self):
-        """git log should not trigger"""
-        output = run_hook("Bash", "git log --oneline")
-        assert output == {}, "git log should not trigger"
-
-    def test_git_diff_silent(self):
-        """git diff should not trigger"""
-        output = run_hook("Bash", "git diff HEAD~1")
-        assert output == {}, "git diff should not trigger"
-
-    def test_non_github_curl_silent(self):
-        """curl to non-GitHub URLs should not trigger"""
-        output = run_hook("Bash", 'curl -X POST https://example.com/api -d \'{"data":"test"}\'')
-        assert output == {}, "Non-GitHub curl should not trigger"
-
-    def test_curl_without_post_patch_silent(self):
-        """curl GET to GitHub should not trigger"""
-        output = run_hook("Bash", 'curl https://api.github.com/repos/owner/repo/issues')
-        assert output == {}, "GET request should not trigger"
-
-    def test_empty_command_silent(self):
-        """Empty command should not trigger"""
-        output = run_hook("Bash", "")
-        assert output == {}, "Empty command should not trigger"
-
-    def test_command_with_commit_in_string_silent(self):
-        """Command with 'commit' in a string but not git commit should not trigger"""
-        output = run_hook("Bash", 'echo "I will commit to this plan"')
-        assert output == {}, "Should not trigger on 'commit' in string"
+    @pytest.mark.parametrize("command,description", [
+        ('curl -X POST https://example.com/api -d \'{"data":"test"}\'', "non-GitHub curl"),
+        ('curl https://api.github.com/repos/owner/repo/issues', "GitHub GET request"),
+        ("", "empty command"),
+        ('echo "I will commit to this plan"', "'commit' in string"),
+    ])
+    def test_non_triggering_commands_silent(self, command, description):
+        """Various non-triggering commands should not trigger"""
+        output = run_hook("Bash", command)
+        assert output == {}, f"{description} should not trigger"
 
 
 class TestEdgeCases:
@@ -408,8 +363,7 @@ class TestOutputValidation:
         """API guidance should include concrete examples"""
         output = run_hook("Bash", 'curl -X POST https://api.github.com/repos/o/r/pulls -d \'{"title":"Test"}\'')
         context = output["hookSpecificOutput"]["additionalContext"]
-        assert "curl" in context
-        assert "github.com" in context.lower()
+        assert "gh pr create" in context.lower()
         assert "body" in context
 
     def test_guidance_mentions_transparency(self):
