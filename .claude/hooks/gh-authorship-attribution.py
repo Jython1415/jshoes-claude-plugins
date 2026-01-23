@@ -3,13 +3,115 @@
 # dependencies = []
 # ///
 """
-Ensure proper authorship attribution when Claude writes to GitHub on behalf of the user.
+gh-authorship-attribution: Ensure proper authorship attribution for AI-assisted GitHub contributions.
 
-This hook detects when Claude is creating commits, PRs, issues, or comments via git
-or GitHub API and provides guidance to include explicit attribution indicating that
-the content was authored with AI assistance.
+Event: PreToolUse (Bash)
 
-Promotes transparency and proper attribution for AI-assisted contributions.
+Purpose: Ensures proper authorship attribution when Claude creates git commits, pull requests,
+issues, or comments on behalf of the user.
+
+Behavior:
+- Detects `git commit` commands without attribution and provides guidance
+- Detects GitHub API calls (POST/PATCH to pulls, issues, comments) without attribution
+- Checks for existing attribution markers (Co-authored-by, AI-assisted, claude.ai/code links)
+- Provides concrete examples for adding attribution
+- Includes 1-minute cooldown to avoid repetitive suggestions
+
+Triggers on:
+- Git commits: `git commit -m "message"`, `git commit --amend`, etc.
+- PR creation: `curl -X POST .../pulls -d '{"title":"...","body":"..."}'`
+- Issue creation: `curl -X POST .../issues -d '{"title":"...","body":"..."}'`
+- Comment creation: `curl -X POST .../comments -d '{"body":"..."}'`
+- PR/issue updates: `curl -X PATCH .../pulls/NUMBER` or `.../issues/NUMBER`
+
+Does NOT trigger when:
+- Attribution already present (Co-authored-by, AI-assisted, claude.ai/code, etc.)
+- Within 1-minute cooldown period since last suggestion
+- Non-write operations (git status, git log, GET requests, etc.)
+- Non-GitHub API calls
+
+Attribution patterns recognized:
+- `Co-authored-by: Claude`
+- `AI-assisted`
+- `claude.ai/code`
+- `Generated with Claude`
+- `With assistance from Claude`
+
+Guidance provided:
+
+For git commits:
+```bash
+# Option 1: Co-authored-by trailer (recommended)
+git commit -m "$(cat <<'EOF'
+Your commit message
+
+Co-authored-by: Claude (Anthropic AI) <claude@anthropic.com>
+https://claude.ai/code/session_ID
+EOF
+)"
+
+# Option 2: AI assistance note
+git commit -m "$(cat <<'EOF'
+Your commit message
+
+AI-assisted with Claude Code
+https://claude.ai/code/session_ID
+EOF
+)"
+
+# Option 3: Multiple -m flags
+git commit -m "feat: add feature" -m "AI-assisted with Claude Code" -m "https://claude.ai/code/session_ID"
+```
+
+For GitHub API calls:
+```bash
+# Pull requests
+curl -X POST -H "Authorization: token $GITHUB_TOKEN" \
+  "https://api.github.com/repos/OWNER/REPO/pulls" \
+  -d '{
+    "title": "PR title",
+    "head": "branch",
+    "base": "main",
+    "body": "Description\n\n---\n*Created with [Claude Code](https://claude.ai/code/session_ID)*"
+  }'
+
+# Issues
+curl -X POST -H "Authorization: token $GITHUB_TOKEN" \
+  "https://api.github.com/repos/OWNER/REPO/issues" \
+  -d '{
+    "title": "Issue title",
+    "body": "Description\n\n---\n*AI-assisted with Claude Code*"
+  }'
+
+# Comments
+curl -X POST -H "Authorization: token $GITHUB_TOKEN" \
+  "https://api.github.com/repos/OWNER/REPO/issues/10/comments" \
+  -d '{"body": "Comment\n\n*AI-assisted with Claude Code*"}'
+```
+
+Why this matters:
+- Transparency about AI-assisted contributions
+- Proper attribution when acting on user's behalf
+- Maintains trust in collaborative development
+- Complies with attribution best practices
+
+State management:
+- Cooldown state stored in: `~/.claude/hook-state/gh-authorship-cooldown`
+- Contains Unix timestamp of last suggestion
+- 60-second (1-minute) cooldown period
+- Safe to delete if behavior needs to be reset
+
+Benefits:
+- Promotes transparency in AI-assisted development
+- Educates about attribution best practices
+- Prevents accidental omission of attribution
+- Works for both git and GitHub API workflows
+
+Limitations:
+- Only detects curl-based GitHub API calls (not wget or other HTTP clients)
+- Attribution detection is pattern-based; unusual formats may not be recognized
+- Cooldown may prevent guidance on subsequent operations within 1 minute
+- Only monitors Bash tool (not direct API operations from other tools)
 """
 import json
 import sys
