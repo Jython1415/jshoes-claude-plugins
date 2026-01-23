@@ -11,6 +11,8 @@ import subprocess
 import sys
 from pathlib import Path
 
+import pytest
+
 # Path to the hook script
 HOOK_PATH = Path(__file__).parent.parent / "auto-unsandbox-pbcopy.py"
 
@@ -43,60 +45,21 @@ class TestAutoUnsandboxPbcopy:
     """Test suite for auto-unsandbox-pbcopy hook"""
 
     # Basic pbcopy detection tests
-    def test_standalone_pbcopy(self):
-        """Standalone pbcopy command should be auto-approved with unsandboxing"""
-        output = run_hook("Bash", "pbcopy")
-        assert "hookSpecificOutput" in output, "Should return hook output"
+    @pytest.mark.parametrize("description,command", [
+        ("standalone pbcopy", "pbcopy"),
+        ("echo pipe pbcopy", 'echo "hello world" | pbcopy'),
+        ("cat pipe pbcopy", "cat file.txt | pbcopy"),
+        ("pbcopy with stdin redirect", "pbcopy < file.txt"),
+        ("command substitution pipe pbcopy", "git rev-parse HEAD | pbcopy"),
+        ("heredoc pipe pbcopy", "cat <<EOF | pbcopy\nsome text\nEOF"),
+        ("pbcopy in command chain", "echo test && echo result | pbcopy"),
+    ])
+    def test_basic_pbcopy_detection(self, description, command):
+        """Test basic pbcopy detection scenarios"""
+        output = run_hook("Bash", command)
+        assert "hookSpecificOutput" in output, f"Should return hook output for: {description}"
         hook_output = output["hookSpecificOutput"]
         assert hook_output["hookEventName"] == "PreToolUse"
-        assert hook_output["permissionDecision"] == "allow"
-        assert hook_output["updatedInput"]["dangerouslyDisableSandbox"] is True
-
-    def test_echo_pipe_pbcopy(self):
-        """echo text piped to pbcopy should be auto-approved with unsandboxing"""
-        output = run_hook("Bash", 'echo "hello world" | pbcopy')
-        assert "hookSpecificOutput" in output, "Should return hook output"
-        hook_output = output["hookSpecificOutput"]
-        assert hook_output["permissionDecision"] == "allow"
-        assert hook_output["updatedInput"]["dangerouslyDisableSandbox"] is True
-
-    def test_cat_pipe_pbcopy(self):
-        """cat file piped to pbcopy should be auto-approved with unsandboxing"""
-        output = run_hook("Bash", "cat file.txt | pbcopy")
-        assert "hookSpecificOutput" in output, "Should return hook output"
-        hook_output = output["hookSpecificOutput"]
-        assert hook_output["permissionDecision"] == "allow"
-        assert hook_output["updatedInput"]["dangerouslyDisableSandbox"] is True
-
-    def test_pbcopy_with_stdin_redirect(self):
-        """pbcopy with stdin redirect should be auto-approved with unsandboxing"""
-        output = run_hook("Bash", "pbcopy < file.txt")
-        assert "hookSpecificOutput" in output, "Should return hook output"
-        hook_output = output["hookSpecificOutput"]
-        assert hook_output["permissionDecision"] == "allow"
-        assert hook_output["updatedInput"]["dangerouslyDisableSandbox"] is True
-
-    def test_command_substitution_pipe_pbcopy(self):
-        """Command substitution piped to pbcopy should be auto-approved"""
-        output = run_hook("Bash", "git rev-parse HEAD | pbcopy")
-        assert "hookSpecificOutput" in output, "Should return hook output"
-        hook_output = output["hookSpecificOutput"]
-        assert hook_output["permissionDecision"] == "allow"
-        assert hook_output["updatedInput"]["dangerouslyDisableSandbox"] is True
-
-    def test_heredoc_pipe_pbcopy(self):
-        """Heredoc piped to pbcopy should be auto-approved"""
-        output = run_hook("Bash", "cat <<EOF | pbcopy\nsome text\nEOF")
-        assert "hookSpecificOutput" in output, "Should return hook output"
-        hook_output = output["hookSpecificOutput"]
-        assert hook_output["permissionDecision"] == "allow"
-        assert hook_output["updatedInput"]["dangerouslyDisableSandbox"] is True
-
-    def test_pbcopy_in_command_chain(self):
-        """pbcopy in a command chain should be auto-approved"""
-        output = run_hook("Bash", "echo test && echo result | pbcopy")
-        assert "hookSpecificOutput" in output, "Should return hook output"
-        hook_output = output["hookSpecificOutput"]
         assert hook_output["permissionDecision"] == "allow"
         assert hook_output["updatedInput"]["dangerouslyDisableSandbox"] is True
 
@@ -106,18 +69,17 @@ class TestAutoUnsandboxPbcopy:
         output = run_hook("Bash", "echo 'hello world'")
         assert output == {}, "Commands without pbcopy should return empty JSON"
 
-    def test_regular_bash_command(self):
+    @pytest.mark.parametrize("command", [
+        "ls -la",
+        "git status",
+        "pytest tests/",
+        "make build",
+        "echo test",
+    ])
+    def test_regular_bash_command(self, command):
         """Regular bash commands should return {}"""
-        test_commands = [
-            "ls -la",
-            "git status",
-            "pytest tests/",
-            "make build",
-            "echo test"
-        ]
-        for cmd in test_commands:
-            output = run_hook("Bash", cmd)
-            assert output == {}, f"'{cmd}' should return empty JSON"
+        output = run_hook("Bash", command)
+        assert output == {}, f"'{command}' should return empty JSON"
 
     # Non-Bash tools should return empty JSON
     def test_non_bash_tool(self):
@@ -125,12 +87,17 @@ class TestAutoUnsandboxPbcopy:
         output = run_hook("Read", "pbcopy")
         assert output == {}, "Non-Bash tools should return empty JSON"
 
-    def test_various_non_bash_tools(self):
+    @pytest.mark.parametrize("tool", [
+        "Read",
+        "Write",
+        "Edit",
+        "Grep",
+        "Glob",
+    ])
+    def test_various_non_bash_tools(self, tool):
         """Various non-Bash tools with pbcopy should return {}"""
-        non_bash_tools = ["Read", "Write", "Edit", "Grep", "Glob"]
-        for tool in non_bash_tools:
-            output = run_hook(tool, "echo test | pbcopy")
-            assert output == {}, f"{tool} tool should return empty JSON"
+        output = run_hook(tool, "echo test | pbcopy")
+        assert output == {}, f"{tool} tool should return empty JSON"
 
     # JSON output validation
     def test_json_output_valid(self):
@@ -256,34 +223,26 @@ class TestAutoUnsandboxPbcopy:
         assert output["hookSpecificOutput"]["permissionDecision"] == "allow"
 
     # Whitespace and formatting variations
-    def test_pbcopy_with_leading_whitespace(self):
-        """pbcopy with leading whitespace should be auto-approved"""
-        output = run_hook("Bash", "  pbcopy  ")
-        assert "hookSpecificOutput" in output, "Should return hook output"
-        assert output["hookSpecificOutput"]["permissionDecision"] == "allow"
-
-    def test_pbcopy_with_newlines(self):
-        """pbcopy command with newlines should be auto-approved"""
-        output = run_hook("Bash", "echo test | \\\npbcopy")
-        assert "hookSpecificOutput" in output, "Should return hook output"
-        assert output["hookSpecificOutput"]["permissionDecision"] == "allow"
-
-    def test_pbcopy_with_tabs(self):
-        """pbcopy command with tabs should be auto-approved"""
-        output = run_hook("Bash", "echo test\t|\tpbcopy")
-        assert "hookSpecificOutput" in output, "Should return hook output"
+    @pytest.mark.parametrize("description,command", [
+        ("leading whitespace", "  pbcopy  "),
+        ("newlines in command", "echo test | \\\npbcopy"),
+        ("tabs in command", "echo test\t|\tpbcopy"),
+    ])
+    def test_whitespace_variations(self, description, command):
+        """Test pbcopy detection with various whitespace and formatting"""
+        output = run_hook("Bash", command)
+        assert "hookSpecificOutput" in output, f"Should return hook output for: {description}"
         assert output["hookSpecificOutput"]["permissionDecision"] == "allow"
 
     # Case sensitivity
-    def test_pbcopy_uppercase(self):
-        """Uppercase PBCOPY should not trigger (case sensitive match)"""
-        output = run_hook("Bash", "echo test | PBCOPY")
-        assert output == {}, "Uppercase PBCOPY should not trigger (case sensitive)"
-
-    def test_pbcopy_mixed_case(self):
-        """Mixed case PbCopy should not trigger (case sensitive match)"""
-        output = run_hook("Bash", "echo test | PbCopy")
-        assert output == {}, "Mixed case should not trigger (case sensitive)"
+    @pytest.mark.parametrize("description,command", [
+        ("uppercase PBCOPY", "echo test | PBCOPY"),
+        ("mixed case PbCopy", "echo test | PbCopy"),
+    ])
+    def test_case_sensitivity(self, description, command):
+        """Test that pbcopy detection is case sensitive"""
+        output = run_hook("Bash", command)
+        assert output == {}, f"{description} should not trigger (case sensitive)"
 
     # Empty and minimal inputs
     def test_empty_command(self):
@@ -311,34 +270,17 @@ class TestAutoUnsandboxPbcopy:
         assert "unsandboxed" in reason.lower(), "Reason should mention unsandboxed mode"
 
     # Complex real-world scenarios
-    def test_git_diff_pipe_pbcopy(self):
-        """git diff piped to pbcopy should be auto-approved"""
-        output = run_hook("Bash", "git diff | pbcopy")
-        assert "hookSpecificOutput" in output, "Should return hook output"
-        assert output["hookSpecificOutput"]["permissionDecision"] == "allow"
-
-    def test_curl_result_pipe_pbcopy(self):
-        """curl result piped to pbcopy should be auto-approved"""
-        output = run_hook("Bash", "curl -s https://example.com | pbcopy")
-        assert "hookSpecificOutput" in output, "Should return hook output"
-        assert output["hookSpecificOutput"]["permissionDecision"] == "allow"
-
-    def test_python_output_pipe_pbcopy(self):
-        """Python script output piped to pbcopy should be auto-approved"""
-        output = run_hook("Bash", "python3 script.py | pbcopy")
-        assert "hookSpecificOutput" in output, "Should return hook output"
-        assert output["hookSpecificOutput"]["permissionDecision"] == "allow"
-
-    def test_jq_processing_pipe_pbcopy(self):
-        """jq processing piped to pbcopy should be auto-approved"""
-        output = run_hook("Bash", "cat data.json | jq '.results' | pbcopy")
-        assert "hookSpecificOutput" in output, "Should return hook output"
-        assert output["hookSpecificOutput"]["permissionDecision"] == "allow"
-
-    def test_grep_awk_sed_pipe_pbcopy(self):
-        """Complex text processing pipeline with pbcopy should be auto-approved"""
-        output = run_hook("Bash", "grep ERROR logs.txt | awk '{print $1}' | sed 's/^/ERROR: /' | pbcopy")
-        assert "hookSpecificOutput" in output, "Should return hook output"
+    @pytest.mark.parametrize("description,command", [
+        ("git diff pipe pbcopy", "git diff | pbcopy"),
+        ("curl result pipe pbcopy", "curl -s https://example.com | pbcopy"),
+        ("python output pipe pbcopy", "python3 script.py | pbcopy"),
+        ("jq processing pipe pbcopy", "cat data.json | jq '.results' | pbcopy"),
+        ("grep awk sed pipe pbcopy", "grep ERROR logs.txt | awk '{print $1}' | sed 's/^/ERROR: /' | pbcopy"),
+    ])
+    def test_real_world_scenarios(self, description, command):
+        """Test real-world scenarios with pbcopy"""
+        output = run_hook("Bash", command)
+        assert "hookSpecificOutput" in output, f"Should return hook output for: {description}"
         assert output["hookSpecificOutput"]["permissionDecision"] == "allow"
 
 

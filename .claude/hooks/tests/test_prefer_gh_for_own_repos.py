@@ -104,121 +104,63 @@ class TestPreferGhForOwnRepos:
 
     # ========== WebFetch with Jython1415 repos ==========
 
-    def test_webfetch_github_issue_url(self):
-        """WebFetch accessing Jython1415 issue should suggest gh when gh available"""
-        output = run_hook(
-            "WebFetch",
-            {"url": f"https://github.com/{TARGET_OWNER}/my-repo/issues/10"},
-            gh_available=True
-        )
-        assert "hookSpecificOutput" in output, "Should return hook output"
+    @pytest.mark.parametrize(
+        "description,url",
+        [
+            ("GitHub issue URL", f"https://github.com/{TARGET_OWNER}/my-repo/issues/10"),
+            ("GitHub PR URL", f"https://github.com/{TARGET_OWNER}/my-repo/pull/5"),
+            ("GitHub API URL", f"https://api.github.com/repos/{TARGET_OWNER}/my-repo/issues/10"),
+        ]
+    )
+    def test_webfetch_positive(self, description, url):
+        """WebFetch accessing Jython1415 repos should suggest gh when gh available"""
+        output = run_hook("WebFetch", {"url": url}, gh_available=True)
+        assert "hookSpecificOutput" in output, f"Should return hook output for {description}"
         assert "gh" in output["hookSpecificOutput"]["additionalContext"]
         assert TARGET_OWNER in output["hookSpecificOutput"]["additionalContext"]
 
-    def test_webfetch_github_pr_url(self):
-        """WebFetch accessing Jython1415 PR should suggest gh when gh available"""
-        output = run_hook(
-            "WebFetch",
-            {"url": f"https://github.com/{TARGET_OWNER}/my-repo/pull/5"},
-            gh_available=True
-        )
-        assert "hookSpecificOutput" in output, "Should return hook output"
-        assert "gh" in output["hookSpecificOutput"]["additionalContext"]
-
-    def test_webfetch_api_github_url(self):
-        """WebFetch accessing GitHub API for Jython1415 repo should suggest gh when gh available"""
-        output = run_hook(
-            "WebFetch",
-            {"url": f"https://api.github.com/repos/{TARGET_OWNER}/my-repo/issues/10"},
-            gh_available=True
-        )
-        assert "hookSpecificOutput" in output, "Should return hook output"
-        assert "gh" in output["hookSpecificOutput"]["additionalContext"]
-
-    def test_webfetch_github_url_gh_unavailable(self):
-        """WebFetch accessing Jython1415 repo should NOT suggest when gh unavailable"""
-        output = run_hook(
-            "WebFetch",
-            {"url": f"https://github.com/{TARGET_OWNER}/my-repo/issues/10"},
-            gh_available=False
-        )
-        assert output == {}, "Should return {} when gh not available"
-
-    def test_webfetch_different_owner(self):
-        """WebFetch accessing different owner's repo should NOT suggest gh"""
-        output = run_hook(
-            "WebFetch",
-            {"url": "https://github.com/torvalds/linux/issues/1"},
-            gh_available=True
-        )
-        assert output == {}, "Should not trigger for different owner"
-
-    def test_webfetch_non_github_url(self):
-        """WebFetch accessing non-GitHub URL should NOT trigger"""
-        output = run_hook(
-            "WebFetch",
-            {"url": "https://stackoverflow.com/questions/12345"},
-            gh_available=True
-        )
-        assert output == {}, "Should not trigger for non-GitHub URLs"
+    @pytest.mark.parametrize(
+        "description,url",
+        [
+            ("gh unavailable", f"https://github.com/{TARGET_OWNER}/my-repo/issues/10"),
+            ("different owner", "https://github.com/torvalds/linux/issues/1"),
+            ("non-GitHub URL", "https://stackoverflow.com/questions/12345"),
+        ]
+    )
+    def test_webfetch_negative(self, description, url):
+        """WebFetch should NOT trigger for unavailable gh, different owners, or non-GitHub URLs"""
+        gh_avail = description != "gh unavailable"
+        output = run_hook("WebFetch", {"url": url}, gh_available=gh_avail)
+        assert output == {}, f"Should not trigger for {description}"
 
     # ========== Bash with curl commands ==========
 
-    def test_bash_curl_github_api(self):
-        """Bash curl accessing Jython1415 GitHub API should suggest gh when gh available"""
-        output = run_hook(
-            "Bash",
-            {"command": f'curl -H "Authorization: token $GITHUB_TOKEN" "https://api.github.com/repos/{TARGET_OWNER}/my-repo/issues/10"'},
-            gh_available=True
-        )
-        assert "hookSpecificOutput" in output, "Should return hook output"
+    @pytest.mark.parametrize(
+        "description,command",
+        [
+            ("GitHub API URL", f'curl -H "Authorization: token $GITHUB_TOKEN" "https://api.github.com/repos/{TARGET_OWNER}/my-repo/issues/10"'),
+            ("GitHub URL", f'curl "https://github.com/{TARGET_OWNER}/my-repo/issues/10"'),
+        ]
+    )
+    def test_bash_curl_positive(self, description, command):
+        """Bash curl accessing Jython1415 repos should suggest gh when gh available"""
+        output = run_hook("Bash", {"command": command}, gh_available=True)
+        assert "hookSpecificOutput" in output, f"Should return hook output for {description}"
         assert "gh" in output["hookSpecificOutput"]["additionalContext"]
 
-    def test_bash_curl_github_url(self):
-        """Bash curl accessing Jython1415 GitHub should suggest gh when gh available"""
-        output = run_hook(
-            "Bash",
-            {"command": f'curl "https://github.com/{TARGET_OWNER}/my-repo/issues/10"'},
-            gh_available=True
-        )
-        assert "hookSpecificOutput" in output, "Should return hook output"
-        assert "gh" in output["hookSpecificOutput"]["additionalContext"]
-
-    def test_bash_curl_different_owner(self):
-        """Bash curl accessing different owner's repo should NOT trigger"""
-        output = run_hook(
-            "Bash",
-            {"command": 'curl "https://api.github.com/repos/torvalds/linux/issues/1"'},
-            gh_available=True
-        )
-        assert output == {}, "Should not trigger for different owner"
-
-    def test_bash_curl_gh_unavailable(self):
-        """Bash curl accessing Jython1415 repo should NOT suggest when gh unavailable"""
-        output = run_hook(
-            "Bash",
-            {"command": f'curl "https://api.github.com/repos/{TARGET_OWNER}/my-repo/issues/10"'},
-            gh_available=False
-        )
-        assert output == {}, "Should return {} when gh not available"
-
-    def test_bash_without_curl(self):
-        """Bash command without curl should NOT trigger"""
-        output = run_hook(
-            "Bash",
-            {"command": "git status"},
-            gh_available=True
-        )
-        assert output == {}, "Should not trigger for non-curl commands"
-
-    def test_bash_curl_non_github(self):
-        """Bash curl to non-GitHub URL should NOT trigger"""
-        output = run_hook(
-            "Bash",
-            {"command": 'curl "https://api.example.com/data"'},
-            gh_available=True
-        )
-        assert output == {}, "Should not trigger for non-GitHub URLs"
+    @pytest.mark.parametrize(
+        "description,command,gh_avail",
+        [
+            ("different owner", 'curl "https://api.github.com/repos/torvalds/linux/issues/1"', True),
+            ("gh unavailable", f'curl "https://api.github.com/repos/{TARGET_OWNER}/my-repo/issues/10"', False),
+            ("without curl", "git status", True),
+            ("non-GitHub URL", 'curl "https://api.example.com/data"', True),
+        ]
+    )
+    def test_bash_curl_negative(self, description, command, gh_avail):
+        """Bash curl should NOT trigger for different owners, unavailable gh, non-curl, or non-GitHub URLs"""
+        output = run_hook("Bash", {"command": command}, gh_available=gh_avail)
+        assert output == {}, f"Should not trigger for {description}"
 
     # ========== Cooldown mechanism tests ==========
 
@@ -288,70 +230,34 @@ class TestPreferGhForOwnRepos:
 
     # ========== Other tool types ==========
 
-    def test_non_webfetch_non_bash_tool(self):
+    @pytest.mark.parametrize(
+        "tool_name,tool_input",
+        [
+            ("Read", {"file_path": "/some/path"}),
+            ("Edit", {"file_path": "/some/path", "old_string": "a", "new_string": "b"}),
+            ("Glob", {"pattern": "*.py"}),
+        ]
+    )
+    def test_non_triggering_tools(self, tool_name, tool_input):
         """Non-WebFetch, non-Bash tools should NOT trigger"""
-        output = run_hook(
-            "Read",
-            {"file_path": "/some/path"},
-            gh_available=True
-        )
-        assert output == {}, "Read tool should not trigger"
-
-    def test_edit_tool(self):
-        """Edit tool should NOT trigger"""
-        output = run_hook(
-            "Edit",
-            {"file_path": "/some/path", "old_string": "a", "new_string": "b"},
-            gh_available=True
-        )
-        assert output == {}, "Edit tool should not trigger"
-
-    def test_glob_tool(self):
-        """Glob tool should NOT trigger"""
-        output = run_hook(
-            "Glob",
-            {"pattern": "*.py"},
-            gh_available=True
-        )
-        assert output == {}, "Glob tool should not trigger"
+        output = run_hook(tool_name, tool_input, gh_available=True)
+        assert output == {}, f"{tool_name} tool should not trigger"
 
     # ========== Edge cases ==========
 
-    def test_empty_url(self):
-        """WebFetch with empty URL should NOT trigger"""
-        output = run_hook(
-            "WebFetch",
-            {"url": ""},
-            gh_available=True
-        )
-        assert output == {}, "Empty URL should not trigger"
-
-    def test_missing_url_field(self):
-        """WebFetch with missing URL field should NOT trigger"""
-        output = run_hook(
-            "WebFetch",
-            {},
-            gh_available=True
-        )
-        assert output == {}, "Missing URL should not trigger"
-
-    def test_empty_command(self):
-        """Bash with empty command should NOT trigger"""
-        output = run_hook(
-            "Bash",
-            {"command": ""},
-            gh_available=True
-        )
-        assert output == {}, "Empty command should not trigger"
-
-    def test_missing_command_field(self):
-        """Bash with missing command field should NOT trigger"""
-        output = run_hook(
-            "Bash",
-            {},
-            gh_available=True
-        )
-        assert output == {}, "Missing command should not trigger"
+    @pytest.mark.parametrize(
+        "tool_name,tool_input,description",
+        [
+            ("WebFetch", {"url": ""}, "empty URL"),
+            ("WebFetch", {}, "missing URL field"),
+            ("Bash", {"command": ""}, "empty command"),
+            ("Bash", {}, "missing command field"),
+        ]
+    )
+    def test_empty_and_missing_fields(self, tool_name, tool_input, description):
+        """Empty and missing fields should NOT trigger"""
+        output = run_hook(tool_name, tool_input, gh_available=True)
+        assert output == {}, f"{description} should not trigger"
 
     def test_malformed_url(self):
         """WebFetch with malformed URL should NOT crash"""
@@ -364,9 +270,9 @@ class TestPreferGhForOwnRepos:
 
     # ========== URL pattern variations ==========
 
-    def test_github_url_with_different_paths(self):
-        """Various GitHub URL paths for Jython1415 should trigger when gh available"""
-        test_urls = [
+    @pytest.mark.parametrize(
+        "url",
+        [
             f"https://github.com/{TARGET_OWNER}/repo/issues/10",
             f"https://github.com/{TARGET_OWNER}/repo/pull/5",
             f"https://github.com/{TARGET_OWNER}/repo/blob/main/file.py",
@@ -375,20 +281,24 @@ class TestPreferGhForOwnRepos:
             f"https://api.github.com/repos/{TARGET_OWNER}/repo/pulls/5",
             f"https://raw.githubusercontent.com/{TARGET_OWNER}/repo/main/README.md",
         ]
-        for url in test_urls:
-            output = run_hook("WebFetch", {"url": url}, gh_available=True)
-            assert "hookSpecificOutput" in output, f"Should trigger for: {url}"
+    )
+    def test_github_url_with_different_paths(self, url):
+        """Various GitHub URL paths for Jython1415 should trigger when gh available"""
+        output = run_hook("WebFetch", {"url": url}, gh_available=True)
+        assert "hookSpecificOutput" in output, f"Should trigger for: {url}"
 
-    def test_curl_with_quotes_variations(self):
-        """Curl commands with various quote styles should be detected"""
-        test_commands = [
+    @pytest.mark.parametrize(
+        "command",
+        [
             f'curl "https://api.github.com/repos/{TARGET_OWNER}/repo/issues"',
             f"curl 'https://api.github.com/repos/{TARGET_OWNER}/repo/issues'",
             f'curl https://api.github.com/repos/{TARGET_OWNER}/repo/issues',
         ]
-        for cmd in test_commands:
-            output = run_hook("Bash", {"command": cmd}, gh_available=True)
-            assert "hookSpecificOutput" in output, f"Should detect URL in: {cmd}"
+    )
+    def test_curl_with_quotes_variations(self, command):
+        """Curl commands with various quote styles should be detected"""
+        output = run_hook("Bash", {"command": command}, gh_available=True)
+        assert "hookSpecificOutput" in output, f"Should detect URL in: {command}"
 
     def test_curl_complex_command(self):
         """Complex curl command with headers and data should still trigger"""

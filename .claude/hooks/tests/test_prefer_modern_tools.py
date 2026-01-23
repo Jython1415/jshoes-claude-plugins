@@ -103,94 +103,44 @@ class TestPreferModernTools:
 
     # ========== Basic find detection tests ==========
 
-    def test_find_basic_usage(self):
-        """Basic find command should trigger fd suggestion when fd is available"""
-        output = run_hook("Bash", 'find . -name "*.py"', fd_available=True)
-        assert "hookSpecificOutput" in output, "Should return hook output"
-        assert "fd" in output["hookSpecificOutput"]["additionalContext"]
-        assert "find" in output["hookSpecificOutput"]["additionalContext"].lower()
-
-    def test_find_basic_usage_fd_unavailable(self):
-        """Basic find command should NOT trigger when fd is unavailable"""
-        output = run_hook("Bash", 'find . -name "*.py"', fd_available=False)
-        assert output == {}, "Should return {} when fd not available"
-
-    def test_find_at_command_start(self):
-        """find at the start of command should trigger suggestion when fd is available"""
-        output = run_hook("Bash", "find /path/to/dir -type f", fd_available=True)
-        assert "hookSpecificOutput" in output, "Should return hook output"
-        assert "fd" in output["hookSpecificOutput"]["additionalContext"]
-
-    def test_find_at_command_start_fd_unavailable(self):
-        """find at the start of command should NOT trigger when fd is unavailable"""
-        output = run_hook("Bash", "find /path/to/dir -type f", fd_available=False)
-        assert output == {}, "Should return {} when fd not available"
-
-    def test_find_with_pipe(self):
-        """find command piped to other commands should trigger when fd is available"""
-        output = run_hook("Bash", 'find . -name "*.txt" | xargs cat', fd_available=True)
-        assert "hookSpecificOutput" in output, "Should return hook output"
-        assert "fd" in output["hookSpecificOutput"]["additionalContext"]
-
-    def test_find_with_pipe_fd_unavailable(self):
-        """find command piped to other commands should NOT trigger when fd is unavailable"""
-        output = run_hook("Bash", 'find . -name "*.txt" | xargs cat', fd_available=False)
-        assert output == {}, "Should return {} when fd not available"
-
-    def test_find_complex_pattern(self):
-        """Complex find command with multiple options should trigger when fd is available"""
-        output = run_hook("Bash", "find /var/log -type f -name '*.log' -mtime +7 -delete", fd_available=True)
-        assert "hookSpecificOutput" in output, "Should return hook output"
-        assert "fd" in output["hookSpecificOutput"]["additionalContext"]
-
-    def test_find_with_exec(self):
-        """find with -exec should trigger suggestion when fd is available"""
-        output = run_hook("Bash", "find . -name '*.pyc' -exec rm {} \\;", fd_available=True)
-        assert "hookSpecificOutput" in output, "Should return hook output"
-        assert "fd" in output["hookSpecificOutput"]["additionalContext"]
+    @pytest.mark.parametrize("command,fd_avail,should_trigger", [
+        ('find . -name "*.py"', True, True),
+        ('find . -name "*.py"', False, False),
+        ('find /path/to/dir -type f', True, True),
+        ('find /path/to/dir -type f', False, False),
+        ('find . -name "*.txt" | xargs cat', True, True),
+        ('find . -name "*.txt" | xargs cat', False, False),
+        ('find /var/log -type f -name \'*.log\' -mtime +7 -delete', True, True),
+        ('find . -name \'*.pyc\' -exec rm {} \\;', True, True),
+    ])
+    def test_find_detection(self, command, fd_avail, should_trigger):
+        """Test find detection with various command patterns"""
+        output = run_hook("Bash", command, fd_available=fd_avail)
+        if should_trigger:
+            assert "hookSpecificOutput" in output, f"Should trigger for: {command}"
+            assert "fd" in output["hookSpecificOutput"]["additionalContext"]
+        else:
+            assert output == {}, f"Should not trigger for: {command}"
 
     # ========== Basic grep detection tests ==========
 
-    def test_grep_basic_usage(self):
-        """Basic grep command should trigger rg suggestion when rg is available"""
-        output = run_hook("Bash", 'grep -r "pattern" .', rg_available=True)
-        assert "hookSpecificOutput" in output, "Should return hook output"
-        assert "rg" in output["hookSpecificOutput"]["additionalContext"]
-        assert "grep" in output["hookSpecificOutput"]["additionalContext"].lower()
-
-    def test_grep_basic_usage_rg_unavailable(self):
-        """Basic grep command should NOT trigger when rg is unavailable"""
-        output = run_hook("Bash", 'grep -r "pattern" .', rg_available=False)
-        assert output == {}, "Should return {} when rg not available"
-
-    def test_grep_at_command_start(self):
-        """grep at the start of command should trigger suggestion when rg is available"""
-        output = run_hook("Bash", 'grep "error" /var/log/syslog', rg_available=True)
-        assert "hookSpecificOutput" in output, "Should return hook output"
-        assert "rg" in output["hookSpecificOutput"]["additionalContext"]
-
-    def test_grep_at_command_start_rg_unavailable(self):
-        """grep at the start of command should NOT trigger when rg is unavailable"""
-        output = run_hook("Bash", 'grep "error" /var/log/syslog', rg_available=False)
-        assert output == {}, "Should return {} when rg not available"
-
-    def test_grep_with_options(self):
-        """grep with various options should trigger when rg is available"""
-        output = run_hook("Bash", 'grep -rn "TODO" src/', rg_available=True)
-        assert "hookSpecificOutput" in output, "Should return hook output"
-        assert "rg" in output["hookSpecificOutput"]["additionalContext"]
-
-    def test_grep_piped_input(self):
-        """grep receiving piped input should trigger when rg is available"""
-        output = run_hook("Bash", 'cat file.txt | grep "pattern"', rg_available=True)
-        assert "hookSpecificOutput" in output, "Should return hook output"
-        assert "rg" in output["hookSpecificOutput"]["additionalContext"]
-
-    def test_grep_case_insensitive(self):
-        """grep -i should trigger suggestion when rg is available"""
-        output = run_hook("Bash", 'grep -i "error" logs/*.log', rg_available=True)
-        assert "hookSpecificOutput" in output, "Should return hook output"
-        assert "rg" in output["hookSpecificOutput"]["additionalContext"]
+    @pytest.mark.parametrize("command,rg_avail,should_trigger", [
+        ('grep -r "pattern" .', True, True),
+        ('grep -r "pattern" .', False, False),
+        ('grep "error" /var/log/syslog', True, True),
+        ('grep "error" /var/log/syslog', False, False),
+        ('grep -rn "TODO" src/', True, True),
+        ('cat file.txt | grep "pattern"', True, True),
+        ('grep -i "error" logs/*.log', True, True),
+    ])
+    def test_grep_detection(self, command, rg_avail, should_trigger):
+        """Test grep detection with various command patterns"""
+        output = run_hook("Bash", command, rg_available=rg_avail)
+        if should_trigger:
+            assert "hookSpecificOutput" in output, f"Should trigger for: {command}"
+            assert "rg" in output["hookSpecificOutput"]["additionalContext"]
+        else:
+            assert output == {}, f"Should not trigger for: {command}"
 
     # ========== Commands that should NOT trigger ==========
 
@@ -278,59 +228,55 @@ class TestPreferModernTools:
 
     # ========== Edge cases - find/grep as part of words should NOT trigger ==========
 
-    def test_find_as_part_of_word(self):
+    @pytest.mark.parametrize("command", [
+        "pathfinder /tmp",
+        "finder app.py",
+        "findings.txt",
+        "refind-boot",
+        "unfind something"
+    ])
+    def test_find_as_part_of_word(self, command):
         """find as part of a larger word should not trigger"""
-        test_cases = [
-            "pathfinder /tmp",
-            "finder app.py",
-            "findings.txt",
-            "refind-boot",
-            "unfind something"
-        ]
-        for cmd in test_cases:
-            output = run_hook("Bash", cmd, fd_available=True)
-            assert output == {}, f"'{cmd}' should not trigger (find is part of word)"
+        output = run_hook("Bash", command, fd_available=True)
+        assert output == {}, f"'{command}' should not trigger (find is part of word)"
 
-    def test_grep_as_part_of_word(self):
+    @pytest.mark.parametrize("command", [
+        "postgres database",
+        "egrep-tool",
+        "grepcode.com",
+        "mgrep utility",
+        "agrep fuzzy"
+    ])
+    def test_grep_as_part_of_word(self, command):
         """grep as part of a larger word should not trigger"""
-        test_cases = [
-            "postgres database",
-            "egrep-tool",
-            "grepcode.com",
-            "mgrep utility",
-            "agrep fuzzy"
-        ]
-        for cmd in test_cases:
-            output = run_hook("Bash", cmd, rg_available=True)
-            assert output == {}, f"'{cmd}' should not trigger (grep is part of word)"
+        output = run_hook("Bash", command, rg_available=True)
+        assert output == {}, f"'{command}' should not trigger (grep is part of word)"
 
     # ========== Edge cases - find/grep in filenames should NOT trigger ==========
 
-    def test_find_in_filename(self):
+    @pytest.mark.parametrize("command", [
+        "cat find.txt",
+        "./find-script.sh",
+        "python3 my-find-tool.py",
+        "ls -la findings",
+        "rm -f old_find.log"
+    ])
+    def test_find_in_filename(self, command):
         """find in filename should not trigger"""
-        test_cases = [
-            "cat find.txt",
-            "./find-script.sh",
-            "python3 my-find-tool.py",
-            "ls -la findings",
-            "rm -f old_find.log"
-        ]
-        for cmd in test_cases:
-            output = run_hook("Bash", cmd, fd_available=True)
-            assert output == {}, f"'{cmd}' should not trigger (find in filename)"
+        output = run_hook("Bash", command, fd_available=True)
+        assert output == {}, f"'{command}' should not trigger (find in filename)"
 
-    def test_grep_in_filename(self):
+    @pytest.mark.parametrize("command", [
+        "cat grep.txt",
+        "./grep-helper.sh",
+        "python3 advanced-grep.py",
+        "ls -la grep_results",
+        "rm -f grep_output.log"
+    ])
+    def test_grep_in_filename(self, command):
         """grep in filename should not trigger"""
-        test_cases = [
-            "cat grep.txt",
-            "./grep-helper.sh",
-            "python3 advanced-grep.py",
-            "ls -la grep_results",
-            "rm -f grep_output.log"
-        ]
-        for cmd in test_cases:
-            output = run_hook("Bash", cmd, rg_available=True)
-            assert output == {}, f"'{cmd}' should not trigger (grep in filename)"
+        output = run_hook("Bash", command, rg_available=True)
+        assert output == {}, f"'{command}' should not trigger (grep in filename)"
 
     def test_hook_limitation_quotes_not_parsed(self):
         """
@@ -345,78 +291,66 @@ class TestPreferModernTools:
 
     # ========== Multiple suggestions ==========
 
-    def test_both_find_and_grep_both_available(self):
-        """Command with both find and grep should suggest both alternatives when both tools available"""
-        output = run_hook("Bash", 'find . -name "*.py" | xargs grep "TODO"', fd_available=True, rg_available=True)
+    @pytest.mark.parametrize("fd_avail,rg_avail,has_fd,has_rg,should_trigger", [
+        (True, True, True, True, True),  # both available
+        (True, False, True, False, True),  # only fd available
+        (False, True, False, True, True),  # only rg available
+        (False, False, False, False, False),  # neither available
+    ])
+    def test_both_find_and_grep_availability(self, fd_avail, rg_avail, has_fd, has_rg, should_trigger):
+        """Command with both find and grep should suggest available tools"""
+        output = run_hook("Bash", 'find . -name "*.py" | xargs grep "TODO"', fd_available=fd_avail, rg_available=rg_avail)
+        if should_trigger:
+            assert "hookSpecificOutput" in output, "Should return hook output"
+            context = output["hookSpecificOutput"]["additionalContext"]
+            if has_fd:
+                assert "fd" in context, "Should suggest fd when available"
+            else:
+                assert "fd" not in context, "Should NOT suggest fd when unavailable"
+            if has_rg:
+                assert "rg" in context, "Should suggest rg when available"
+            else:
+                assert "rg" not in context, "Should NOT suggest rg when unavailable"
+        else:
+            assert output == {}, "Should return {} when neither tool is available"
+
+    @pytest.mark.parametrize("fd_avail,rg_avail,has_fd,has_rg", [
+        (True, True, True, True),
+        (False, True, False, True),
+    ])
+    def test_grep_and_find_in_sequence(self, fd_avail, rg_avail, has_fd, has_rg):
+        """Sequential grep and find commands should trigger appropriate suggestions"""
+        output = run_hook("Bash", 'grep "class" *.py && find . -name "*.pyc" -delete', fd_available=fd_avail, rg_available=rg_avail)
         assert "hookSpecificOutput" in output, "Should return hook output"
         context = output["hookSpecificOutput"]["additionalContext"]
-        assert "fd" in context, "Should suggest fd"
-        assert "rg" in context, "Should suggest rg"
-        assert "find" in context.lower(), "Should mention find"
-        assert "grep" in context.lower(), "Should mention grep"
-
-    def test_both_find_and_grep_only_fd_available(self):
-        """Command with both find and grep should only suggest fd when only fd is available"""
-        output = run_hook("Bash", 'find . -name "*.py" | xargs grep "TODO"', fd_available=True, rg_available=False)
-        assert "hookSpecificOutput" in output, "Should return hook output"
-        context = output["hookSpecificOutput"]["additionalContext"]
-        assert "fd" in context, "Should suggest fd"
-        assert "rg" not in context, "Should NOT suggest rg when unavailable"
-
-    def test_both_find_and_grep_only_rg_available(self):
-        """Command with both find and grep should only suggest rg when only rg is available"""
-        output = run_hook("Bash", 'find . -name "*.py" | xargs grep "TODO"', fd_available=False, rg_available=True)
-        assert "hookSpecificOutput" in output, "Should return hook output"
-        context = output["hookSpecificOutput"]["additionalContext"]
-        assert "fd" not in context, "Should NOT suggest fd when unavailable"
-        assert "rg" in context, "Should suggest rg"
-
-    def test_both_find_and_grep_neither_available(self):
-        """Command with both find and grep should return {} when neither tool is available"""
-        output = run_hook("Bash", 'find . -name "*.py" | xargs grep "TODO"', fd_available=False, rg_available=False)
-        assert output == {}, "Should return {} when neither tool is available"
-
-    def test_grep_and_find_in_sequence(self):
-        """Sequential find and grep commands should trigger appropriate suggestions"""
-        output = run_hook("Bash", 'grep "class" *.py && find . -name "*.pyc" -delete', fd_available=True, rg_available=True)
-        assert "hookSpecificOutput" in output, "Should return hook output"
-        context = output["hookSpecificOutput"]["additionalContext"]
-        assert "rg" in context, "Should suggest rg for grep"
-        assert "fd" in context, "Should suggest fd for find"
-
-    def test_grep_and_find_in_sequence_only_rg(self):
-        """Sequential grep and find should only suggest rg when only rg is available"""
-        output = run_hook("Bash", 'grep "class" *.py && find . -name "*.pyc" -delete', fd_available=False, rg_available=True)
-        assert "hookSpecificOutput" in output, "Should return hook output"
-        context = output["hookSpecificOutput"]["additionalContext"]
-        assert "rg" in context, "Should suggest rg for grep"
-        assert "fd" not in context, "Should NOT suggest fd when unavailable"
+        if has_rg:
+            assert "rg" in context, "Should suggest rg for grep when available"
+        if has_fd:
+            assert "fd" in context, "Should suggest fd for find when available"
 
     # ========== Edge cases - environment variables ==========
 
-    def test_find_in_env_var_name(self):
+    @pytest.mark.parametrize("command", [
+        "echo $FINDPATH",
+        "export FIND_DIR=/tmp",
+        "${FIND_ROOT}/bin/app",
+        "$FINDER_APP"
+    ])
+    def test_find_in_env_var_name(self, command):
         """Environment variables with find in name should not trigger"""
-        test_cases = [
-            "echo $FINDPATH",
-            "export FIND_DIR=/tmp",
-            "${FIND_ROOT}/bin/app",
-            "$FINDER_APP"
-        ]
-        for cmd in test_cases:
-            output = run_hook("Bash", cmd, fd_available=True)
-            assert output == {}, f"'{cmd}' should not trigger (env var, not find command)"
+        output = run_hook("Bash", command, fd_available=True)
+        assert output == {}, f"'{command}' should not trigger (env var, not find command)"
 
-    def test_grep_in_env_var_name(self):
+    @pytest.mark.parametrize("command", [
+        "echo $GREP_COLORS",
+        "export GREP_OPTIONS='--color=auto'",
+        "${GREP_PATH}/bin",
+        "$GREPPY_VAR"
+    ])
+    def test_grep_in_env_var_name(self, command):
         """Environment variables with grep in name should not trigger"""
-        test_cases = [
-            "echo $GREP_COLORS",
-            "export GREP_OPTIONS='--color=auto'",
-            "${GREP_PATH}/bin",
-            "$GREPPY_VAR"
-        ]
-        for cmd in test_cases:
-            output = run_hook("Bash", cmd, rg_available=True)
-            assert output == {}, f"'{cmd}' should not trigger (env var, not grep command)"
+        output = run_hook("Bash", command, rg_available=True)
+        assert output == {}, f"'{command}' should not trigger (env var, not grep command)"
 
     # ========== Commands with rg present should not suggest grep alternative ==========
 
@@ -555,38 +489,29 @@ class TestPreferModernTools:
         output = run_hook("Bash", cmd, rg_available=False)
         assert output == {}, "Should return {} when rg not available"
 
-    def test_nested_find_with_grep_both_available(self):
-        """Nested command with both find and grep should suggest both when both tools available"""
+    @pytest.mark.parametrize("fd_avail,rg_avail,has_fd,has_rg,should_trigger", [
+        (True, True, True, True, True),
+        (True, False, True, False, True),
+        (False, True, False, True, True),
+        (False, False, False, False, False),
+    ])
+    def test_nested_find_with_grep(self, fd_avail, rg_avail, has_fd, has_rg, should_trigger):
+        """Nested command with find/grep should suggest available tools"""
         cmd = 'find src/ -type f -name "*.py" -exec grep -l "import pandas" {} \\;'
-        output = run_hook("Bash", cmd, fd_available=True, rg_available=True)
-        assert "hookSpecificOutput" in output
-        context = output["hookSpecificOutput"]["additionalContext"]
-        assert "fd" in context, "Should suggest fd when available"
-        assert "rg" in context, "Should suggest rg when available"
-
-    def test_nested_find_with_grep_only_fd(self):
-        """Nested command with both find and grep should only suggest fd when only fd available"""
-        cmd = 'find src/ -type f -name "*.py" -exec grep -l "import pandas" {} \\;'
-        output = run_hook("Bash", cmd, fd_available=True, rg_available=False)
-        assert "hookSpecificOutput" in output
-        context = output["hookSpecificOutput"]["additionalContext"]
-        assert "fd" in context, "Should suggest fd when available"
-        assert "rg" not in context, "Should NOT suggest rg when unavailable"
-
-    def test_nested_find_with_grep_only_rg(self):
-        """Nested command with both find and grep should only suggest rg when only rg available"""
-        cmd = 'find src/ -type f -name "*.py" -exec grep -l "import pandas" {} \\;'
-        output = run_hook("Bash", cmd, fd_available=False, rg_available=True)
-        assert "hookSpecificOutput" in output
-        context = output["hookSpecificOutput"]["additionalContext"]
-        assert "fd" not in context, "Should NOT suggest fd when unavailable"
-        assert "rg" in context, "Should suggest rg when available"
-
-    def test_nested_find_with_grep_neither_available(self):
-        """Nested command with both find and grep should return {} when neither tool available"""
-        cmd = 'find src/ -type f -name "*.py" -exec grep -l "import pandas" {} \\;'
-        output = run_hook("Bash", cmd, fd_available=False, rg_available=False)
-        assert output == {}, "Should return {} when neither tool is available"
+        output = run_hook("Bash", cmd, fd_available=fd_avail, rg_available=rg_avail)
+        if should_trigger:
+            assert "hookSpecificOutput" in output, "Should return hook output"
+            context = output["hookSpecificOutput"]["additionalContext"]
+            if has_fd:
+                assert "fd" in context, "Should suggest fd when available"
+            else:
+                assert "fd" not in context, "Should NOT suggest fd when unavailable"
+            if has_rg:
+                assert "rg" in context, "Should suggest rg when available"
+            else:
+                assert "rg" not in context, "Should NOT suggest rg when unavailable"
+        else:
+            assert output == {}, "Should return {} when neither tool is available"
 
     # ========== Edge cases - spacing variations ==========
 

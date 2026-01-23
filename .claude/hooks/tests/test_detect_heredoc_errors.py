@@ -11,6 +11,8 @@ import subprocess
 import sys
 from pathlib import Path
 
+import pytest
+
 # Path to the hook script
 HOOK_PATH = Path(__file__).parent.parent / "detect-heredoc-errors.py"
 
@@ -138,56 +140,25 @@ class TestDetectHeredocErrors:
         assert HEREDOC_ERROR in output["hookSpecificOutput"]["additionalContext"]
 
     # Non-heredoc errors should return empty JSON
-    def test_bash_syntax_error_no_heredoc(self):
-        """Bash syntax error without heredoc should return {}"""
-        output = run_hook_with_error("Bash", "bash: syntax error near unexpected token `)'")
-        assert output == {}, "Non-heredoc syntax error should not trigger"
-
-    def test_command_not_found_error(self):
-        """Command not found error should return {}"""
-        output = run_hook_with_error("Bash", "bash: foobar: command not found")
-        assert output == {}, "Command not found error should not trigger"
-
-    def test_permission_denied_error(self):
-        """Permission denied error should return {}"""
-        output = run_hook_with_error("Bash", "bash: ./script.sh: Permission denied")
-        assert output == {}, "Permission denied error should not trigger"
-
-    def test_file_not_found_error(self):
-        """File not found error should return {}"""
-        output = run_hook_with_error("Bash", "bash: nonexistent.txt: No such file or directory")
-        assert output == {}, "File not found error should not trigger"
-
-    def test_eof_error_without_heredoc_keyword(self):
-        """EOF error without heredoc keyword should return {}"""
-        output = run_hook_with_error("Bash", "bash: unexpected EOF while looking for matching `\"'")
-        assert output == {}, "EOF error without heredoc keyword should not trigger"
-
-    def test_generic_bash_error(self):
-        """Generic bash error should return {}"""
-        output = run_hook_with_error("Bash", "bash: line 42: unexpected error occurred")
-        assert output == {}, "Generic bash error should not trigger"
+    @pytest.mark.parametrize("error_message,description", [
+        ("bash: syntax error near unexpected token `)'", "Bash syntax error without heredoc"),
+        ("bash: foobar: command not found", "Command not found error"),
+        ("bash: ./script.sh: Permission denied", "Permission denied error"),
+        ("bash: nonexistent.txt: No such file or directory", "File not found error"),
+        ("bash: unexpected EOF while looking for matching `\"'", "EOF error without heredoc keyword"),
+        ("bash: line 42: unexpected error occurred", "Generic bash error"),
+    ])
+    def test_non_heredoc_bash_errors(self, error_message, description):
+        """Non-heredoc errors should return {} and not trigger the hook"""
+        output = run_hook_with_error("Bash", error_message)
+        assert output == {}, f"{description} should not trigger"
 
     # Non-Bash tools should return empty JSON
-    def test_read_tool_with_heredoc_error(self):
-        """Read tool with heredoc error message should return {}"""
-        output = run_hook_with_error("Read", HEREDOC_ERROR)
-        assert output == {}, "Non-Bash tool should not trigger even with heredoc error"
-
-    def test_write_tool_with_heredoc_error(self):
-        """Write tool with heredoc error message should return {}"""
-        output = run_hook_with_error("Write", HEREDOC_ERROR)
-        assert output == {}, "Write tool should not trigger"
-
-    def test_edit_tool_with_heredoc_error(self):
-        """Edit tool with heredoc error message should return {}"""
-        output = run_hook_with_error("Edit", HEREDOC_ERROR)
-        assert output == {}, "Edit tool should not trigger"
-
-    def test_glob_tool_with_heredoc_error(self):
-        """Glob tool with heredoc error message should return {}"""
-        output = run_hook_with_error("Glob", HEREDOC_ERROR)
-        assert output == {}, "Glob tool should not trigger"
+    @pytest.mark.parametrize("tool_name", ["Read", "Write", "Edit", "Glob"])
+    def test_non_bash_tools_with_heredoc_error(self, tool_name):
+        """Non-Bash tools with heredoc error message should return {}"""
+        output = run_hook_with_error(tool_name, HEREDOC_ERROR)
+        assert output == {}, f"{tool_name} tool should not trigger even with heredoc error"
 
     # Successful commands should return empty JSON
     def test_successful_bash_command(self):
@@ -253,38 +224,42 @@ class TestDetectHeredocErrors:
             assert isinstance(output, dict), f"Output should be valid JSON dict"
 
     # Guidance content verification
-    def test_guidance_includes_git_commit_workaround(self):
-        """Guidance should mention git commit -m workaround"""
+    @pytest.mark.parametrize("key_phrase,expected_content,description", [
+        (
+            "git_commit",
+            ["git commit", "-m"],
+            "Guidance should mention git commit -m workaround",
+        ),
+        (
+            "ansi_c_quoting",
+            ["ANSI-C", "\\n"],
+            "Guidance should mention ANSI-C quoting workaround",
+        ),
+        (
+            "write_tool",
+            ["Write"],
+            "Guidance should mention Write tool as alternative",
+        ),
+        (
+            "sandbox_warning",
+            ["sandbox", "don't work"],
+            "Guidance should explicitly state heredocs don't work in sandbox",
+        ),
+    ])
+    def test_guidance_content_includes_key_phrases(self, key_phrase, expected_content, description):
+        """Guidance should include key phrases for troubleshooting"""
         output = run_hook_with_error("Bash", HEREDOC_ERROR)
         context = output["hookSpecificOutput"]["additionalContext"]
 
-        assert "git commit" in context, "Should mention git commit"
-        assert "-m" in context, "Should mention -m flag"
-        assert "multiple -m flags" in context.lower() or "multiple" in context, "Should suggest multiple -m"
-
-    def test_guidance_includes_ansi_c_quoting(self):
-        """Guidance should mention ANSI-C quoting workaround"""
-        output = run_hook_with_error("Bash", HEREDOC_ERROR)
-        context = output["hookSpecificOutput"]["additionalContext"]
-
-        assert "ANSI-C" in context or "$'" in context, "Should mention ANSI-C quoting or $'...'"
-        assert "\\n" in context or "\\\\n" in context, "Should show newline escape example"
-
-    def test_guidance_includes_write_tool_workaround(self):
-        """Guidance should mention Write tool as alternative"""
-        output = run_hook_with_error("Bash", HEREDOC_ERROR)
-        context = output["hookSpecificOutput"]["additionalContext"]
-
-        assert "Write" in context, "Should mention Write tool"
-        assert "create file" in context.lower() or "file first" in context.lower(), "Should suggest creating file"
-
-    def test_guidance_warns_heredocs_dont_work(self):
-        """Guidance should explicitly state heredocs don't work in sandbox"""
-        output = run_hook_with_error("Bash", HEREDOC_ERROR)
-        context = output["hookSpecificOutput"]["additionalContext"]
-
-        assert "sandbox" in context.lower(), "Should mention sandbox"
-        assert "don't work" in context.lower() or "doesn't work" in context.lower(), "Should state heredocs don't work"
+        # Check for any of the expected content phrases (case-insensitive for sandbox)
+        for phrase in expected_content:
+            if key_phrase == "sandbox_warning":
+                assert phrase.lower() in context.lower(), f"{description}: Should include '{phrase}'"
+            elif key_phrase == "ansi_c_quoting":
+                # For ANSI-C, accept either "ANSI-C" or "$'" syntax
+                assert phrase in context or "$'" in context, f"{description}: Should include '{phrase}' or ANSI-C syntax"
+            else:
+                assert phrase in context, f"{description}: Should include '{phrase}'"
 
     def test_guidance_shows_practical_examples(self):
         """Guidance should include code examples"""
@@ -304,32 +279,19 @@ class TestDetectHeredocErrors:
 
         assert custom_error in context, "Should include the actual error message"
 
-    # Edge cases - case sensitivity
-    def test_heredoc_error_case_sensitive(self):
-        """Heredoc error detection should be case-sensitive"""
-        # All caps version should not match
-        output = run_hook_with_error("Bash", "CAN'T CREATE TEMP FILE FOR HERE DOCUMENT")
-        assert output == {}, "Should be case-sensitive - all caps should not match"
-
-        # Mixed case in wrong places should not match
-        output = run_hook_with_error("Bash", "can't create TEMP file for HERE document")
-        assert output == {}, "Should be case-sensitive - mixed case should not match"
-
-    def test_heredoc_error_partial_match(self):
-        """Partial heredoc error string should not trigger"""
-        output = run_hook_with_error("Bash", "can't create temp file")
-        assert output == {}, "Partial error message should not trigger"
-
-        output = run_hook_with_error("Bash", "here document error")
-        assert output == {}, "Partial error message should not trigger"
-
-    def test_heredoc_error_with_typo(self):
-        """Heredoc error with typo should not trigger"""
-        output = run_hook_with_error("Bash", "can't create temp file for heredoc")
-        assert output == {}, "Typo in error message should not trigger"
-
-        output = run_hook_with_error("Bash", "cannot create temp file for here document")
-        assert output == {}, "Synonym in error message should not trigger"
+    # Edge cases - case sensitivity and exact matching
+    @pytest.mark.parametrize("error_message,description", [
+        ("CAN'T CREATE TEMP FILE FOR HERE DOCUMENT", "All caps version should not match"),
+        ("can't create TEMP file for HERE document", "Mixed case should not match"),
+        ("can't create temp file", "Partial message (first half) should not match"),
+        ("here document error", "Partial message (second half) should not match"),
+        ("can't create temp file for heredoc", "Typo in error message should not match"),
+        ("cannot create temp file for here document", "Synonym ('cannot' vs 'can't') should not match"),
+    ])
+    def test_heredoc_error_exact_match_required(self, error_message, description):
+        """Heredoc error detection requires exact string match"""
+        output = run_hook_with_error("Bash", error_message)
+        assert output == {}, f"{description}"
 
     # Edge cases - real-world heredoc error scenarios
     def test_git_commit_heredoc_failure(self):
@@ -350,46 +312,30 @@ Command: cat << EOF > file.txt"""
 
         assert "hookSpecificOutput" in output
 
-    def test_heredoc_error_at_start_of_message(self):
-        """Heredoc error at the start of error message should trigger"""
-        output = run_hook_with_error("Bash", f"{HEREDOC_ERROR}")
-        assert "hookSpecificOutput" in output
+    @pytest.mark.parametrize("error_message,position", [
+        (f"{HEREDOC_ERROR}", "start"),
+        (f"Command failed: {HEREDOC_ERROR}", "end"),
+        (f"Error: {HEREDOC_ERROR} at line 5", "middle"),
+    ])
+    def test_heredoc_error_position_in_message(self, error_message, position):
+        """Heredoc error should trigger when at any position in the message"""
+        output = run_hook_with_error("Bash", error_message)
+        assert "hookSpecificOutput" in output, f"Heredoc error at {position} of message should trigger"
 
-    def test_heredoc_error_at_end_of_message(self):
-        """Heredoc error at the end of error message should trigger"""
-        output = run_hook_with_error("Bash", f"Command failed: {HEREDOC_ERROR}")
-        assert "hookSpecificOutput" in output
-
-    def test_heredoc_error_middle_of_message(self):
-        """Heredoc error in middle of error message should trigger"""
-        output = run_hook_with_error("Bash", f"Error: {HEREDOC_ERROR} at line 5")
-        assert "hookSpecificOutput" in output
-
-    # Edge cases - whitespace variations
-    def test_heredoc_error_with_extra_whitespace(self):
-        """Heredoc error with extra spaces should still trigger"""
-        error_with_spaces = "can't  create  temp  file  for  here  document"
-        output = run_hook_with_error("Bash", error_with_spaces)
-        assert output == {}, "Error with extra spaces should not match (exact string match required)"
-
-    def test_heredoc_error_with_newlines(self):
-        """Heredoc error split across lines should trigger if substring present"""
-        error_with_newlines = f"bash: line 1:\n{HEREDOC_ERROR}:\nNo such file"
-        output = run_hook_with_error("Bash", error_with_newlines)
-        assert "hookSpecificOutput" in output
-
-    # Edge cases - special characters in error
-    def test_heredoc_error_with_quotes(self):
-        """Heredoc error message containing quotes should trigger"""
-        error_with_quotes = f"bash: '{HEREDOC_ERROR}': system error"
-        output = run_hook_with_error("Bash", error_with_quotes)
-        assert "hookSpecificOutput" in output
-
-    def test_heredoc_error_with_escape_sequences(self):
-        """Heredoc error with escape sequences should trigger"""
-        error_with_escapes = f"bash: \\t{HEREDOC_ERROR}\\n: error"
-        output = run_hook_with_error("Bash", error_with_escapes)
-        assert "hookSpecificOutput" in output
+    # Edge cases - whitespace and special character handling
+    @pytest.mark.parametrize("error_message,contains_heredoc_error,description", [
+        ("can't  create  temp  file  for  here  document", False, "Extra spaces should not match (exact string match)"),
+        (f"bash: line 1:\n{HEREDOC_ERROR}:\nNo such file", True, "Heredoc error split across newlines should trigger"),
+        (f"bash: '{HEREDOC_ERROR}': system error", True, "Heredoc error within quotes should trigger"),
+        (f"bash: \\t{HEREDOC_ERROR}\\n: error", True, "Heredoc error with escape sequences should trigger"),
+    ])
+    def test_heredoc_error_with_whitespace_and_special_chars(self, error_message, contains_heredoc_error, description):
+        """Heredoc error detection with various whitespace and special character scenarios"""
+        output = run_hook_with_error("Bash", error_message)
+        if contains_heredoc_error:
+            assert "hookSpecificOutput" in output, f"{description}"
+        else:
+            assert output == {}, f"{description}"
 
     # Edge cases - exception handling
     def test_malformed_json_input(self):

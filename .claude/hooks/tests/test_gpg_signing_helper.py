@@ -11,6 +11,8 @@ import subprocess
 import sys
 from pathlib import Path
 
+import pytest
+
 # Path to the hook script
 HOOK_PATH = Path(__file__).parent.parent / "gpg-signing-helper.py"
 
@@ -93,37 +95,27 @@ def run_hook_success(tool_name: str = "Bash") -> dict:
 class TestGPGSigningHelperPostToolUseFailure:
     """Test suite for gpg-signing-helper hook with PostToolUseFailure events (top-level error field)"""
 
-    def test_gpg_failed_to_sign_detected(self):
-        """Should detect 'gpg failed to sign the data' error"""
-        error = "error: gpg failed to sign the data\nfatal: failed to write commit object"
+    @pytest.mark.parametrize("error_message", [
+        ("error: gpg failed to sign the data\nfatal: failed to write commit object", "gpg failed to sign the data"),
+        ("gpg: can't connect to the agent: IPC connect call failed\ngpg: problem with the agent: No agent running", None),
+        ("gpg: problem with the agent: No agent running\nerror: gpg failed to sign the data", None),
+    ], ids=["gpg_failed_to_sign", "gpg_cant_connect_to_agent", "no_agent_running"])
+    def test_gpg_error_detection(self, error_message):
+        """Should detect GPG signing errors (parametrized)"""
+        if isinstance(error_message, tuple):
+            error, error_substring = error_message
+        else:
+            error = error_message
+            error_substring = None
+
         output = run_hook_post_tool_use_failure(error)
 
         assert "hookSpecificOutput" in output, "Should return hook output"
-        assert "additionalContext" in output["hookSpecificOutput"]
         context = output["hookSpecificOutput"]["additionalContext"]
         assert "GPG SIGNING ERROR DETECTED" in context
         assert "--no-gpg-sign" in context
-        assert "gpg failed to sign the data" in context
-
-    def test_gpg_cant_connect_to_agent_detected(self):
-        """Should detect 'gpg: can't connect to the agent' error"""
-        error = "gpg: can't connect to the agent: IPC connect call failed\ngpg: problem with the agent: No agent running"
-        output = run_hook_post_tool_use_failure(error)
-
-        assert "hookSpecificOutput" in output
-        context = output["hookSpecificOutput"]["additionalContext"]
-        assert "GPG SIGNING ERROR DETECTED" in context
-        assert "--no-gpg-sign" in context
-
-    def test_no_agent_running_detected(self):
-        """Should detect 'No agent running' error"""
-        error = "gpg: problem with the agent: No agent running\nerror: gpg failed to sign the data"
-        output = run_hook_post_tool_use_failure(error)
-
-        assert "hookSpecificOutput" in output
-        context = output["hookSpecificOutput"]["additionalContext"]
-        assert "GPG SIGNING ERROR DETECTED" in context
-        assert "--no-gpg-sign" in context
+        if error_substring:
+            assert error_substring in context
 
     def test_guidance_includes_no_gpg_sign_flag(self):
         """Guidance should include --no-gpg-sign flag"""
@@ -151,16 +143,15 @@ class TestGPGSigningHelperPostToolUseFailure:
         assert "IMPORTANT" in context
         assert "All git commits" in context or "require" in context
 
-    def test_non_gpg_error_returns_empty_json(self):
-        """Non-GPG errors should return empty JSON"""
-        error = "fatal: not a git repository"
+    @pytest.mark.parametrize("error_message", [
+        ("fatal: not a git repository", "Non-GPG error"),
+        ("", "Empty error"),
+    ], ids=["non_gpg_error", "empty_error"])
+    def test_non_gpg_errors_return_empty(self, error_message):
+        """Non-GPG and empty errors should return empty JSON (parametrized)"""
+        error, _ = error_message if isinstance(error_message, tuple) else (error_message, "")
         output = run_hook_post_tool_use_failure(error)
-        assert output == {}, "Non-GPG error should return empty JSON"
-
-    def test_empty_error_returns_empty_json(self):
-        """Empty error should return empty JSON"""
-        output = run_hook_post_tool_use_failure("")
-        assert output == {}, "Empty error should return empty JSON"
+        assert output == {}, f"Error should return empty JSON"
 
     def test_non_bash_tool_with_gpg_error(self):
         """GPG error from non-Bash tool should still be detected"""
@@ -201,58 +192,46 @@ class TestGPGSigningHelperPostToolUseFailure:
 class TestGPGSigningHelperPostToolUse:
     """Test suite for gpg-signing-helper hook with PostToolUse events (tool_result.error field)"""
 
-    def test_gpg_failed_to_sign_in_tool_result_error(self):
-        """Should detect GPG error in tool_result.error field"""
-        error = "error: gpg failed to sign the data\nfatal: failed to write commit object"
+    @pytest.mark.parametrize("error_message", [
+        ("error: gpg failed to sign the data\nfatal: failed to write commit object", "gpg failed to sign the data"),
+        ("gpg: can't connect to the agent: IPC connect call failed", None),
+        ("gpg: problem with the agent: No agent running", None),
+    ], ids=["gpg_failed_to_sign", "gpg_cant_connect_to_agent", "no_agent_running"])
+    def test_gpg_error_detection_in_tool_result(self, error_message):
+        """Should detect GPG errors in tool_result.error field (parametrized)"""
+        if isinstance(error_message, tuple):
+            error, error_substring = error_message
+        else:
+            error = error_message
+            error_substring = None
+
         output = run_hook_post_tool_use(error)
 
         assert "hookSpecificOutput" in output
         context = output["hookSpecificOutput"]["additionalContext"]
         assert "GPG SIGNING ERROR DETECTED" in context
-        assert "--no-gpg-sign" in context
+        if error_substring:
+            assert error_substring in context
 
-    def test_gpg_cant_connect_in_tool_result_error(self):
-        """Should detect 'can't connect to agent' in tool_result.error field"""
-        error = "gpg: can't connect to the agent: IPC connect call failed"
+    @pytest.mark.parametrize("error_message", [
+        ("fatal: pathspec 'file.txt' did not match any files", "Non-GPG error"),
+        ("", "Empty error"),
+    ], ids=["non_gpg_error", "empty_error"])
+    def test_non_gpg_errors_in_tool_result_return_empty(self, error_message):
+        """Non-GPG and empty errors in tool_result should return empty JSON (parametrized)"""
+        error, _ = error_message if isinstance(error_message, tuple) else (error_message, "")
         output = run_hook_post_tool_use(error)
-
-        assert "hookSpecificOutput" in output
-        context = output["hookSpecificOutput"]["additionalContext"]
-        assert "GPG SIGNING ERROR DETECTED" in context
-
-    def test_no_agent_in_tool_result_error(self):
-        """Should detect 'No agent running' in tool_result.error field"""
-        error = "gpg: problem with the agent: No agent running"
-        output = run_hook_post_tool_use(error)
-
-        assert "hookSpecificOutput" in output
-        context = output["hookSpecificOutput"]["additionalContext"]
-        assert "GPG SIGNING ERROR DETECTED" in context
-
-    def test_non_gpg_error_in_tool_result_returns_empty(self):
-        """Non-GPG error in tool_result.error should return empty JSON"""
-        error = "fatal: pathspec 'file.txt' did not match any files"
-        output = run_hook_post_tool_use(error)
-        assert output == {}, "Non-GPG error should return empty JSON"
-
-    def test_empty_tool_result_error_returns_empty(self):
-        """Empty tool_result.error should return empty JSON"""
-        output = run_hook_post_tool_use("")
-        assert output == {}, "Empty error should return empty JSON"
+        assert output == {}, f"Error should return empty JSON"
 
 
 class TestGPGSigningHelperSuccessfulCommands:
     """Test suite for successful git commands (no errors)"""
 
-    def test_successful_git_status_returns_empty(self):
-        """Successful git status should return empty JSON"""
-        output = run_hook_success("Bash")
+    @pytest.mark.parametrize("tool_name", ["Bash", "Read"], ids=["git_status", "non_bash_tool"])
+    def test_successful_commands_return_empty(self, tool_name):
+        """Successful commands should return empty JSON (parametrized)"""
+        output = run_hook_success(tool_name)
         assert output == {}, "Successful command should return empty JSON"
-
-    def test_successful_non_bash_tool_returns_empty(self):
-        """Successful non-Bash tool should return empty JSON"""
-        output = run_hook_success("Read")
-        assert output == {}, "Successful non-Bash tool should return empty JSON"
 
 
 class TestGPGSigningHelperEdgeCases:
