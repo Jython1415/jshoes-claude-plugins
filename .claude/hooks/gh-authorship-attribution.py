@@ -17,9 +17,8 @@ import re
 import time
 from pathlib import Path
 
-# Cooldown period in seconds (10 minutes)
-# Longer than other hooks because attribution guidance is important but not urgent
-COOLDOWN_PERIOD = 600
+# Cooldown period in seconds (1 minute)
+COOLDOWN_PERIOD = 60
 
 # State file location
 STATE_DIR = Path.home() / ".claude" / "hook-state"
@@ -172,7 +171,7 @@ git commit -m "Your message" -m "AI-assisted with Claude Code"
 
 This promotes transparency about AI-assisted contributions. Use your judgment based on who authored the code.
 
-*This reminder appears once per 10 minutes.*"""
+*This reminder appears once per minute.*"""
                 }
             }
 
@@ -217,7 +216,7 @@ gh pr create --title "Title" --body "Description
 
 This promotes transparency about AI-assisted contributions. Use your judgment based on who authored the content.
 
-*This reminder appears once per 10 minutes.*"""
+*This reminder appears once per minute.*"""
                 }
             }
 
@@ -262,7 +261,7 @@ gh pr create --title "Title" --body "Description
 
 This promotes transparency about AI-assisted contributions. Use your judgment based on who authored the content.
 
-*This reminder appears once per 10 minutes.*"""
+*This reminder appears once per minute.*"""
                 }
             }
 
