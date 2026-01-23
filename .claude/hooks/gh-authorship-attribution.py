@@ -38,56 +38,7 @@ Attribution patterns recognized:
 - `With assistance from Claude`
 
 Guidance provided:
-
-For git commits:
-```bash
-# Option 1: Co-authored-by trailer (recommended)
-git commit -m "$(cat <<'EOF'
-Your commit message
-
-Co-authored-by: Claude (Anthropic AI) <claude@anthropic.com>
-https://claude.ai/code/session_ID
-EOF
-)"
-
-# Option 2: AI assistance note
-git commit -m "$(cat <<'EOF'
-Your commit message
-
-AI-assisted with Claude Code
-https://claude.ai/code/session_ID
-EOF
-)"
-
-# Option 3: Multiple -m flags
-git commit -m "feat: add feature" -m "AI-assisted with Claude Code" -m "https://claude.ai/code/session_ID"
-```
-
-For GitHub API calls:
-```bash
-# Pull requests
-curl -X POST -H "Authorization: token $GITHUB_TOKEN" \
-  "https://api.github.com/repos/OWNER/REPO/pulls" \
-  -d '{
-    "title": "PR title",
-    "head": "branch",
-    "base": "main",
-    "body": "Description\n\n---\n*Created with [Claude Code](https://claude.ai/code/session_ID)*"
-  }'
-
-# Issues
-curl -X POST -H "Authorization: token $GITHUB_TOKEN" \
-  "https://api.github.com/repos/OWNER/REPO/issues" \
-  -d '{
-    "title": "Issue title",
-    "body": "Description\n\n---\n*AI-assisted with Claude Code*"
-  }'
-
-# Comments
-curl -X POST -H "Authorization: token $GITHUB_TOKEN" \
-  "https://api.github.com/repos/OWNER/REPO/issues/10/comments" \
-  -d '{"body": "Comment\n\n*AI-assisted with Claude Code*"}'
-```
+For detailed examples, see the guidance messages provided by this hook.
 
 Why this matters:
 - Transparency about AI-assisted contributions
@@ -218,6 +169,22 @@ def record_suggestion():
         print(f"Warning: Could not record cooldown state: {e}", file=sys.stderr)
 
 
+def format_cooldown_message():
+    """Format the cooldown period message based on COOLDOWN_PERIOD constant."""
+    if COOLDOWN_PERIOD < 60:
+        return f"*This reminder appears every {COOLDOWN_PERIOD} seconds.*"
+    elif COOLDOWN_PERIOD == 60:
+        return "*This reminder appears once per minute.*"
+    elif COOLDOWN_PERIOD % 60 == 0:
+        minutes = COOLDOWN_PERIOD // 60
+        if minutes == 1:
+            return "*This reminder appears once per minute.*"
+        else:
+            return f"*This reminder appears every {minutes} minutes.*"
+    else:
+        return f"*This reminder appears every {COOLDOWN_PERIOD} seconds.*"
+
+
 def main():
     try:
         input_data = json.load(sys.stdin)
@@ -273,7 +240,8 @@ git commit -m "Your message" -m "AI-assisted with Claude Code"
 
 This promotes transparency about AI-assisted contributions. Use your judgment based on who authored the code.
 
-*This reminder appears once per minute.*"""
+""" + format_cooldown_message() + """
+"""
                 }
             }
 
@@ -318,7 +286,8 @@ gh pr create --title "Title" --body "Description
 
 This promotes transparency about AI-assisted contributions. Use your judgment based on who authored the content.
 
-*This reminder appears once per minute.*"""
+""" + format_cooldown_message() + """
+"""
                 }
             }
 
@@ -363,7 +332,8 @@ gh pr create --title "Title" --body "Description
 
 This promotes transparency about AI-assisted contributions. Use your judgment based on who authored the content.
 
-*This reminder appears once per minute.*"""
+""" + format_cooldown_message() + """
+"""
                 }
             }
 
