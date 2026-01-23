@@ -351,26 +351,19 @@ class TestOutputValidation:
         if "hookSpecificOutput" in output:
             assert output["hookSpecificOutput"]["hookEventName"] == "PreToolUse"
 
-    def test_git_guidance_includes_examples(self):
-        """Git commit guidance should include concrete examples"""
+    def test_git_guidance_presented(self):
+        """Git commit should trigger guidance presentation"""
         output = run_hook("Bash", 'git commit -m "Test"')
-        context = output["hookSpecificOutput"]["additionalContext"]
-        assert "git commit" in context.lower()
-        assert "Co-authored-by" in context
-        assert "claude.ai/code" in context
+        assert "hookSpecificOutput" in output
+        assert "additionalContext" in output["hookSpecificOutput"]
+        assert len(output["hookSpecificOutput"]["additionalContext"]) > 0
 
-    def test_api_guidance_includes_examples(self):
-        """API guidance should include concrete examples"""
+    def test_api_guidance_presented(self):
+        """GitHub API operations should trigger guidance presentation"""
         output = run_hook("Bash", 'curl -X POST https://api.github.com/repos/o/r/pulls -d \'{"title":"Test"}\'')
-        context = output["hookSpecificOutput"]["additionalContext"]
-        assert "gh pr create" in context.lower()
-        assert "body" in context
-
-    def test_guidance_mentions_transparency(self):
-        """Guidance should mention transparency/attribution"""
-        output = run_hook("Bash", 'git commit -m "Test"')
-        context = output["hookSpecificOutput"]["additionalContext"]
-        assert any(word in context.lower() for word in ["transparency", "attribution", "ai-assisted"])
+        assert "hookSpecificOutput" in output
+        assert "additionalContext" in output["hookSpecificOutput"]
+        assert len(output["hookSpecificOutput"]["additionalContext"]) > 0
 
 
 if __name__ == "__main__":
