@@ -12,7 +12,7 @@ dev = [
 ]
 
 [tool.pytest.ini_options]
-testpaths = ["hooks/tests"]
+testpaths = [".claude/hooks/tests"]
 python_files = "test_*.py"
 addopts = "-v --tb=short"
 
