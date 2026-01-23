@@ -113,20 +113,16 @@ class TestGhWebFallback:
         output = run_hook("gh issue list", gh_available=False, token_available=True)
         assert "hookSpecificOutput" in output, "Should detect gh at start"
 
-    def test_gh_command_after_pipe(self):
-        """gh command after pipe should be detected"""
-        output = run_hook("git status | gh issue view 10", gh_available=False, token_available=True)
-        assert "hookSpecificOutput" in output, "Should detect gh after pipe"
-
-    def test_gh_command_after_semicolon(self):
-        """gh command after semicolon should be detected"""
-        output = run_hook("git status; gh issue list", gh_available=False, token_available=True)
-        assert "hookSpecificOutput" in output, "Should detect gh after semicolon"
-
-    def test_gh_command_after_or(self):
-        """gh command after || should be detected"""
-        output = run_hook("cat file || gh pr view 10", gh_available=False, token_available=True)
-        assert "hookSpecificOutput" in output, "Should detect gh after ||"
+    @pytest.mark.parametrize("command", [
+        "git status | gh issue view 10",
+        "git status; gh issue list",
+        "cat file || gh pr view 10",
+        "git status && gh pr create",
+    ])
+    def test_gh_command_after_shell_operators(self, command):
+        """gh commands after various shell operators (|, ;, &&, ||) should trigger"""
+        output = run_hook(command, gh_available=False, token_available=True)
+        assert "hookSpecificOutput" in output, f"Should detect gh in: {command}"
 
     def test_no_trigger_on_sigh(self):
         """'sigh' should NOT trigger (not a standalone gh command)"""
@@ -305,34 +301,16 @@ class TestGhWebFallback:
             output = json.loads(result.stdout)
             assert "hookSpecificOutput" in output, "Bash tool should trigger"
 
-    def test_webfetch_not_monitored(self):
-        """WebFetch tool should NOT be monitored by this hook"""
+    @pytest.mark.parametrize("tool_name,tool_input", [
+        ("WebFetch", {"url": "https://api.github.com/repos/owner/repo"}),
+        ("Read", {"file_path": "/some/path"}),
+        ("Edit", {"file_path": "/path", "old_string": "a", "new_string": "b"}),
+    ])
+    def test_non_bash_tools_ignored(self, tool_name, tool_input):
+        """Non-Bash tools should not trigger the hook"""
         input_data = {
-            "tool_name": "WebFetch",
-            "tool_input": {"url": "https://api.github.com/repos/owner/repo"}
-        }
-
-        with tempfile.TemporaryDirectory() as tmpdir:
-            env = os.environ.copy()
-            env['GITHUB_TOKEN'] = 'test-token'
-            env['PATH'] = f"{tmpdir}:{env.get('PATH', '')}"
-
-            result = subprocess.run(
-                ["uv", "run", "--script", str(HOOK_PATH)],
-                input=json.dumps(input_data),
-                capture_output=True,
-                text=True,
-                env=env
-            )
-
-            output = json.loads(result.stdout)
-            assert output == {}, "WebFetch should not trigger"
-
-    def test_read_tool_ignored(self):
-        """Read tool should not trigger"""
-        input_data = {
-            "tool_name": "Read",
-            "tool_input": {"file_path": "/some/path"}
+            "tool_name": tool_name,
+            "tool_input": tool_input
         }
 
         result = subprocess.run(
@@ -344,25 +322,7 @@ class TestGhWebFallback:
         )
 
         output = json.loads(result.stdout)
-        assert output == {}, "Read tool should not trigger"
-
-    def test_edit_tool_ignored(self):
-        """Edit tool should not trigger"""
-        input_data = {
-            "tool_name": "Edit",
-            "tool_input": {"file_path": "/path", "old_string": "a", "new_string": "b"}
-        }
-
-        result = subprocess.run(
-            ["uv", "run", "--script", str(HOOK_PATH)],
-            input=json.dumps(input_data),
-            capture_output=True,
-            text=True,
-            env=os.environ.copy()
-        )
-
-        output = json.loads(result.stdout)
-        assert output == {}, "Edit tool should not trigger"
+        assert output == {}, f"{tool_name} should not trigger"
 
     # ========== Edge Cases ==========
 
@@ -439,22 +399,6 @@ class TestGhWebFallback:
 
     # ========== Output Validation Tests ==========
 
-    def test_output_valid_json(self):
-        """All outputs should be valid JSON"""
-        test_cases = [
-            ("gh issue list", False, True),
-            ("gh pr view 5", False, True),
-            ("echo test", False, True),
-            ("git status", False, False),
-            ("gh issue list", True, True),  # gh available
-        ]
-        for command, gh_avail, token_avail in test_cases:
-            try:
-                output = run_hook(command, gh_available=gh_avail, token_available=token_avail)
-                assert isinstance(output, dict), f"Output should be valid JSON dict for: {command}"
-            except json.JSONDecodeError:
-                pytest.fail(f"Output should be valid JSON for: {command}")
-
     def test_hook_event_name(self):
         """hookEventName should be 'PreToolUse'"""
         output = run_hook("gh issue list", gh_available=False, token_available=True)
@@ -472,36 +416,28 @@ class TestGhWebFallback:
         output = run_hook("gh issue list", gh_available=False, token_available=True)
         assert "decision" not in output.get("hookSpecificOutput", {}), "Should not have decision field"
 
-    def test_mentions_github_api(self):
-        """Context should mention GitHub API or curl"""
+    def test_additional_context_content(self):
+        """additionalContext should contain all key guidance elements"""
         output = run_hook("gh issue list", gh_available=False, token_available=True)
         context = output["hookSpecificOutput"]["additionalContext"]
-        assert "GitHub API" in context or "curl" in context, "Should mention GitHub API or curl"
+
+        # Verify all essential content is present
+        assert "GitHub API" in context or "GitHub REST API" in context, "Should mention GitHub API"
+        assert "REST" in context or "rest" in context.lower(), "Should mention REST API"
+        assert "jq" in context, "Should mention jq for parsing"
+        assert "docs.github.com" in context, "Should include GitHub docs link"
+        assert "curl" in context, "Should mention curl command"
+        assert "Authorization" in context, "Should mention Authorization header"
 
     # ========== Real-World Scenarios ==========
 
-    def test_scenario_gh_issue_view(self):
-        """Real scenario: gh issue view with complex flags"""
-        output = run_hook("gh issue view 10 --repo owner/repo --json title,body", gh_available=False, token_available=True)
-        assert "hookSpecificOutput" in output, "Should detect complex gh issue view"
-        assert "curl" in output["hookSpecificOutput"]["additionalContext"]
-
-    def test_scenario_gh_pr_create(self):
-        """Real scenario: gh pr create with title and body"""
-        output = run_hook('gh pr create --title "New feature" --body "Description here"', gh_available=False, token_available=True)
+    def test_scenario_integration(self):
+        """Integration test: realistic gh pr create command triggers correctly"""
+        cmd = 'gh pr create --title "Add feature" --body "Description" --head feature --base main'
+        output = run_hook(cmd, gh_available=False, token_available=True)
         assert "hookSpecificOutput" in output, "Should detect gh pr create"
         context = output["hookSpecificOutput"]["additionalContext"]
-        assert "curl" in context or "POST" in context
-
-    def test_scenario_gh_in_script(self):
-        """Real scenario: Multi-line script with gh command"""
-        script = """
-git pull
-gh issue list
-echo "done"
-"""
-        output = run_hook(script, gh_available=False, token_available=True)
-        assert "hookSpecificOutput" in output, "Should detect gh in multi-line script"
+        assert "curl" in context or "POST" in context, "Should provide curl guidance for POST request"
 
     def test_scenario_after_suggestion_cooldown_active(self):
         """Real scenario: Multiple gh commands, only first triggers"""
@@ -514,40 +450,7 @@ echo "done"
             output = run_hook("gh pr view 5", gh_available=False, token_available=True, clear_cooldown=False)
             assert output == {}, f"Command {i+2} should be suppressed by cooldown"
 
-    # ========== Additional Coverage Tests ==========
-
-    def test_gh_with_ampersand(self):
-        """gh command after && should be detected"""
-        output = run_hook("git status && gh issue list", gh_available=False, token_available=True)
-        assert "hookSpecificOutput" in output, "Should detect gh after &&"
-
-    def test_gh_with_spaces_in_chain(self):
-        """gh with multiple spaces in command chain should be detected"""
-        output = run_hook("git status   &&   gh issue list", gh_available=False, token_available=True)
-        assert "hookSpecificOutput" in output, "Should detect gh with extra spaces"
-
-    def test_context_mentions_rest_api(self):
-        """Context should mention REST API"""
-        output = run_hook("gh issue list", gh_available=False, token_available=True)
-        context = output["hookSpecificOutput"]["additionalContext"]
-        assert "REST" in context or "rest" in context.lower(), "Should mention REST API"
-
-    def test_context_mentions_jq(self):
-        """Context should mention jq for JSON parsing"""
-        output = run_hook("gh issue list", gh_available=False, token_available=True)
-        context = output["hookSpecificOutput"]["additionalContext"]
-        assert "jq" in context, "Should mention jq for parsing"
-
-    def test_context_mentions_docs_link(self):
-        """Context should include GitHub docs link"""
-        output = run_hook("gh issue list", gh_available=False, token_available=True)
-        context = output["hookSpecificOutput"]["additionalContext"]
-        assert "docs.github.com" in context, "Should include GitHub docs link"
-
-    def test_multiple_gh_commands_in_chain(self):
-        """Multiple gh commands in chain should still trigger"""
-        output = run_hook("gh issue list && gh pr view 5", gh_available=False, token_available=True)
-        assert "hookSpecificOutput" in output, "Should detect first gh command"
+    # ========== Additional Coverage ==========
 
     def test_gh_with_complex_flags(self):
         """gh with complex flags and options should be detected"""

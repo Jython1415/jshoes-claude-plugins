@@ -483,19 +483,18 @@ The `prefer-gh-for-own-repos.py` hook has 37 tests covering:
 
 ### Test Coverage for gh-web-fallback
 
-The `gh-web-fallback.py` hook has 44 tests covering:
-- ✅ Command detection: gh commands at start, after pipes, semicolons, OR chains
+The `gh-web-fallback.py` hook has 36 tests covering:
+- ✅ Command detection: gh commands at start, parametrized shell operators (|, ;, &&, ||)
 - ✅ False positive prevention: "sigh", "high" don't trigger (gh must be standalone)
 - ✅ Environment detection: Only triggers when gh unavailable AND token available
 - ✅ Cooldown mechanism: Duplicate suggestions prevented within 5 minutes
 - ✅ Cooldown expiry: Suggestions resume after cooldown period
-- ✅ Tool filtering: Only Bash tool monitored (WebFetch, Read, Edit ignored)
+- ✅ Tool filtering: Parametrized non-Bash tools (WebFetch, Read, Edit)
 - ✅ Edge cases: Empty commands, missing fields, malformed JSON handled
 - ✅ JSON validity and event name correctness
-- ✅ Output validation: additionalContext present, no decision field
-- ✅ Real-world scenarios: gh issue view, gh pr create, multi-line scripts
-- ✅ Content validation: Mentions GitHub API, REST API, jq, documentation link
-- ✅ Complex commands: Multiple gh invocations, complex flags
+- ✅ Output validation: Comprehensive content validation (GitHub API, jq, docs)
+- ✅ Real-world scenarios: Integration test, cooldown behavior
+- ✅ Complex commands: Complex flags and chained operations
 
 ## Adding New Hooks
 
