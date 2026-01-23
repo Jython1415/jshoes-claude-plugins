@@ -140,11 +140,18 @@ def main():
             output = {
                 "hookSpecificOutput": {
                     "hookEventName": "PreToolUse",
-                    "additionalContext": """**AUTHORSHIP ATTRIBUTION REQUIRED**
+                    "additionalContext": """**AUTHORSHIP ATTRIBUTION REMINDER**
 
-When creating git commits on behalf of the user, you must include explicit attribution indicating AI assistance.
+When committing code on behalf of the user, consider whether attribution is appropriate.
 
-**Required**: Add attribution to your commit message using one of these approaches:
+**Principle**: Don't commit code as the user if the user didn't write it.
+
+**Exercise judgment**:
+- If **you (Claude) wrote the code**: Include attribution
+- If **user wrote the code** and you're just writing the commit message: Attribution may not be needed
+- If **collaborative** (user edited your code): Use your judgment
+
+**If attribution is appropriate**, use one of these approaches:
 
 1. **Add Co-authored-by trailer** (recommended for collaborative work):
    ```bash
@@ -174,10 +181,11 @@ When creating git commits on behalf of the user, you must include explicit attri
    ```
 
 **Why this matters**:
-- Transparency about AI-assisted contributions
-- Proper attribution for collaborative work
-- Helps maintain trust in the development process
-- Complies with attribution best practices
+- Transparency about who authored the code/content
+- Proper attribution maintains trust in collaborative work
+- Helps distinguish AI-generated vs human-written contributions
+
+**Note**: This is a reminder, not a requirement. Use your judgment based on the situation.
 
 **This reminder will appear once per 10 minutes.**"""
                 }
@@ -205,11 +213,18 @@ When creating git commits on behalf of the user, you must include explicit attri
             output = {
                 "hookSpecificOutput": {
                     "hookEventName": "PreToolUse",
-                    "additionalContext": """**AUTHORSHIP ATTRIBUTION REQUIRED**
+                    "additionalContext": """**AUTHORSHIP ATTRIBUTION REMINDER**
 
-When creating or updating GitHub content (PRs, issues, comments) via API on behalf of the user, you must include explicit attribution in the request body.
+When creating or updating GitHub content (PRs, issues, comments) on behalf of the user, consider whether attribution is appropriate.
 
-**Required**: Add attribution to the body/description field:
+**Principle**: Don't create content as the user if the user didn't write it.
+
+**Exercise judgment**:
+- If **you (Claude) drafted the PR/issue/comment**: Include attribution
+- If **user provided the content** and you're formatting the API call: Attribution may not be needed
+- If **you're summarizing user's work**: Use your judgment based on content authorship
+
+**If attribution is appropriate**, add it to the body/description field:
 
 **For Pull Requests**:
 ```bash
@@ -246,9 +261,11 @@ curl -X POST -H "Authorization: token $GITHUB_TOKEN" \\
 ```
 
 **Why this matters**:
-- Transparency about AI-assisted contributions
-- Proper attribution when acting on user's behalf
-- Maintains trust and clarity in collaborative development
+- Transparency about who authored the content
+- Proper attribution maintains trust when acting on user's behalf
+- Helps distinguish AI-drafted vs user-written contributions
+
+**Note**: This is a reminder, not a requirement. Use your judgment based on authorship.
 
 **This reminder will appear once per 10 minutes.**"""
                 }
