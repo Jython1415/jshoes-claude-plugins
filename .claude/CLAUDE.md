@@ -67,3 +67,59 @@ def test_guidance_presented_for_commit():
 4. **Edge Case Tests**: Handle malformed input, missing fields, etc.
 
 This philosophy applies to all hooks in `.claude/hooks/`.
+
+## Test File Structure Guidelines
+
+When creating or modifying test files in `.claude/hooks/tests/`:
+
+### Dependency Management
+
+**DO NOT** use PEP 723 inline dependencies in test files:
+```python
+# ❌ WRONG - Do not use in test files
+#!/usr/bin/env python3
+# /// script
+# dependencies = ["pytest>=7.0.0"]
+# ///
+```
+
+**DO** use centralized dependency management in `pyproject.toml`:
+- Test dependencies are declared in `[dependency-groups]` section
+- This follows PEP 735 and modern Python testing best practices
+- Provides single source of truth and reproducible test environments
+
+**Rationale:**
+- PEP 723 is for standalone production scripts (like hooks), not test infrastructure
+- Tests are development tooling, not deliverables
+- Centralized dependencies eliminate duplication across test files
+
+### Test File Headers
+
+Test files should have a simple docstring describing what they test:
+
+```python
+"""
+Unit tests for hookname.py hook
+
+This test suite validates that the hook properly detects [specific behavior].
+"""
+import json
+import subprocess
+from pathlib import Path
+
+import pytest
+
+# ... test code ...
+```
+
+**DO NOT** include test running instructions in individual test file docstrings. These are centralized in:
+- `.claude/hooks/README.md` for detailed testing documentation
+- `pyproject.toml` for pytest configuration
+
+### Semantic Distinction
+
+This creates a clear pattern in the repository:
+- **Production hooks** → Use PEP 723 (standalone scripts, portable)
+- **Test files** → Use `pyproject.toml` (development infrastructure, centralized)
+
+This hybrid approach follows Python ecosystem best practices and was established in commit 03b6ecc.
