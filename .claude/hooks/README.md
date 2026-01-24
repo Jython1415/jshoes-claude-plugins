@@ -180,11 +180,6 @@ class TestMyHook:
         assert output == {}, "Description of expected behavior"
 ```
 
-**Rationale:**
-- Production hooks use PEP 723 because they are standalone scripts
-- Test files use `pyproject.toml` because they are development infrastructure
-- This creates a clear semantic distinction and follows Python ecosystem best practices
-
 ### Test Coverage for detect-cd-pattern
 
 The `detect-cd-pattern.py` hook has 14 tests covering:
