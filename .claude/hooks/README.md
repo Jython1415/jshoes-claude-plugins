@@ -71,7 +71,7 @@ Hooks are configured in `settings.json`:
         "matcher": "Write|Edit",
         "hooks": [{
           "type": "command",
-          "command": "uv run --script ~/.claude/hooks/normalize-line-endings.py"
+          "command": "uv run --script \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/normalize-line-endings.py"
         }]
       }
     ],
@@ -80,13 +80,27 @@ Hooks are configured in `settings.json`:
         "matcher": "Bash",
         "hooks": [{
           "type": "command",
-          "command": "uv run --script ~/.claude/hooks/gpg-signing-helper.py"
+          "command": "uv run --script \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/gpg-signing-helper.py"
         }]
       }
     ]
   }
 }
 ```
+
+### Hook Path Convention
+
+**Always use `$CLAUDE_PROJECT_DIR` for hook paths**, not `~` or relative paths:
+
+```json
+"command": "uv run --script \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/hookname.py"
+```
+
+**Why not `~` (tilde)?** The tilde expands to the current user's home directory. In Claude Code Web, hooks run as a different user than where the project is located, causing path resolution failures.
+
+**Why not relative paths?** Relative paths like `.claude/hooks/...` break when the working directory changes (e.g., after `cd` or when pytest runs from subdirectories).
+
+`$CLAUDE_PROJECT_DIR` is an environment variable that Claude Code automatically sets to the project root, making it portable across all environments.
 
 ## Testing Hooks
 
