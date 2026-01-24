@@ -51,12 +51,12 @@ Guidance provided:
 Example patterns:
 ```bash
 # View issue
-curl -s -H "Authorization: token $GITHUB_TOKEN" \
+curl -s -H "Authorization: token $(printenv GITHUB_TOKEN)" \
   -H "Accept: application/vnd.github.v3+json" \
   "https://api.github.com/repos/OWNER/REPO/issues/NUMBER"
 
 # Create PR
-curl -X POST -H "Authorization: token $GITHUB_TOKEN" \
+curl -X POST -H "Authorization: token $(printenv GITHUB_TOKEN)" \
   -H "Accept: application/vnd.github.v3+json" \
   "https://api.github.com/repos/OWNER/REPO/pulls" \
   -d '{"title":"PR Title","head":"branch","base":"main","body":"Description"}'
@@ -203,28 +203,28 @@ def main():
                 "hookEventName": "PreToolUse",
                 "additionalContext": """**ENVIRONMENT NOTICE: Claude Code Web Detected**
 
-The `gh` CLI is not available in this environment, but `$GITHUB_TOKEN` is available.
+The `gh` CLI is not available in this environment, but `GITHUB_TOKEN` is available.
 Use the GitHub REST API with curl instead.
 
 **GitHub API Patterns:**
 
 1. **View issue/PR:**
    ```bash
-   curl -s -H "Authorization: token $GITHUB_TOKEN" \\
+   curl -s -H "Authorization: token $(printenv GITHUB_TOKEN)" \\
      -H "Accept: application/vnd.github.v3+json" \\
      "https://api.github.com/repos/OWNER/REPO/issues/NUMBER"
    ```
 
 2. **List issues:**
    ```bash
-   curl -s -H "Authorization: token $GITHUB_TOKEN" \\
+   curl -s -H "Authorization: token $(printenv GITHUB_TOKEN)" \\
      -H "Accept: application/vnd.github.v3+json" \\
      "https://api.github.com/repos/OWNER/REPO/issues"
    ```
 
 3. **Create pull request:**
    ```bash
-   curl -X POST -H "Authorization: token $GITHUB_TOKEN" \\
+   curl -X POST -H "Authorization: token $(printenv GITHUB_TOKEN)" \\
      -H "Accept: application/vnd.github.v3+json" \\
      "https://api.github.com/repos/OWNER/REPO/pulls" \\
      -d '{"title":"PR Title","head":"branch","base":"main","body":"Description"}'
@@ -232,7 +232,7 @@ Use the GitHub REST API with curl instead.
 
 4. **Check CI status:**
    ```bash
-   curl -s -H "Authorization: token $GITHUB_TOKEN" \\
+   curl -s -H "Authorization: token $(printenv GITHUB_TOKEN)" \\
      -H "Accept: application/vnd.github.v3+json" \\
      "https://api.github.com/repos/OWNER/REPO/commits/SHA/check-runs"
    ```
@@ -240,6 +240,7 @@ Use the GitHub REST API with curl instead.
 **Tips:**
 - Use `-s` flag for silent mode (no progress)
 - Parse JSON with `jq` or `python3 -m json.tool` (never manual string parsing)
+- Use `$(printenv GITHUB_TOKEN)` instead of `$GITHUB_TOKEN` when using pipes
 - GitHub API docs: https://docs.github.com/en/rest
 
 **This message will only appear once per 5 minutes.**"""

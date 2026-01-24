@@ -104,7 +104,7 @@ def main():
 
 1. **List issues:**
    ```bash
-   curl -s -H "Authorization: token $GITHUB_TOKEN" \\
+   curl -s -H "Authorization: token $(printenv GITHUB_TOKEN)" \\
      -H "Accept: application/vnd.github.v3+json" \\
      "https://api.github.com/repos/OWNER/REPO/issues"
    ```
@@ -112,7 +112,7 @@ def main():
 2. **Create pull request:**
    ```bash
    curl -X POST \\
-     -H "Authorization: token $GITHUB_TOKEN" \\
+     -H "Authorization: token $(printenv GITHUB_TOKEN)" \\
      -H "Accept: application/vnd.github.v3+json" \\
      "https://api.github.com/repos/OWNER/REPO/pulls" \\
      -d '{{"title":"PR Title","head":"branch-name","base":"main","body":"PR description"}}'
@@ -120,7 +120,7 @@ def main():
 
 3. **Get issue/PR details:**
    ```bash
-   curl -s -H "Authorization: token $GITHUB_TOKEN" \\
+   curl -s -H "Authorization: token $(printenv GITHUB_TOKEN)" \\
      -H "Accept: application/vnd.github.v3+json" \\
      "https://api.github.com/repos/OWNER/REPO/issues/NUMBER"
    ```
@@ -128,7 +128,7 @@ def main():
 4. **Update PR/issue:**
    ```bash
    curl -X PATCH \\
-     -H "Authorization: token $GITHUB_TOKEN" \\
+     -H "Authorization: token $(printenv GITHUB_TOKEN)" \\
      -H "Accept: application/vnd.github.v3+json" \\
      "https://api.github.com/repos/OWNER/REPO/pulls/NUMBER" \\
      -d '{{"body":"Updated description"}}'
@@ -136,19 +136,19 @@ def main():
 
 5. **Search issues:**
    ```bash
-   curl -s -H "Authorization: token $GITHUB_TOKEN" \\
+   curl -s -H "Authorization: token $(printenv GITHUB_TOKEN)" \\
      -H "Accept: application/vnd.github.v3+json" \\
      "https://api.github.com/repos/OWNER/REPO/issues?state=all"
    ```
 
 **Tips:**
 - Use `jq` or `python3 -m json.tool` to parse JSON responses
-- The GITHUB_TOKEN is already available as `$GITHUB_TOKEN`
+- Use `$(printenv GITHUB_TOKEN)` instead of `$GITHUB_TOKEN` when using pipes
 - GitHub API docs: https://docs.github.com/en/rest
 
 **Example converting your gh command:**
 If you tried: `gh issue list`
-Use instead: `curl -s -H "Authorization: token $GITHUB_TOKEN" -H "Accept: application/vnd.github.v3+json" "https://api.github.com/repos/OWNER/REPO/issues"`"""
+Use instead: `curl -s -H "Authorization: token $(printenv GITHUB_TOKEN)" -H "Accept: application/vnd.github.v3+json" "https://api.github.com/repos/OWNER/REPO/issues"`"""
         }
     }
 
