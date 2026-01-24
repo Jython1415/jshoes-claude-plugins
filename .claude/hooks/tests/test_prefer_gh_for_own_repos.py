@@ -81,9 +81,35 @@ def run_hook(
             gh_path.write_text("#!/bin/sh\necho 'mock gh'\nexit 0\n")
             gh_path.chmod(0o755)
 
-        # Modify PATH to include our mock directory
+        # Modify PATH based on gh_available to control whether real gh is accessible
         env = os.environ.copy()
-        env['PATH'] = f"{tmpdir}:{env.get('PATH', '')}"
+
+        if gh_available:
+            # When gh is available, prepend our mock to PATH
+            env['PATH'] = f"{tmpdir}:{env.get('PATH', '')}"
+        else:
+            # When gh should be unavailable, filter PATH to exclude directories containing gh
+            # but keep essential tools like uv, python
+            import shutil
+            minimal_path_parts = [tmpdir]
+
+            # Find and include the directory containing uv
+            uv_path = shutil.which('uv')
+            if uv_path:
+                uv_dir = os.path.dirname(uv_path)
+                minimal_path_parts.append(uv_dir)
+
+            # Add other essential paths but check they don't contain gh
+            for path_part in env.get('PATH', '').split(':'):
+                if not path_part or path_part in minimal_path_parts:
+                    continue
+                # Check if this directory contains gh
+                potential_gh = os.path.join(path_part, 'gh')
+                if not os.path.exists(potential_gh) and not os.path.islink(potential_gh):
+                    # Safe to include - no gh here
+                    minimal_path_parts.append(path_part)
+
+            env['PATH'] = ':'.join(minimal_path_parts)
 
         result = subprocess.run(
             ["uv", "run", "--script", str(HOOK_PATH)],
