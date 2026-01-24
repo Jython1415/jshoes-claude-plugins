@@ -143,10 +143,6 @@ Each test file should:
    - JSON validity
    - Event name correctness
 
-**Dependencies:**
-- Test dependencies are managed in `pyproject.toml` using PEP 735 dependency groups
-- No need for PEP 723 headers in test files (reserved for production hook scripts only)
-
 **Example test structure:**
 ```python
 """
