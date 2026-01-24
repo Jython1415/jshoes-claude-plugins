@@ -1,10 +1,7 @@
 """
 Unit tests for suggest-uv-for-missing-deps.py hook
 
-Run with:
-  uv run pytest                              # Run all tests
-  uv run pytest hooks/tests/test_suggest_uv_for_missing_deps.py  # Run this test file
-  uv run pytest -v                           # Verbose output
+This test suite validates that the hook properly detects Python dependency errors.
 """
 import json
 import os

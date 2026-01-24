@@ -1,10 +1,7 @@
 """
 Unit tests for gh-fallback-helper.py hook
 
-Run with:
-  uv run pytest                              # Run all tests
-  uv run pytest hooks/tests/test_gh_fallback_helper.py  # Run this test file
-  uv run pytest -v                           # Verbose output
+This test suite validates that the hook properly detects gh CLI errors and suggests fallbacks.
 """
 import json
 import subprocess

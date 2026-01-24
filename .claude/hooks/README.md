@@ -106,38 +106,36 @@ Hooks are configured in `settings.json`:
 
 ### Test Structure
 
-Hook tests are located in `hooks/tests/` directory:
+Hook tests are located in `.claude/hooks/tests/` directory:
 - Each hook has a corresponding test file: `test_<hookname>.py`
-- Tests use pytest with PEP 723 inline dependencies
+- Tests use pytest with dependencies managed in `pyproject.toml` (PEP 735 dependency groups)
 - Tests can be run individually or all together
 
 ### Running Tests
 
 **Run all hook tests:**
 ```bash
-(cd hooks/tests && uv run pytest -v)
+uv run pytest
 ```
 
 **Run specific hook test:**
 ```bash
-uv run --script hooks/tests/test_detect_cd_pattern.py
-```
-Or with pytest:
-```bash
-(cd hooks/tests && uv run pytest test_detect_cd_pattern.py -v)
+uv run pytest .claude/hooks/tests/test_detect_cd_pattern.py
 ```
 
 **Run tests with specific options:**
 ```bash
-(cd hooks/tests && uv run pytest -v -k "subshell")  # Run only tests matching "subshell"
-(cd hooks/tests && uv run pytest --tb=short)        # Short traceback format
+uv run pytest -v                    # Verbose output
+uv run pytest -k "subshell"         # Run only tests matching "subshell"
+uv run pytest --tb=short            # Short traceback format
+uv run pytest --cov=.claude/hooks   # Run with coverage
 ```
 
 ### Writing Hook Tests
 
 Each test file should:
-1. Use PEP 723 header with `pytest>=7.0.0` dependency
-2. Include a helper function to run the hook with test input
+1. Include a docstring describing what the test file covers
+2. Define a helper function to run the hook with test input
 3. Have comprehensive test cases covering:
    - Happy path (correct behavior, returns `{}`)
    - Error cases (warnings/guidance)
@@ -147,15 +145,19 @@ Each test file should:
 
 **Example test structure:**
 ```python
-#!/usr/bin/env python3
-# /// script
-# dependencies = ["pytest>=7.0.0"]
-# ///
+"""
+Unit tests for hookname.py hook
+
+This test suite validates that the hook properly detects [what it detects].
+"""
 import json
 import subprocess
 from pathlib import Path
 
+import pytest
+
 HOOK_PATH = Path(__file__).parent.parent / "hookname.py"
+
 
 def run_hook(tool_name: str, command: str) -> dict:
     """Helper to run hook and return parsed output"""
@@ -170,6 +172,7 @@ def run_hook(tool_name: str, command: str) -> dict:
         text=True
     )
     return json.loads(result.stdout)
+
 
 class TestMyHook:
     def test_case_name(self):

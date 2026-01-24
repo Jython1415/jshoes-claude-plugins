@@ -1,10 +1,7 @@
 """
 Unit tests for normalize-line-endings.py hook
 
-Run with:
-  uv run pytest                              # Run all tests
-  uv run pytest hooks/tests/test_normalize_line_endings.py  # Run this test file
-  uv run pytest -v                           # Verbose output
+This test suite validates that the hook properly detects and handles line ending issues.
 """
 import json
 import subprocess
