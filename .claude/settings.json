@@ -113,7 +113,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "uv run --script \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/normalize-line-endings.py"
+            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/run-with-fallback.sh open \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/normalize-line-endings.py"
           }
         ]
       },
@@ -122,23 +122,23 @@
         "hooks": [
           {
             "type": "command",
-            "command": "uv run --script \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/gh-authorship-attribution.py"
+            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/run-with-fallback.sh open \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/gh-authorship-attribution.py"
           },
           {
             "type": "command",
-            "command": "uv run --script \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/gh-web-fallback.py"
+            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/run-with-fallback.sh open \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/gh-web-fallback.py"
           },
           {
             "type": "command",
-            "command": "uv run --script \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/prefer-modern-tools.py"
+            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/run-with-fallback.sh open \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/prefer-modern-tools.py"
           },
           {
             "type": "command",
-            "command": "uv run --script \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/detect-cd-pattern.py"
+            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/run-with-fallback.sh open \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/detect-cd-pattern.py"
           },
           {
             "type": "command",
-            "command": "uv run --script \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/auto-unsandbox-pbcopy.py"
+            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/run-with-fallback.sh open \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/auto-unsandbox-pbcopy.py"
           }
         ]
       },
@@ -147,7 +147,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "uv run --script \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/prefer-gh-for-own-repos.py"
+            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/run-with-fallback.sh open \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/prefer-gh-for-own-repos.py"
           }
         ]
       }
@@ -158,11 +158,11 @@
         "hooks": [
           {
             "type": "command",
-            "command": "uv run --script \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/gpg-signing-helper.py"
+            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/run-with-fallback.sh open \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/gpg-signing-helper.py"
           },
           {
             "type": "command",
-            "command": "uv run --script \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/detect-heredoc-errors.py",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/run-with-fallback.sh open \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/detect-heredoc-errors.py",
             "timeout": 10
           }
         ]
@@ -174,20 +174,20 @@
         "hooks": [
           {
             "type": "command",
-            "command": "uv run --script \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/gh-fallback-helper.py"
+            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/run-with-fallback.sh open \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/gh-fallback-helper.py"
           },
           {
             "type": "command",
-            "command": "uv run --script \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/gpg-signing-helper.py"
+            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/run-with-fallback.sh open \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/gpg-signing-helper.py"
           },
           {
             "type": "command",
-            "command": "uv run --script \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/detect-heredoc-errors.py",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/run-with-fallback.sh open \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/detect-heredoc-errors.py",
             "timeout": 10
           },
           {
             "type": "command",
-            "command": "uv run --script \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/suggest-uv-for-missing-deps.py"
+            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/run-with-fallback.sh open \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/suggest-uv-for-missing-deps.py"
           }
         ]
       }
