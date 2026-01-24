@@ -1,11 +1,6 @@
 """
 Unit tests for prefer-gh-for-own-repos.py hook
 
-Run with:
-  uv run pytest                                          # Run all tests
-  uv run pytest hooks/tests/test_prefer_gh_for_own_repos.py  # Run this test file
-  uv run pytest -v                                       # Verbose output
-
 This test suite uses mocking to test gh availability and cooldown scenarios.
 """
 import json

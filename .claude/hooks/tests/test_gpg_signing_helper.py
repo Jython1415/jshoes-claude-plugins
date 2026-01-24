@@ -1,10 +1,7 @@
 """
 Unit tests for gpg-signing-helper.py hook
 
-Run with:
-  uv run pytest                              # Run all tests
-  uv run pytest hooks/tests/test_gpg_signing_helper.py  # Run this test file
-  uv run pytest -v                           # Verbose output
+This test suite validates that the hook properly detects GPG signing scenarios.
 """
 import json
 import subprocess

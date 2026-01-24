@@ -1,11 +1,6 @@
 """
 Unit tests for gh-web-fallback.py hook
 
-Run with:
-  uv run pytest                                       # Run all tests
-  uv run pytest hooks/tests/test_gh_web_fallback.py  # Run this test file
-  uv run pytest -v                                    # Verbose output
-
 This test suite uses mocking to test gh availability, GITHUB_TOKEN presence,
 command detection, and cooldown scenarios.
 """

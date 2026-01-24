@@ -1,11 +1,6 @@
 """
 Unit tests for prefer-modern-tools.py hook
 
-Run with:
-  uv run pytest                              # Run all tests
-  uv run pytest hooks/tests/test_prefer_modern_tools.py  # Run this test file
-  uv run pytest -v                           # Verbose output
-
 This test suite uses mocking to test tool availability scenarios regardless of
 what tools are actually installed on the system. All tests should pass on any
 system configuration.
