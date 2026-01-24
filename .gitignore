@@ -1,4 +1,5 @@
 # Runtime data - DO NOT COMMIT
+settings.local.json
 history.jsonl
 debug/
 projects/
