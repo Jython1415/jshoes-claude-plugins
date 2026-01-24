@@ -81,7 +81,34 @@ def run_hook(
 
         # Modify environment
         env = os.environ.copy()
-        env['PATH'] = f"{tmpdir}:{env.get('PATH', '')}"
+
+        # Set PATH based on gh_available to control whether real gh is accessible
+        if gh_available:
+            # When gh is available, prepend our mock to PATH
+            env['PATH'] = f"{tmpdir}:{env.get('PATH', '')}"
+        else:
+            # When gh should be unavailable, filter PATH to exclude directories containing gh
+            # but keep essential tools like uv, python
+            import shutil
+            minimal_path_parts = [tmpdir]
+
+            # Find and include the directory containing uv
+            uv_path = shutil.which('uv')
+            if uv_path:
+                uv_dir = os.path.dirname(uv_path)
+                minimal_path_parts.append(uv_dir)
+
+            # Add other essential paths but check they don't contain gh
+            for path_part in env.get('PATH', '').split(':'):
+                if not path_part or path_part in minimal_path_parts:
+                    continue
+                # Check if this directory contains gh
+                potential_gh = os.path.join(path_part, 'gh')
+                if not os.path.exists(potential_gh) and not os.path.islink(potential_gh):
+                    # Safe to include - no gh here
+                    minimal_path_parts.append(path_part)
+
+            env['PATH'] = ':'.join(minimal_path_parts)
 
         # Control GITHUB_TOKEN availability
         if token_available:
@@ -169,7 +196,25 @@ class TestGhWebFallback:
             which_path.chmod(0o755)
 
             env = os.environ.copy()
-            env['PATH'] = f"{tmpdir}:{env.get('PATH', '')}"
+            # Use minimal PATH to ensure gh is unavailable
+            import shutil
+            minimal_path_parts = [tmpdir]
+
+            # Find and include the directory containing uv
+            uv_path = shutil.which('uv')
+            if uv_path:
+                uv_dir = os.path.dirname(uv_path)
+                minimal_path_parts.append(uv_dir)
+
+            # Add other paths that don't contain gh
+            for path_part in env.get('PATH', '').split(':'):
+                if not path_part or path_part in minimal_path_parts:
+                    continue
+                potential_gh = os.path.join(path_part, 'gh')
+                if not os.path.exists(potential_gh) and not os.path.islink(potential_gh):
+                    minimal_path_parts.append(path_part)
+
+            env['PATH'] = ':'.join(minimal_path_parts)
             env['GITHUB_TOKEN'] = ''  # Empty string
 
             result = subprocess.run(
@@ -269,7 +314,25 @@ class TestGhWebFallback:
             which_path.chmod(0o755)
 
             env = os.environ.copy()
-            env['PATH'] = f"{tmpdir}:{env.get('PATH', '')}"
+            # Use minimal PATH to ensure gh is unavailable
+            import shutil
+            minimal_path_parts = [tmpdir]
+
+            # Find and include the directory containing uv
+            uv_path = shutil.which('uv')
+            if uv_path:
+                uv_dir = os.path.dirname(uv_path)
+                minimal_path_parts.append(uv_dir)
+
+            # Add other paths that don't contain gh
+            for path_part in env.get('PATH', '').split(':'):
+                if not path_part or path_part in minimal_path_parts:
+                    continue
+                potential_gh = os.path.join(path_part, 'gh')
+                if not os.path.exists(potential_gh) and not os.path.islink(potential_gh):
+                    minimal_path_parts.append(path_part)
+
+            env['PATH'] = ':'.join(minimal_path_parts)
             env['GITHUB_TOKEN'] = 'test-token'
 
             result = subprocess.run(

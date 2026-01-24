@@ -1,0 +1,43 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+
+    - name: Set up uv
+      uses: astral-sh/setup-uv@v7
+      with:
+        enable-cache: true
+
+    - name: Debug environment
+      run: |
+        echo "Python version:"
+        python --version
+        echo "UV version:"
+        uv --version
+        echo "UV location:"
+        which uv
+        echo "PATH:"
+        echo $PATH
+        echo "Installed packages:"
+        uv pip list
+
+    - name: Sync dependencies
+      run: uv sync --all-groups
+
+    - name: Run tests
+      run: uv run pytest -v --tb=short
