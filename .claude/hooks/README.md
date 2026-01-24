@@ -10,7 +10,6 @@ Custom hooks for enhancing Claude Code CLI behavior.
 | `gh-authorship-attribution.py` | PreToolUse (Bash) | Ensures proper attribution for AI-assisted GitHub contributions |
 | `prefer-modern-tools.py` | PreToolUse (Bash) | Suggests fd/rg instead of find/grep |
 | `detect-cd-pattern.py` | PreToolUse (Bash) | Warns on global cd, allows subshell pattern |
-| `auto-unsandbox-pbcopy.py` | PreToolUse (Bash) | Auto-approves and unsandboxes pbcopy |
 | `prefer-gh-for-own-repos.py` | PreToolUse (WebFetch/Bash) | Suggests gh CLI for Jython1415's repositories |
 | `gh-web-fallback.py` | PreToolUse (Bash) | Proactively guides to GitHub API when gh unavailable (Web environment) |
 | `gh-fallback-helper.py` | PostToolUseFailure (Bash) | Guides Claude to use GitHub API when gh CLI unavailable |
@@ -35,12 +34,18 @@ All hooks use inline script dependencies:
 - Include `hookEventName` matching the event type
 
 ### Testing Hooks
-```bash
-# Test with sample input
-echo '{"tool_name":"Bash","tool_input":{"command":"echo test"}}' | uv run --script hooks/hookname.py
 
-# Check output is valid JSON
-echo '{"test":"data"}' | uv run --script hooks/hookname.py | jq .
+**Use pytest for testing hooks** (see "Testing Hooks" section below for full details):
+
+```bash
+# Run all hook tests
+uv run pytest
+
+# Run tests for a specific hook
+uv run pytest .claude/hooks/tests/test_hookname.py
+
+# Run with verbose output
+uv run pytest -v
 ```
 
 ### Error Handling
