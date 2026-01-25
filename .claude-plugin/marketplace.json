@@ -1,0 +1,31 @@
+{
+  "$schema": "https://code.claude.com/schema/marketplace.json",
+  "name": "claude-code-config",
+  "description": "Personal Claude Code plugins and configurations by Jython1415",
+  "version": "1.0.0",
+  "owner": {
+    "name": "Jython1415",
+    "url": "https://github.com/Jython1415"
+  },
+  "plugins": [
+    {
+      "name": "claude-code-hooks",
+      "description": "Productivity hooks for Claude Code: line ending normalization, gh attribution reminders, modern tool suggestions, and more",
+      "version": "1.0.0",
+      "author": {
+        "name": "Jython1415",
+        "url": "https://github.com/Jython1415"
+      },
+      "source": "./plugins/claude-code-hooks",
+      "category": "development",
+      "keywords": [
+        "hooks",
+        "productivity",
+        "git",
+        "github",
+        "workflow",
+        "cli"
+      ]
+    }
+  ]
+}
