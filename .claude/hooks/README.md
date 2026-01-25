@@ -51,17 +51,22 @@ These files remain local in `.claude/hooks/`:
 - Using WSL (Windows Subsystem for Linux)
 
 On Windows without symlink support:
-- Clone this repository and copy hook files manually from `plugins/claude-code-hooks/hooks/` to `.claude/hooks/`
-- Or use WSL for full compatibility
-- The `setup.sh` script may fail to create symlinks on Windows
+- Use WSL for full compatibility
+- Or copy hook files manually from `plugins/claude-code-hooks/hooks/` to `.claude/hooks/`
+- Or install hooks via plugin marketplace (when published)
 
-### Automatic Setup
+### Symlink Management
 
-The `setup.sh` script automatically creates these symlinks:
+The symlinks in `.claude/hooks/` are tracked in git and automatically created when you clone the repository (on Linux/Mac).
+
+**To recreate symlinks manually** (if they become broken):
 ```bash
-./setup.sh        # Creates all symlinks
-./setup.sh --force # Overwrites existing symlinks
+cd .claude/hooks
+ln -sf ../../plugins/claude-code-hooks/hooks/normalize-line-endings.py normalize-line-endings.py
+# Repeat for each hook file...
 ```
+
+Or use the plugin marketplace for global installation.
 
 ## Development Guidelines
 
