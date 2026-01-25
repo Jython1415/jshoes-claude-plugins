@@ -17,6 +17,52 @@ Custom hooks for enhancing Claude Code CLI behavior.
 | `detect-heredoc-errors.py` | PostToolUse/PostToolUseFailure (Bash) | Provides heredoc workarounds |
 | `suggest-uv-for-missing-deps.py` | PostToolUseFailure (Bash) | Suggests uv run with PEP 723 for import errors |
 
+## Architecture: Symlinks for Web Compatibility
+
+### Plugin Source of Truth
+
+Hook files are maintained in the `claude-code-hooks` plugin at:
+```
+plugins/claude-code-hooks/hooks/
+```
+
+The hooks in `.claude/hooks/` are **symlinks** pointing to the plugin:
+```
+.claude/hooks/normalize-line-endings.py -> ../../plugins/claude-code-hooks/hooks/normalize-line-endings.py
+```
+
+This architecture enables:
+- **Claude Code Web**: Uses `.claude/hooks/` directly (Web doesn't support plugins)
+- **Claude Code CLI**: Can use hooks via symlinks or install the plugin from marketplace
+- **Single source of truth**: All edits in plugin automatically reflect in `.claude/hooks/`
+- **Version control**: Plugin can be published to marketplace independently
+
+### Local Files (Not Symlinked)
+
+These files remain local in `.claude/hooks/`:
+- `README.md` - Hook documentation
+- `tests/` - Hook test suite
+
+### Windows Limitation
+
+**Symlinks may not work on Windows** unless:
+- Developer Mode is enabled (Windows 10+), OR
+- Running as Administrator, OR
+- Using WSL (Windows Subsystem for Linux)
+
+On Windows without symlink support:
+- Clone this repository and copy hook files manually from `plugins/claude-code-hooks/hooks/` to `.claude/hooks/`
+- Or use WSL for full compatibility
+- The `setup.sh` script may fail to create symlinks on Windows
+
+### Automatic Setup
+
+The `setup.sh` script automatically creates these symlinks:
+```bash
+./setup.sh        # Creates all symlinks
+./setup.sh --force # Overwrites existing symlinks
+```
+
 ## Development Guidelines
 
 ### PEP 723 Header

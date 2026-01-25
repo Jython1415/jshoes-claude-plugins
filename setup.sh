@@ -61,6 +61,48 @@ create_symlink "$SCRIPT_DIR/.claude/CLAUDE.md" "$CLAUDE_DIR/CLAUDE.md"
 create_symlink "$SCRIPT_DIR/.claude/hooks" "$CLAUDE_DIR/hooks"
 create_symlink "$SCRIPT_DIR/.claude/plugins/installed_plugins.json" "$CLAUDE_DIR/plugins/installed_plugins.json"
 
+# Create internal symlinks from .claude/hooks to plugin hooks
+echo ""
+echo "Creating internal plugin hook symlinks..."
+HOOKS_DIR="$SCRIPT_DIR/.claude/hooks"
+PLUGIN_HOOKS_DIR="$SCRIPT_DIR/plugins/claude-code-hooks/hooks"
+
+# Array of hook files to symlink
+HOOK_FILES=(
+    "normalize-line-endings.py"
+    "gh-authorship-attribution.py"
+    "gh-web-fallback.py"
+    "prefer-modern-tools.py"
+    "detect-cd-pattern.py"
+    "prefer-gh-for-own-repos.py"
+    "gpg-signing-helper.py"
+    "detect-heredoc-errors.py"
+    "gh-fallback-helper.py"
+    "suggest-uv-for-missing-deps.py"
+    "run-with-fallback.sh"
+)
+
+# Create symlinks for each hook file
+for hook in "${HOOK_FILES[@]}"; do
+    target="$HOOKS_DIR/$hook"
+    # Use relative path for symlink
+    source="../../plugins/claude-code-hooks/hooks/$hook"
+
+    # Remove existing file/symlink if present
+    if [[ -e "$target" ]] || [[ -L "$target" ]]; then
+        if [[ "$FORCE" == "true" ]] || [[ -L "$target" ]]; then
+            rm -f "$target"
+            echo "Creating hook symlink: $hook"
+            (cd "$HOOKS_DIR" && ln -sf "$source" "$hook")
+        else
+            echo "Hook file exists (not a symlink): $hook - skipping (use --force to overwrite)"
+        fi
+    else
+        echo "Creating hook symlink: $hook"
+        (cd "$HOOKS_DIR" && ln -sf "$source" "$hook")
+    fi
+done
+
 # Verify symlinks
 echo ""
 echo "Verifying symlinks..."
