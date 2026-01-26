@@ -1,7 +1,6 @@
 ---
 name: hook-development
-description: Guidance for developing and testing hooks in claude-code-config repository
-disable-model-invocation: true
+description: Read this skill when working on hooks in .claude/hooks/ or plugins/claude-code-hooks/hooks/ - covers development process, PEP 723 patterns, JSON output, and testing philosophy
 ---
 
 # Hook Development Skill
