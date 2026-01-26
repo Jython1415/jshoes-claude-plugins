@@ -16,6 +16,7 @@ Custom hooks for enhancing Claude Code CLI behavior.
 | `gpg-signing-helper.py` | PostToolUse/PostToolUseFailure (Bash) | Guides Claude on GPG signing issues |
 | `detect-heredoc-errors.py` | PostToolUse/PostToolUseFailure (Bash) | Provides heredoc workarounds |
 | `suggest-uv-for-missing-deps.py` | PostToolUseFailure (Bash) | Suggests uv run with PEP 723 for import errors |
+| `markdown-commit-reminder.py` | PreToolUse (Bash) | Reminds about markdown file inclusion criteria before commits |
 
 ## Architecture: Symlinks for Web Compatibility
 
@@ -277,6 +278,20 @@ The `gh-web-fallback.py` hook has 36 tests covering:
 - ✅ Output validation: Comprehensive content validation (GitHub API, jq, docs)
 - ✅ Real-world scenarios: Integration test, cooldown behavior
 - ✅ Complex commands: Complex flags and chained operations
+
+### Test Coverage for markdown-commit-reminder
+
+The `markdown-commit-reminder.py` hook has comprehensive tests covering:
+- ✅ Direct markdown file detection: `git add README.md` triggers reminder
+- ✅ Glob pattern detection: `git add *.md` triggers reminder
+- ✅ Bulk add detection: `git add .`, `git add -A`, `git add --all` trigger (may include markdown)
+- ✅ Suspicious pattern detection: `*_REPORT.md`, `*_FINDINGS.md`, `*_REVIEW.md`, etc.
+- ✅ Cooldown mechanism: Duplicate reminders prevented within 5 minutes
+- ✅ Non-triggering commands: `git status`, `git log`, non-.md files
+- ✅ Tool filtering: Only triggers for Bash tool
+- ✅ Edge cases: Empty commands, missing fields, malformed JSON handled
+- ✅ JSON validity and event name correctness
+- ✅ Real-world scenarios: Documentation workflow, security review
 
 ## Adding New Hooks
 

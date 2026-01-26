@@ -1,0 +1,1 @@
+../../plugins/claude-code-hooks/hooks/markdown-commit-reminder.py

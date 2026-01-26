@@ -135,6 +135,10 @@
           {
             "type": "command",
             "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/run-with-fallback.sh open \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/detect-cd-pattern.py"
+          },
+          {
+            "type": "command",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/run-with-fallback.sh open \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/markdown-commit-reminder.py"
           }
         ]
       },
