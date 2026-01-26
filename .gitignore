@@ -13,7 +13,9 @@ chrome/
 statsig/
 telemetry/
 local/
+# Ignore user skills (runtime data), but allow project-scoped skills in .claude/
 skills/
+!.claude/skills/
 hook-logs/
 stats-cache.json
 
