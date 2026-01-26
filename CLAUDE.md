@@ -3,22 +3,22 @@
 This repository contains version-controlled configuration for **Claude Code CLI and Web**.
 
 ## Repository Structure
-- `.claude/` - Configuration directory (works for both CLI and Web)
+- `.claude/` - Project-scoped configuration directory (works for both CLI and Web)
   - `settings.json` - Core configuration (permissions, hooks, model selection)
-  - `CLAUDE.md` - Global user instructions
-  - `hooks/` - Custom hook scripts
+  - `CLAUDE.md` - User instructions for Claude
+  - `hooks/` - Custom hook scripts (symlinked to plugin)
   - `plugins/` - Plugin configuration
-- `setup.sh` - Setup script for CLI (creates symlinks from ~/.claude/ to .claude/)
+- `plugins/claude-code-hooks/` - Hook plugin source (published to marketplace)
 
 ## How It Works
 
 **For Claude Code Web:**
 - Configuration in `.claude/` is automatically available (project scope)
-- No additional setup required when using this repository
+- No setup required when using this repository
 
 **For Claude Code CLI:**
-- Run `./setup.sh` to create symlinks from `~/.claude/` to `.claude/`
-- Allows version-controlled configuration on your local machine
+- Configuration in `.claude/` is automatically available when working in this project directory
+- For global configuration: Install hooks via plugin marketplace or manually symlink files
 
 ## Self-Management Instructions for Claude
 
@@ -62,11 +62,19 @@ After making changes:
 ### Safety Guidelines
 - Never commit sensitive data (tokens, history, personal info)
 - Always use .gitignore to protect runtime data
-- Test symlinks after modifications
-- Keep backups before major changes
+- Keep backups before major configuration changes
+- Test hook changes thoroughly (481 tests: `uv run pytest`)
 
-## Syncing to Other Machines
+## Using This Configuration on Other Machines
+
+**Option 1: Project-scoped (Recommended)**
 1. Clone this repo: `git clone https://github.com/Jython1415/claude-code-config.git`
-2. Run setup script: `cd claude-code-config && ./setup.sh`
-3. Restart Claude Code: `/exit` then `claude`
-4. Verify configuration loaded correctly
+2. Work in the repository directory: `cd claude-code-config && claude`
+3. Configuration in `.claude/` is automatically available
+
+**Option 2: Global via plugin marketplace**
+1. Install the hooks plugin: `claude plugin install claude-code-hooks@claude-code-config`
+2. Copy settings from `.claude/settings.json` to your `~/.claude/settings.json` as needed
+
+**Option 3: Manual global setup (Advanced)**
+See README.md for manual symlink creation instructions

@@ -17,6 +17,57 @@ Custom hooks for enhancing Claude Code CLI behavior.
 | `detect-heredoc-errors.py` | PostToolUse/PostToolUseFailure (Bash) | Provides heredoc workarounds |
 | `suggest-uv-for-missing-deps.py` | PostToolUseFailure (Bash) | Suggests uv run with PEP 723 for import errors |
 
+## Architecture: Symlinks for Web Compatibility
+
+### Plugin Source of Truth
+
+Hook files are maintained in the `claude-code-hooks` plugin at:
+```
+plugins/claude-code-hooks/hooks/
+```
+
+The hooks in `.claude/hooks/` are **symlinks** pointing to the plugin:
+```
+.claude/hooks/normalize-line-endings.py -> ../../plugins/claude-code-hooks/hooks/normalize-line-endings.py
+```
+
+This architecture enables:
+- **Claude Code Web**: Uses `.claude/hooks/` directly (Web doesn't support plugins)
+- **Claude Code CLI**: Can use hooks via symlinks or install the plugin from marketplace
+- **Single source of truth**: All edits in plugin automatically reflect in `.claude/hooks/`
+- **Version control**: Plugin can be published to marketplace independently
+
+### Local Files (Not Symlinked)
+
+These files remain local in `.claude/hooks/`:
+- `README.md` - Hook documentation
+- `tests/` - Hook test suite
+
+### Windows Limitation
+
+**Symlinks may not work on Windows** unless:
+- Developer Mode is enabled (Windows 10+), OR
+- Running as Administrator, OR
+- Using WSL (Windows Subsystem for Linux)
+
+On Windows without symlink support:
+- Use WSL for full compatibility
+- Or copy hook files manually from `plugins/claude-code-hooks/hooks/` to `.claude/hooks/`
+- Or install hooks via plugin marketplace (when published)
+
+### Symlink Management
+
+The symlinks in `.claude/hooks/` are tracked in git and automatically created when you clone the repository (on Linux/Mac).
+
+**To recreate symlinks manually** (if they become broken):
+```bash
+cd .claude/hooks
+ln -sf ../../plugins/claude-code-hooks/hooks/normalize-line-endings.py normalize-line-endings.py
+# Repeat for each hook file...
+```
+
+Or use the plugin marketplace for global installation.
+
 ## Development Guidelines
 
 ### PEP 723 Header
