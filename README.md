@@ -52,45 +52,23 @@ Use this repository as your working directory in Claude Code:
 
 3. Configuration in `.claude/` is automatically available (both CLI and Web)
 
-### Option 2: Install Hooks via Plugin Marketplace
+### Option 2: Global Installation via Plugin Marketplace (Recommended for Global Use)
 
-To use just the hooks globally without this entire configuration:
+Install hooks globally to use them in all your projects:
 
-```bash
-# Install the claude-code-hooks plugin
-claude plugin install claude-code-hooks@claude-code-config
+1. **Add this repository as a plugin marketplace**:
+   ```bash
+   claude plugin marketplace add https://github.com/Jython1415/claude-code-config
+   ```
 
-# Configure the hooks in your own ~/.claude/settings.json
-```
+2. **Install the claude-code-hooks plugin**:
+   ```bash
+   claude plugin install claude-code-hooks@claude-code-config --scope user
+   ```
+
+3. **Hooks are now active globally**. You can optionally copy custom permissions from `.claude/settings.json` to your `~/.claude/settings.json` if desired.
 
 See `plugins/claude-code-hooks/README.md` for plugin-specific documentation.
-
-### Option 3: Manual Global Setup (Advanced CLI Users)
-
-If you want this entire configuration as your global `~/.claude/` config:
-
-1. **Backup existing config**:
-   ```bash
-   cp -R ~/.claude ~/.claude-backup-$(date +%Y%m%d-%H%M%S)
-   ```
-
-2. **Create symlinks manually**:
-   ```bash
-   cd /path/to/claude-code-config
-   ln -sf "$(pwd)/.claude/settings.json" ~/.claude/settings.json
-   ln -sf "$(pwd)/.claude/CLAUDE.md" ~/.claude/CLAUDE.md
-   ln -sf "$(pwd)/.claude/hooks" ~/.claude/hooks
-   mkdir -p ~/.claude/plugins
-   ln -sf "$(pwd)/.claude/plugins/installed_plugins.json" ~/.claude/plugins/installed_plugins.json
-   ```
-
-3. **Restart Claude Code**:
-   ```bash
-   /exit
-   claude
-   ```
-
-**Note**: On Windows, symlinks require Developer Mode, Administrator privileges, or WSL.
 
 ## What's Included
 
@@ -151,7 +129,10 @@ The following are intentionally excluded via `.gitignore`:
 4. Commit: `git commit -am "feat: description of change"`
 5. Push: `git push`
 
-If using symlinked global config (Option 3), changes in this repo automatically affect `~/.claude/`.
+**Note**: If you've installed the plugin globally (Option 2), you'll need to update the plugin to get the latest changes:
+```bash
+claude plugin update claude-code-hooks@claude-code-config
+```
 
 ## Hook Development
 

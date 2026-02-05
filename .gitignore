@@ -18,6 +18,7 @@ skills/
 !.claude/skills/
 hook-logs/
 stats-cache.json
+plugins/installed_plugins.json
 
 # OS files
 .DS_Store

@@ -67,14 +67,12 @@ After making changes:
 
 ## Using This Configuration on Other Machines
 
-**Option 1: Project-scoped (Recommended)**
+**Option 1: Project-scoped (Recommended for development)**
 1. Clone this repo: `git clone https://github.com/Jython1415/claude-code-config.git`
 2. Work in the repository directory: `cd claude-code-config && claude`
 3. Configuration in `.claude/` is automatically available
 
-**Option 2: Global via plugin marketplace**
-1. Install the hooks plugin: `claude plugin install claude-code-hooks@claude-code-config`
-2. Copy settings from `.claude/settings.json` to your `~/.claude/settings.json` as needed
-
-**Option 3: Manual global setup (Advanced)**
-See README.md for manual symlink creation instructions
+**Option 2: Global via plugin marketplace (Recommended for global use)**
+1. Add marketplace: `claude plugin marketplace add https://github.com/Jython1415/claude-code-config`
+2. Install plugin: `claude plugin install claude-code-hooks@claude-code-config --scope user`
+3. Hooks are now active globally. Optionally copy custom permissions from `.claude/settings.json` to `~/.claude/settings.json`
