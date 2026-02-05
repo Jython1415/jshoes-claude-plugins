@@ -28,6 +28,10 @@
           {
             "type": "command",
             "command": "\"${CLAUDE_PLUGIN_ROOT}\"/hooks/run-with-fallback.sh open \"${CLAUDE_PLUGIN_ROOT}\"/hooks/detect-cd-pattern.py"
+          },
+          {
+            "type": "command",
+            "command": "\"${CLAUDE_PLUGIN_ROOT}\"/hooks/run-with-fallback.sh open \"${CLAUDE_PLUGIN_ROOT}\"/hooks/markdown-commit-reminder.py"
           }
         ]
       },
@@ -53,6 +57,10 @@
             "type": "command",
             "command": "\"${CLAUDE_PLUGIN_ROOT}\"/hooks/run-with-fallback.sh open \"${CLAUDE_PLUGIN_ROOT}\"/hooks/detect-heredoc-errors.py",
             "timeout": 10
+          },
+          {
+            "type": "command",
+            "command": "\"${CLAUDE_PLUGIN_ROOT}\"/hooks/run-with-fallback.sh open \"${CLAUDE_PLUGIN_ROOT}\"/hooks/monitor-ci-results.py"
           }
         ]
       }
