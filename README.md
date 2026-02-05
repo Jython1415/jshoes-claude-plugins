@@ -21,7 +21,7 @@ claude-code-config/
 │   ├── CLAUDE.md                      # User instructions for Claude
 │   ├── hooks/                         # Custom hooks (symlinked to plugin)
 │   │   ├── README.md                  # Hook documentation
-│   │   └── tests/                     # Comprehensive test suite (481 tests)
+│   │   └── tests/                     # Comprehensive test suite
 │   └── plugins/
 │       └── installed_plugins.json     # Plugin installation list
 ├── plugins/
@@ -124,7 +124,7 @@ The following are intentionally excluded via `.gitignore`:
 ## Making Configuration Changes
 
 1. Edit files in `.claude/` directory
-2. Test changes (hooks have 481 tests: `uv run pytest`)
+2. Test changes: `uv run pytest`
 3. Review changes: `git diff`
 4. Commit: `git commit -am "feat: description of change"`
 5. Push: `git push`

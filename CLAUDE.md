@@ -63,7 +63,7 @@ After making changes:
 - Never commit sensitive data (tokens, history, personal info)
 - Always use .gitignore to protect runtime data
 - Keep backups before major configuration changes
-- Test hook changes thoroughly (481 tests: `uv run pytest`)
+- Test hook changes thoroughly: `uv run pytest`
 
 ## Using This Configuration on Other Machines
 
