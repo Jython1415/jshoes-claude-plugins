@@ -39,6 +39,8 @@ jobs:
           repository: ${{ env.SOURCE_REPO }}
           ref: ${{ env.SOURCE_BRANCH }}
           path: _source_config
+          # For private source repos, add SOURCE_REPO_TOKEN secret with read access
+          token: ${{ secrets.SOURCE_REPO_TOKEN || secrets.GITHUB_TOKEN }}
 
       - name: Get source commit info
         id: source-info
