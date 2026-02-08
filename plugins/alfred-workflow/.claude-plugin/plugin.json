@@ -1,0 +1,12 @@
+{
+  "name": "alfred-workflow",
+  "description": "Skill for programmatically creating and managing Alfred 5 workflows from the command line. Covers the complete reverse-engineered info.plist schema, all node types, connections, scripting, and workflow lifecycle.",
+  "version": "1.0.0",
+  "author": {
+    "name": "Jython1415",
+    "url": "https://github.com/Jython1415"
+  },
+  "homepage": "https://github.com/Jython1415/claude-code-config",
+  "repository": "https://github.com/Jython1415/claude-code-config",
+  "license": "MIT"
+}

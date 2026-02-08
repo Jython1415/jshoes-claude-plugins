@@ -16,6 +16,7 @@ local/
 # Ignore user skills (runtime data), but allow project-scoped skills in .claude/
 skills/
 !.claude/skills/
+!plugins/*/skills/
 hook-logs/
 stats-cache.json
 plugins/installed_plugins.json
