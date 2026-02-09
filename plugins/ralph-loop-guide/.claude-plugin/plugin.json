@@ -1,0 +1,12 @@
+{
+  "name": "ralph-loop-guide",
+  "description": "Best practices reference for writing effective ralph-loop prompts. Use when helping users structure PROMPT.md files, configure ralph loops, or debug loop convergence issues.",
+  "version": "1.0.0",
+  "author": {
+    "name": "Jython1415",
+    "url": "https://github.com/Jython1415"
+  },
+  "homepage": "https://github.com/Jython1415/claude-code-config",
+  "repository": "https://github.com/Jython1415/claude-code-config",
+  "license": "MIT"
+}
