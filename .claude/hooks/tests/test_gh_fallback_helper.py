@@ -223,11 +223,11 @@ class TestGhFallbackHelper:
         )
         assert "hookSpecificOutput" in output, "Should detect gh with pipe"
 
-    # Edge cases - "gh" as part of word WILL trigger (limitation of simple substring check)
+    # Edge cases - "gh" as part of word should NOT trigger (tighter matching)
     def test_gh_as_part_of_word(self):
-        """'gh' as part of a larger word will trigger (hook uses simple substring match)"""
-        # Note: This is a known limitation of the hook's simple "gh" in command check
-        # It will match any command containing "gh" substring, even in words like "high"
+        """'gh' as part of a larger word should not trigger (tighter matching)"""
+        # The hook checks for "gh " in command or command.startswith("gh")
+        # to avoid false positives on words like "high", "light", etc.
         test_cases = [
             ("echo 'high quality'", "echo: command not found"),
             ("light on", "light: command not found"),
@@ -243,8 +243,7 @@ class TestGhFallbackHelper:
                 error=error_msg,
                 github_token="ghp_test123"
             )
-            # Due to simple substring matching, these WILL trigger
-            assert "hookSpecificOutput" in output, f"Hook uses simple substring match: {cmd}"
+            assert output == {}, f"Should not trigger on word containing 'gh': {cmd}"
 
     def test_gh_in_string_literal(self):
         """'gh' inside string literal will trigger if error also contains 'not found'"""
@@ -388,19 +387,16 @@ class TestGhFallbackHelper:
         assert output == {}, "Empty command should return {}"
 
     def test_command_with_gh_flag_not_gh_command(self):
-        """Command with --gh flag but not gh command should return {}"""
+        """Command with --gh flag but not gh command should NOT trigger"""
         output = run_hook(
             tool_name="Bash",
             command="some-tool --gh-mode",
             error="some-tool: command not found",
             github_token="ghp_test123"
         )
-        # This will actually trigger because "gh" is in "--gh-mode"
-        # and "command not found" is in error
-        # The hook's check is simple: "gh" in command
-        # This is a limitation of the current implementation
-        # For now, document this behavior
-        assert "hookSpecificOutput" in output, "Current implementation: 'gh' substring match triggers"
+        # Tighter matching: "gh " in command or command.startswith("gh")
+        # prevents false positives on flags like "--gh-mode"
+        assert output == {}, "Should not trigger on --gh flag in non-gh command"
 
     def test_multiple_gh_commands_in_chain(self):
         """Multiple gh commands in chain should trigger"""
