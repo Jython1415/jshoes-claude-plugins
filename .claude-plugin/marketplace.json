@@ -47,6 +47,27 @@
       "skills": [
         "./skills/alfred-workflow"
       ]
+    },
+    {
+      "name": "ralph-loop-guide",
+      "description": "Best practices reference for writing effective ralph-loop prompts. Use when helping users structure prompts for autonomous coding loops, configure completion criteria, design quality gates, or debug convergence issues.",
+      "version": "1.0.0",
+      "author": {
+        "name": "Jython1415",
+        "url": "https://github.com/Jython1415"
+      },
+      "source": "./plugins/ralph-loop-guide",
+      "category": "development",
+      "keywords": [
+        "ralph-loop",
+        "autonomous",
+        "coding-loop",
+        "prompts",
+        "best-practices"
+      ],
+      "skills": [
+        "./skills/ralph-loop-guide"
+      ]
     }
   ]
 }
