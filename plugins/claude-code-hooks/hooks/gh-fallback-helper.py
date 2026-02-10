@@ -31,9 +31,13 @@ Relationship with other hooks:
   before gh runs; this hook provides reactive guidance (PostToolUseFailure) after gh fails
 """
 import json
+import re
 import sys
 import os
 
+# Regex to detect gh as a standalone command (not substring of another word)
+# Matches: "gh ...", "&& gh ...", "|| gh ...", "; gh ...", "| gh ..."
+GH_COMMAND_PATTERN = r"(?:^|[;&|]\s*)gh\s+"
 
 # TLS/x509 error patterns that indicate sandbox certificate verification failure
 TLS_ERROR_PATTERNS = [
@@ -189,8 +193,8 @@ def main():
     tool_input = input_data.get("tool_input", {})
     command = tool_input.get("command", "")
 
-    # Must be a gh command
-    if "gh " not in command and not command.startswith("gh"):
+    # Must be a gh command (use regex to avoid matching "high", "--gh-mode", etc.)
+    if not re.search(GH_COMMAND_PATTERN, command, re.MULTILINE):
         print("{}")
         sys.exit(0)
 

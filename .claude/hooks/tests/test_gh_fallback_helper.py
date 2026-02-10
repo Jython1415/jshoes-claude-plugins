@@ -246,18 +246,16 @@ class TestGhFallbackHelper:
             assert output == {}, f"Should not trigger on word containing 'gh': {cmd}"
 
     def test_gh_in_string_literal(self):
-        """'gh' inside string literal will trigger if error also contains 'not found'"""
-        # The hook checks if "gh" is in the command string (simple substring match)
-        # So "echo 'gh issue list'" would match because "gh" is in the command
+        """'gh' inside string literal should NOT trigger (not a standalone gh command)"""
+        # The hook uses regex to match gh as a standalone command
+        # "echo 'gh issue list'" is an echo command, not a gh command
         output = run_hook(
             tool_name="Bash",
             command="echo 'gh issue list'",
             error="echo: command not found",
             github_token="ghp_test123"
         )
-        # The hook sees "gh" in command AND "command not found" in error, so it triggers
-        # This is a limitation of the simple substring matching approach
-        assert "hookSpecificOutput" in output, "Hook triggers on substring match"
+        assert output == {}, "Should not trigger on gh inside string literal"
 
     # Error field location tests
     @pytest.mark.parametrize("error_location,command,top_level_error,tool_result_error", [
