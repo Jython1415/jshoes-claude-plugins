@@ -385,7 +385,7 @@ class TestPreferGhForOwnRepos:
         output = run_hook(
             "WebFetch",
             {
-                "url": f"https://api.github.com/repos/{TARGET_OWNER}/claude-code-config/issues/10",
+                "url": f"https://api.github.com/repos/{TARGET_OWNER}/jshoes-claude-plugins/issues/10",
                 "prompt": "Extract the issue details"
             },
             gh_available=True

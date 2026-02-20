@@ -13,7 +13,7 @@ This repository serves as:
 ## Repository Structure
 
 ```
-claude-code-config/
+jshoes-claude-plugins/
 ├── README.md                          # This file
 ├── CLAUDE.md                          # Self-management instructions for Claude
 ├── .claude/                           # Project-scoped configuration
@@ -40,8 +40,8 @@ Use this repository as your working directory in Claude Code:
 
 1. Clone this repository:
    ```bash
-   git clone https://github.com/Jython1415/claude-code-config.git
-   cd claude-code-config
+   git clone https://github.com/Jython1415/jshoes-claude-plugins.git
+   cd jshoes-claude-plugins
    ```
 
 2. Open in Claude Code:
@@ -58,12 +58,12 @@ Install hooks globally to use them in all your projects:
 
 1. **Add this repository as a plugin marketplace**:
    ```bash
-   claude plugin marketplace add https://github.com/Jython1415/claude-code-config
+   claude plugin marketplace add https://github.com/Jython1415/jshoes-claude-plugins
    ```
 
 2. **Install the claude-code-hooks plugin**:
    ```bash
-   claude plugin install claude-code-hooks@claude-code-config --scope user
+   claude plugin install claude-code-hooks@jshoes-claude-plugins --scope user
    ```
 
 3. **Hooks are now active globally**. You can optionally copy custom permissions from `.claude/settings.json` to your `~/.claude/settings.json` if desired.
@@ -131,7 +131,7 @@ The following are intentionally excluded via `.gitignore`:
 
 **Note**: If you've installed the plugin globally (Option 2), you'll need to update the plugin to get the latest changes:
 ```bash
-claude plugin update claude-code-hooks@claude-code-config
+claude plugin update claude-code-hooks@jshoes-claude-plugins
 ```
 
 ## Hook Development

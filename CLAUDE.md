@@ -75,13 +75,13 @@ After making changes:
 ## Using This Configuration on Other Machines
 
 **Option 1: Project-scoped (Recommended for development)**
-1. Clone this repo: `git clone https://github.com/Jython1415/claude-code-config.git`
-2. Work in the repository directory: `cd claude-code-config && claude`
+1. Clone this repo: `git clone https://github.com/Jython1415/jshoes-claude-plugins.git`
+2. Work in the repository directory: `cd jshoes-claude-plugins && claude`
 3. Configuration in `.claude/` is automatically available
 
 **Option 2: Global via plugin marketplace (Recommended for global use)**
-1. Add marketplace: `claude plugin marketplace add https://github.com/Jython1415/claude-code-config`
-2. Install plugin: `claude plugin install claude-code-hooks@claude-code-config --scope user`
+1. Add marketplace: `claude plugin marketplace add https://github.com/Jython1415/jshoes-claude-plugins`
+2. Install plugin: `claude plugin install claude-code-hooks@jshoes-claude-plugins --scope user`
 3. Hooks are now active globally. Optionally copy custom permissions from `.claude/settings.json` to `~/.claude/settings.json`
 
 ## Syncing Config to Other GitHub Repositories
@@ -89,7 +89,7 @@ After making changes:
 For Claude Code Web usage in other repositories, you can use the provided GitHub Actions workflow to automatically sync configuration.
 
 **Setup (per repository):**
-1. Copy `.github/workflow-templates/sync-claude-config.yml` to your target repo's `.github/workflows/`
+1. Copy `.github/workflow-templates/sync-claude-plugins.yml` to your target repo's `.github/workflows/`
 2. If source repo is private: add a `SOURCE_REPO_TOKEN` secret with read access
 3. The workflow runs weekly and creates PRs when updates are available
 4. Manually trigger via Actions tab for immediate sync

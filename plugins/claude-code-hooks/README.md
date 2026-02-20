@@ -44,21 +44,21 @@ Smart rate limiting prevents repetitive suggestions:
 
 ```bash
 # Add marketplace
-claude plugin marketplace add Jython1415/claude-code-config
+claude plugin marketplace add Jython1415/jshoes-claude-plugins
 
 # Install plugin globally
-claude plugin install claude-code-hooks@claude-code-config
+claude plugin install claude-code-hooks@jshoes-claude-plugins
 
 # Or install for current project only
-claude plugin install claude-code-hooks@claude-code-config --scope project
+claude plugin install claude-code-hooks@jshoes-claude-plugins --scope project
 ```
 
 ### Local Development
 
 ```bash
 # Clone the repository
-git clone https://github.com/Jython1415/claude-code-config.git
-cd claude-code-config
+git clone https://github.com/Jython1415/jshoes-claude-plugins.git
+cd jshoes-claude-plugins
 
 # Test plugin locally
 claude --plugin-dir ./plugins/claude-code-hooks
@@ -147,4 +147,4 @@ https://github.com/Jython1415
 
 ## Repository
 
-https://github.com/Jython1415/claude-code-config
+https://github.com/Jython1415/jshoes-claude-plugins
