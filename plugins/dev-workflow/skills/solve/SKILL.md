@@ -83,8 +83,12 @@ Write a concrete implementation plan:
 3. Include test additions or updates where appropriate
 4. Note any migration, compatibility, or ordering considerations
 
-Present the plan to the user for approval -- use AskUserQuestion so the
-user can efficiently review and approve, push back, or request changes.
+Present the plan to the user for approval. If the plan involves
+meaningful design choices (file structure, approach, scope), apply
+`/consult` principles: surface specific decisions with codebase-informed
+options that demonstrate understanding. A generic "looks good?" is only
+appropriate when the plan is fully mechanical with no real choices to
+make.
 
 ## Phase 5: Implement
 
@@ -129,7 +133,9 @@ Before presenting the PR to the user:
 
 1. Invoke `/code-review` using the Skill tool to run a thorough review of
    the PR
-2. If the review surfaces real issues, fix them and commit
+2. If the review surfaces real issues, fix them and commit -- do not
+   pause to report intermediate findings to the user; act on them
+   autonomously
 3. Re-run `/code-review` until clean -- the PR must pass review before
    being presented to the user
 
