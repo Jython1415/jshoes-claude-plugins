@@ -1,0 +1,77 @@
+name: Version Check
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'plugins/**'
+
+jobs:
+  version-check:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check plugin versions
+        run: |
+          BASE=${{ github.event.pull_request.base.sha }}
+          HEAD=${{ github.event.pull_request.head.sha }}
+
+          # Get all changed files under plugins/
+          CHANGED=$(git diff --name-only "$BASE" "$HEAD" -- 'plugins/')
+
+          # Extract unique candidate directory names (second path component)
+          PLUGINS=$(echo "$CHANGED" | grep '^plugins/' | cut -d'/' -f2 | sort -u)
+
+          if [ -z "$PLUGINS" ]; then
+            echo "No plugin directories changed."
+            exit 0
+          fi
+
+          ERRORS=0
+
+          for PLUGIN in $PLUGINS; do
+            MANIFEST="plugins/$PLUGIN/.claude-plugin/plugin.json"
+
+            # Skip if not a plugin directory (e.g., installed_plugins.json)
+            if [ ! -f "$MANIFEST" ]; then
+              echo "Skipping '$PLUGIN' (no plugin.json found)"
+              continue
+            fi
+
+            PLUGIN_CHANGED=$(git diff --name-only "$BASE" "$HEAD" -- "plugins/$PLUGIN/")
+
+            # If only plugin.json changed, no further checks needed
+            NON_MANIFEST=$(echo "$PLUGIN_CHANGED" | grep -v "^plugins/$PLUGIN/\.claude-plugin/plugin\.json$" || true)
+            if [ -z "$NON_MANIFEST" ]; then
+              echo "✓ $PLUGIN: Only plugin.json changed"
+              continue
+            fi
+
+            # Non-plugin.json files changed — version must be bumped
+            OLD_VERSION=$(git show "$BASE:$MANIFEST" 2>/dev/null | jq -r '.version // empty')
+            NEW_VERSION=$(jq -r '.version // empty' "$MANIFEST")
+
+            if [ "$OLD_VERSION" = "$NEW_VERSION" ]; then
+              echo "✗ $PLUGIN: Files changed but version was not bumped (still $NEW_VERSION)."
+              echo "  Update the \"version\" field in $MANIFEST"
+              ERRORS=$((ERRORS + 1))
+              continue
+            fi
+
+            # Version was bumped — check for duplicate tag
+            TAG="$PLUGIN-v$NEW_VERSION"
+            if git tag -l "$TAG" | grep -q "^$TAG$"; then
+              echo "✗ $PLUGIN: Version $NEW_VERSION already released (tag $TAG exists). Bump to a new version."
+              ERRORS=$((ERRORS + 1))
+            else
+              echo "✓ $PLUGIN: Version bumped $OLD_VERSION → $NEW_VERSION"
+            fi
+          done
+
+          if [ "$ERRORS" -gt 0 ]; then
+            exit 1
+          fi
