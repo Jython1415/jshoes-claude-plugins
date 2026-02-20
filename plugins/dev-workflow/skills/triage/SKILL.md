@@ -54,28 +54,46 @@ context, handoff notes, or activity logs are stored. Look for:
 
 ## Step 4: Synthesize
 
-Group issues by theme, dependency, and effort:
+Analyze issues along these dimensions:
 
-- **Themes**: Which issues are related and would benefit from being
-  solved together? (e.g., "error handling", "performance",
-  "new feature")
 - **Dependencies**: Which issues unblock others? Those go first.
 - **Effort**: Roughly how large is each issue? Can it fit in a single
   PR or does it need splitting?
 - **Urgency**: Is anything broken or degraded right now?
+- **Bundleability**: Which issues belong in the same PR vs separate PRs?
+
+### Bundleable vs independent
+
+Classify each pair of issues as **bundleable** or **independent**. Issues
+are bundleable only when there is a concrete reason to solve them
+together:
+
+- They modify overlapping files or the same subsystem
+- One blocks the other (a shared prerequisite, a migration step)
+- Changes would conflict if done in separate PRs (touching the same
+  lines, renaming the same interface)
+
+Issues that merely share a theme (e.g., both are "performance" or both
+are "docs") are **not** bundleable -- thematic similarity alone does not
+justify a combined PR. When in doubt, default to independent. Smaller,
+focused PRs are easier to review and revert.
 
 ## Step 5: Propose
 
-Present 2-3 recommended batches to the user, ordered by your
-recommendation. For each batch:
+Present a **prioritized session queue** -- an ordered list of work items,
+where each item is either a single issue or a bundle of related issues.
 
-- Which issues it includes and why they go together
+For each queue item:
+
+- Issue number(s) and a short description
+- If a bundle: why these issues belong together (cite the concrete
+  bundling reason -- overlapping files, blocking dependency, etc.)
 - Estimated complexity (light / moderate / heavy)
 - What it unblocks or enables
-- Any risks or open questions
 
-Lead with your recommendation, explain why, and surface the trade-offs.
-The user decides what to work on -- you provide the informed options.
+Lead with your recommendation for what to tackle first, explain why,
+and surface the trade-offs. The user picks which item(s) to work on --
+each item maps to one `/solve` invocation and one PR.
 
 ## Guidelines
 
