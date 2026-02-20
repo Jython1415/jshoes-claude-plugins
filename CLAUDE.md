@@ -44,6 +44,10 @@ When working in this repository, you are managing the user's Claude Code configu
 - Test permission changes carefully
 - Document why permissions were added/changed in commit messages
 
+### Writing Skills
+- Do not use `allowed-tools` in skill frontmatter
+- Skills should be self-contained SKILL.md files under `plugins/<name>/skills/<skill-name>/`
+
 ### Workflow
 Always create a feature branch before committing changes. Never commit directly to `main`. Use the `/solve` pattern (or create a branch manually) before making the first commit.
 
