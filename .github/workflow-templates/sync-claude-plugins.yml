@@ -17,7 +17,7 @@ on:
         default: false
 
 env:
-  SOURCE_REPO: Jython1415/claude-code-config
+  SOURCE_REPO: Jython1415/jshoes-claude-plugins
   SOURCE_BRANCH: main
 
 jobs:
@@ -152,7 +152,7 @@ jobs:
 
             Source: ${{ env.SOURCE_REPO }}@${{ steps.source-info.outputs.sha }}
             Date: ${{ steps.source-info.outputs.date }}
-          branch: chore/sync-claude-config
+          branch: chore/sync-claude-plugins
           delete-branch: true
           title: "chore: Sync Claude Code configuration"
           body: |
