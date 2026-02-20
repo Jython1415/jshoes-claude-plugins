@@ -2,7 +2,8 @@
 Unit tests for ensure-tmpdir.py hook
 
 This test suite validates that the hook creates TMPDIR when missing and is
-otherwise silent.
+otherwise silent. The hook runs on SessionStart — it receives session metadata
+but only acts on the TMPDIR environment variable.
 """
 import json
 import os
@@ -17,8 +18,8 @@ import pytest
 HOOK_PATH = Path(__file__).parent.parent / "ensure-tmpdir.py"
 
 
-def run_hook(tool_name: str, env: dict | None = None) -> dict:
-    """Helper function to run the hook with given input and return parsed output.
+def run_hook(env: dict | None = None) -> dict:
+    """Helper function to run the hook with SessionStart-shaped input and return parsed output.
 
     Invokes the hook using the current Python interpreter directly (not via
     uv) because the hook has no external dependencies. This avoids the issue
@@ -26,14 +27,13 @@ def run_hook(tool_name: str, env: dict | None = None) -> dict:
     fail when the test intentionally points TMPDIR at a missing path.
 
     Args:
-        tool_name: The tool name to include in the hook input.
         env: Optional environment overrides. Pass None to use the current
              process environment. Pass a dict to override specific variables.
              To unset a variable, set its value to None in the dict.
     """
     input_data = {
-        "tool_name": tool_name,
-        "tool_input": {"command": "echo test"}
+        "session_id": "test-session",
+        "source": "startup"
     }
 
     # Build the environment for the subprocess
@@ -70,7 +70,7 @@ class TestEnsureTmpdir:
             missing_dir = os.path.join(parent, "tmpdir-that-does-not-exist")
             assert not os.path.isdir(missing_dir), "Pre-condition: directory should not exist"
 
-            output = run_hook("Bash", env={"TMPDIR": missing_dir})
+            output = run_hook(env={"TMPDIR": missing_dir})
 
             assert output == {}, "Hook should return empty JSON"
             assert os.path.isdir(missing_dir), "Hook should have created the missing directory"
@@ -78,25 +78,17 @@ class TestEnsureTmpdir:
     def test_silent_when_tmpdir_exists(self):
         """Hook should return {} silently when TMPDIR already exists"""
         with tempfile.TemporaryDirectory() as existing_dir:
-            output = run_hook("Bash", env={"TMPDIR": existing_dir})
+            output = run_hook(env={"TMPDIR": existing_dir})
             assert output == {}, "Hook should return empty JSON when TMPDIR exists"
 
     def test_silent_when_tmpdir_not_set(self):
         """Hook should return {} silently when TMPDIR is not set"""
-        output = run_hook("Bash", env={"TMPDIR": None})
+        output = run_hook(env={"TMPDIR": None})
         assert output == {}, "Hook should return empty JSON when TMPDIR is unset"
-
-    def test_ignores_non_bash_tools(self):
-        """Hook should return {} without side effects for non-Bash tools"""
-        with tempfile.TemporaryDirectory() as parent:
-            missing_dir = os.path.join(parent, "tmpdir-write-tool")
-            output = run_hook("Write", env={"TMPDIR": missing_dir})
-            assert output == {}, "Hook should return empty JSON for non-Bash tools"
-            assert not os.path.isdir(missing_dir), "Hook should NOT create directory for non-Bash tools"
 
     def test_json_output_is_valid(self):
         """Hook output should always be valid JSON"""
-        output = run_hook("Bash", env={"TMPDIR": None})
+        output = run_hook(env={"TMPDIR": None})
         assert isinstance(output, dict), "Output should be a valid JSON dict"
 
     def test_malformed_input_returns_empty_json(self):
@@ -116,7 +108,7 @@ class TestEnsureTmpdir:
             nested_dir = os.path.join(parent, "a", "b", "c")
             assert not os.path.isdir(nested_dir)
 
-            output = run_hook("Bash", env={"TMPDIR": nested_dir})
+            output = run_hook(env={"TMPDIR": nested_dir})
 
             assert output == {}, "Hook should return empty JSON"
             assert os.path.isdir(nested_dir), "Hook should create nested directories"

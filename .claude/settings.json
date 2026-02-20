@@ -139,10 +139,6 @@
           {
             "type": "command",
             "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/run-with-fallback.sh open \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/markdown-commit-reminder.py"
-          },
-          {
-            "type": "command",
-            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/run-with-fallback.sh open \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/ensure-tmpdir.py"
           }
         ]
       },
@@ -152,6 +148,16 @@
           {
             "type": "command",
             "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/run-with-fallback.sh open \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/prefer-gh-for-own-repos.py"
+          }
+        ]
+      }
+    ],
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/run-with-fallback.sh open \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/ensure-tmpdir.py"
           }
         ]
       }
