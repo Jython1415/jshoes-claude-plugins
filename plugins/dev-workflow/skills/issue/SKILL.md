@@ -6,7 +6,6 @@ description: |
   structured issue. Asks the user to clarify only when the
   description is genuinely ambiguous.
 argument-hint: <description>
-allowed-tools: Bash(gh issue *), Bash(gh pr list:*), Bash(git log:*)
 ---
 
 # /issue — File a GitHub issue
