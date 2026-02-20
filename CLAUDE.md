@@ -65,6 +65,8 @@ Each plugin has a `version` field in `plugins/<name>/.claude-plugin/plugin.json`
 
 **Rule**: Bump the version in the same commit that ships the change. Never let `plugin.json` lag behind. CI enforces this on every PR that touches plugin files.
 
+Also keep `.claude-plugin/marketplace.json` in sync — it duplicates per-plugin version fields and is not currently checked by CI.
+
 ### Writing Skills
 - Do not use `allowed-tools` in skill frontmatter
 - Skills should be self-contained SKILL.md files under `plugins/<name>/skills/<skill-name>/`

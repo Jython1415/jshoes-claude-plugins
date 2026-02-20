@@ -70,7 +70,9 @@ any reason), invoke `/reflect` to:
 ## Guidelines
 
 - **Each phase is a checkpoint.** Wait for user input between phases.
-  Don't auto-advance from triage to solve without approval.
+  Don't auto-advance from triage to solve without approval. The
+  solve→reflect transition is the exception: after merging the final PR,
+  proceed directly to `/reflect` without checking in.
 - **Phases can be skipped.** If the user already knows what to work on,
   skip triage. If there's nothing to reflect on, skip reflect. The
   skill is a framework, not a straitjacket.
