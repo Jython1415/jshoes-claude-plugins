@@ -23,9 +23,9 @@ The triage agent should assess:
 - Repo state (recent commits, open PRs, CI status)
 - Open issues (priorities, themes, dependencies)
 - Recent context (handoff notes, session history)
-- A recommended batch of issues to tackle
+- A prioritized session queue of work items to tackle
 
-Wait for the user to approve the batch before proceeding.
+Wait for the user to approve the queue before proceeding.
 
 ## Phase 2: Solve
 
