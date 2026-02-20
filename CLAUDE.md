@@ -72,6 +72,8 @@ Each plugin has a `version` field in `plugins/<name>/.claude-plugin/plugin.json`
 ### Workflow
 Always create a feature branch before committing changes. Never commit directly to `main`. Use the `/solve` pattern (or create a branch manually) before making the first commit.
 
+Use squash merge when closing PRs: `gh pr merge --squash --delete-branch`. This updates local main and deletes both local and remote feature branches in one step.
+
 ### Commit Messages
 Follow conventional commit format:
 ```
@@ -86,6 +88,8 @@ After making changes:
 2. Verify configuration loads correctly
 3. Test affected features (hooks, permissions)
 4. Check `~/.claude/debug/latest` for errors
+
+**CI trigger scope**: `version-check.yml` only fires on `plugins/**` changes. PRs that only touch `.github/` or `CLAUDE.md` won't run it. To test a workflow change, the PR must also include a plugin file change.
 
 ### Safety Guidelines
 - Never commit sensitive data (tokens, history, personal info)
