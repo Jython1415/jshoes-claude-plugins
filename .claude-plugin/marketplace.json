@@ -68,6 +68,34 @@
       "skills": [
         "./skills/ralph-loop-guide"
       ]
+    },
+    {
+      "name": "dev-workflow",
+      "description": "Development workflow skills for GitHub-based repos. Includes /session (full dev lifecycle), /triage (issue prioritization), /solve (issue-to-PR), /code-review (multi-agent PR review), /consult (structured decisions), /reflect (session retrospective), and /issue (file well-researched issues).",
+      "version": "1.0.0",
+      "author": {
+        "name": "Jython1415",
+        "url": "https://github.com/Jython1415"
+      },
+      "source": "./plugins/dev-workflow",
+      "category": "development",
+      "keywords": [
+        "workflow",
+        "github",
+        "issues",
+        "code-review",
+        "triage",
+        "productivity"
+      ],
+      "skills": [
+        "./skills/session",
+        "./skills/triage",
+        "./skills/consult",
+        "./skills/reflect",
+        "./skills/issue",
+        "./skills/code-review",
+        "./skills/solve"
+      ]
     }
   ]
 }
