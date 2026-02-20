@@ -68,7 +68,9 @@ is obvious, transient, or already documented, skip it.
 
 Present the improvements as a structured list. For each:
 
-- **What**: The specific change (file, section, content)
+- **What**: The exact change -- specify the file path, the section heading,
+  and the literal text to add or replace. Not a paraphrase; the user needs
+  to see the actual content to approve efficiently.
 - **Why**: What session event motivated it
 - **Impact**: How it prevents the misstep or codifies the pattern
 

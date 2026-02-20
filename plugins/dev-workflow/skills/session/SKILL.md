@@ -25,7 +25,11 @@ The triage agent should assess:
 - Recent context (handoff notes, session history)
 - A prioritized session queue of work items to tackle
 
-Wait for the user to approve the queue before proceeding.
+After the triage agent returns, use AskUserQuestion to present the queue
+for approval. Surface the key decision (which item to tackle) as structured
+options -- one option per queue item -- not freeform prose. Include enough
+context per option (complexity, what it unblocks) for the user to choose
+without re-reading the full triage output.
 
 ## Phase 2: Solve
 
