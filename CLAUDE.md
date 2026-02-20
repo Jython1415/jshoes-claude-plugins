@@ -31,12 +31,25 @@ When working in this repository, you are managing the user's Claude Code configu
 - Test hooks manually before committing: `echo '{"test":"data"}' | uv run --script .claude/hooks/hookname.py`
 
 ### Hook Development Guidelines
-1. Always include PEP 723 header with dependencies
+1. Always include PEP 723 header. Use `requires-python` for hooks with no
+   dependencies. Only add `dependencies = [...]` when the hook actually
+   imports third-party packages — `uv` does extra work (writing to TMPDIR)
+   when `dependencies` is present, even as an empty list.
 2. Use try-except to catch errors and output `{}` on failure
 3. For PostToolUseFailure hooks, check both `error` and `tool_result.error` fields
 4. Use `additionalContext` for guidance, not `decision` in PostToolUseFailure
 5. Test locally before deploying
 6. Document hook behavior in .claude/hooks/README.md
+7. Use `SessionStart` for session-initialization concerns (environment
+   setup, directory creation). Use `PreToolUse`/`PostToolUse` only for
+   per-command validation and guidance.
+
+### Hook Performance Assumptions
+- This repo assumes `uv` is available for running Python hooks
+- Python hooks via `uv run --script` are acceptable overhead as long as
+  hooks are written with performance in mind (no network requests, no
+  heavy computation in the hot path)
+- Focus on correctness and lifecycle placement over micro-optimization
 
 ### Modifying Settings
 - Edit `.claude/settings.json` directly
