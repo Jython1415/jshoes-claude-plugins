@@ -26,8 +26,8 @@ jshoes-claude-plugins/
 │       └── installed_plugins.json     # Plugin installation list
 ├── plugins/
 │   └── claude-code-hooks/             # Hook plugin (source of truth)
-│       ├── marketplace.json           # Plugin metadata
-│       └── hooks/                     # Actual hook implementations (11 scripts)
+│       ├── .claude-plugin/plugin.json # Plugin metadata and version
+│       └── hooks/                     # Hook implementations
 ├── pyproject.toml                     # Python project metadata
 └── .gitignore                         # Protects runtime data from commits
 ```
@@ -141,7 +141,7 @@ This repository serves as the development workspace for the `claude-code-hooks` 
 1. Edit hooks in `plugins/claude-code-hooks/hooks/`
 2. Symlinks in `.claude/hooks/` automatically reflect changes
 3. Run tests: `uv run pytest .claude/hooks/tests/`
-4. Update version in `plugins/claude-code-hooks/marketplace.json`
+4. Bump version in `plugins/claude-code-hooks/.claude-plugin/plugin.json` (same commit)
 5. Publish to plugin marketplace (when ready)
 
 See `.claude/hooks/README.md` for hook development guidelines.
