@@ -1,9 +1,9 @@
 ---
 name: session
 description: >
-  Full dev session lifecycle: triage open issues, solve a batch, then
-  reflect on lessons learned. Chains /triage, /solve, and /reflect
-  into a single workflow.
+  Full dev session lifecycle: triage open issues, solve the top
+  priority item, then reflect on lessons learned. Chains /triage,
+  /solve, and /reflect into a single workflow.
 ---
 
 # Session
@@ -23,23 +23,28 @@ The triage agent should assess:
 - Repo state (recent commits, open PRs, CI status)
 - Open issues (priorities, themes, dependencies)
 - Recent context (handoff notes, session history)
-- A recommended batch of issues to tackle
+- A prioritized session queue of work items to tackle
 
-Wait for the user to approve the batch before proceeding.
+Wait for the user to approve the queue before proceeding.
 
 ## Phase 2: Solve
 
-Invoke `/solve` with the approved issue batch. This runs the full
-issue-to-PR workflow:
+The user selects one or more items from the triage queue. Each queue
+item (a single issue or a bundle of related issues) maps to one
+`/solve` invocation and one PR.
+
+By default, solve the **top item** from the approved queue. A single
+solve cycle (intake → implement → review → merge) consumes most of the
+available context, so one item per session is the normal case. If the
+user explicitly asks to continue with more items, repeat Phase 2 for
+the next queue item after merging the current PR.
+
+`/solve` runs the full issue-to-PR workflow:
 
 - Intake, explore, scope (with `/consult` for design decisions)
 - Plan, implement, verify
 - Code review and CI confirmation
 - Present the PR
-
-If the batch contains independent issues that would produce separate
-PRs, run `/solve` for each. If issues are related and belong in one
-PR, pass them all to a single `/solve` invocation.
 
 ## Phase 2b: Merge
 
@@ -49,13 +54,9 @@ After each PR is approved by the user, merge it and clean up:
 2. Update the local default branch
 3. Delete the feature branch locally and remotely
 
-If there are multiple PRs in the batch, merge each one after its
-approval before moving to the next `/solve` invocation, so later work
-builds on the merged state.
-
 ## Phase 3: Reflect
 
-After all PRs are presented (or if the session is winding down for
+After the PR is presented (or if the session is winding down for
 any reason), invoke `/reflect` to:
 
 - Review the session for missteps, discoveries, and patterns
@@ -69,9 +70,10 @@ any reason), invoke `/reflect` to:
 - **Phases can be skipped.** If the user already knows what to work on,
   skip triage. If there's nothing to reflect on, skip reflect. The
   skill is a framework, not a straitjacket.
-- **Multiple solve cycles are fine.** A session might involve triaging
-  once, then solving 2-3 batches before reflecting. The lifecycle is
-  triage → (solve)+ → reflect, not strictly one of each.
+- **Multiple solve cycles are possible but not the default.** A single
+  solve cycle typically consumes most of the context. If the user asks
+  to continue after merging, repeat Phase 2 for the next queue item.
+  Don't auto-advance -- let the user decide.
 - **Reflect even on short sessions.** A quick fix that surfaced a
   gotcha is still worth capturing. The value of /reflect isn't
   proportional to session length.
