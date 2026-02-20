@@ -42,33 +42,49 @@ jobs:
               continue
             fi
 
-            PLUGIN_CHANGED=$(git diff --name-only "$BASE" "$HEAD" -- "plugins/$PLUGIN/")
-
-            # If only plugin.json changed, no further checks needed
-            NON_MANIFEST=$(echo "$PLUGIN_CHANGED" | grep -v "^plugins/$PLUGIN/\.claude-plugin/plugin\.json$" || true)
-            if [ -z "$NON_MANIFEST" ]; then
-              echo "✓ $PLUGIN: Only plugin.json changed"
-              continue
-            fi
-
-            # Non-plugin.json files changed — version must be bumped
             OLD_VERSION=$(git show "$BASE:$MANIFEST" 2>/dev/null | jq -r '.version // empty')
             NEW_VERSION=$(jq -r '.version // empty' "$MANIFEST")
 
-            if [ "$OLD_VERSION" = "$NEW_VERSION" ]; then
-              echo "✗ $PLUGIN: Files changed but version was not bumped (still $NEW_VERSION)."
-              echo "  Update the \"version\" field in $MANIFEST"
-              ERRORS=$((ERRORS + 1))
-              continue
+            PLUGIN_CHANGED=$(git diff --name-only "$BASE" "$HEAD" -- "plugins/$PLUGIN/")
+
+            # If only plugin.json changed, no version bump enforcement needed
+            NON_MANIFEST=$(echo "$PLUGIN_CHANGED" | grep -v "^plugins/$PLUGIN/\.claude-plugin/plugin\.json$" || true)
+            if [ -z "$NON_MANIFEST" ]; then
+              echo "✓ $PLUGIN: Only plugin.json changed"
+            else
+              # Non-plugin.json files changed — version must be bumped
+              if [ "$OLD_VERSION" = "$NEW_VERSION" ]; then
+                echo "✗ $PLUGIN: Files changed but version was not bumped (still $NEW_VERSION)."
+                echo "  Update the \"version\" field in $MANIFEST"
+                ERRORS=$((ERRORS + 1))
+                continue
+              fi
+
+              # Version was bumped — check for duplicate tag
+              TAG="$PLUGIN-v$NEW_VERSION"
+              if git tag -l "$TAG" | grep -q "^$TAG$"; then
+                echo "✗ $PLUGIN: Version $NEW_VERSION already released (tag $TAG exists). Bump to a new version."
+                ERRORS=$((ERRORS + 1))
+                continue
+              fi
+
+              echo "✓ $PLUGIN: Version bumped $OLD_VERSION → $NEW_VERSION"
             fi
 
-            # Version was bumped — check for duplicate tag
-            TAG="$PLUGIN-v$NEW_VERSION"
-            if git tag -l "$TAG" | grep -q "^$TAG$"; then
-              echo "✗ $PLUGIN: Version $NEW_VERSION already released (tag $TAG exists). Bump to a new version."
-              ERRORS=$((ERRORS + 1))
-            else
-              echo "✓ $PLUGIN: Version bumped $OLD_VERSION → $NEW_VERSION"
+            # When the version changed, verify marketplace.json is in sync
+            if [ "$OLD_VERSION" != "$NEW_VERSION" ]; then
+              MARKETPLACE=".claude-plugin/marketplace.json"
+              PLUGIN_NAME=$(jq -r '.name // empty' "$MANIFEST")
+              MARKET_VERSION=$(jq -r --arg name "$PLUGIN_NAME" '.plugins[] | select(.name == $name) | .version // empty' "$MARKETPLACE")
+              if [ -z "$MARKET_VERSION" ]; then
+                echo "  Note: $PLUGIN_NAME not found in $MARKETPLACE (skipping marketplace sync check)"
+              elif [ "$MARKET_VERSION" != "$NEW_VERSION" ]; then
+                echo "✗ $PLUGIN: marketplace.json version ($MARKET_VERSION) does not match plugin.json version ($NEW_VERSION)."
+                echo "  Update the \"version\" field in $MARKETPLACE for the \"$PLUGIN_NAME\" entry"
+                ERRORS=$((ERRORS + 1))
+              else
+                echo "  ✓ marketplace.json in sync ($NEW_VERSION)"
+              fi
             fi
           done
 

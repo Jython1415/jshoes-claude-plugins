@@ -63,9 +63,7 @@ Each plugin has a `version` field in `plugins/<name>/.claude-plugin/plugin.json`
 - **Minor** (1.x.0): New hooks or skills added
 - **Major** (x.0.0): Breaking changes (removed hooks, renamed skills, changed interfaces)
 
-**Rule**: Bump the version in the same commit that ships the change. Never let `plugin.json` lag behind. CI enforces this on every PR that touches plugin files.
-
-Also keep `.claude-plugin/marketplace.json` in sync — it duplicates per-plugin version fields and is not currently checked by CI.
+**Rule**: Bump the version in the same commit that ships the change. Never let `plugin.json` lag behind. CI enforces this on every PR that touches plugin files. Also keep `.claude-plugin/marketplace.json` in sync — CI verifies that its per-plugin version fields match `plugin.json` whenever a version is bumped.
 
 ### Writing Skills
 - Do not use `allowed-tools` in skill frontmatter
