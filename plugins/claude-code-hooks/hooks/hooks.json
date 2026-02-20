@@ -50,6 +50,16 @@
         ]
       }
     ],
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"${CLAUDE_PLUGIN_ROOT}\"/hooks/run-with-fallback.sh open \"${CLAUDE_PLUGIN_ROOT}\"/hooks/ensure-tmpdir.py"
+          }
+        ]
+      }
+    ],
     "PostToolUse": [
       {
         "matcher": "Bash",
