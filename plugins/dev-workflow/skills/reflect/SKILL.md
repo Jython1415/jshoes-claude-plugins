@@ -66,18 +66,20 @@ is obvious, transient, or already documented, skip it.
 
 ## Step 3: Propose changes
 
-Present each proposed improvement as a separate question via AskUserQuestion.
+One AskUserQuestion call per proposed change — never bundle multiple
+improvements into a single call. Each question must stand alone so the
+user can approve or skip each insight independently.
+
 For each question:
 
-- Show the exact change: file path, section heading, and the literal text
-  to add or replace (not a paraphrase -- the user needs to see the actual
-  content to approve efficiently)
-- Options should cover: the recommended location (lead with this), an
+- **Show the exact change**: absolute file path, section heading, and the
+  literal text to add or replace (not a paraphrase -- the user needs to
+  see the actual content to approve efficiently)
+- **Options should cover**: the recommended location (lead with this), an
   alternative location if meaningful, and "skip / not worth persisting"
-- Include the motivation (session event) and impact in the question or
+- **Include the motivation** (session event) and impact in the question or
   option descriptions
 
-Group related questions together -- up to 4 per AskUserQuestion call.
 Gather all approvals before applying any changes in Step 4.
 
 ## Step 4: Apply
