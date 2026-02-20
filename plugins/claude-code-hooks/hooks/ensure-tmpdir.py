@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # /// script
-# dependencies = []
+# requires-python = ">=3.10"
 # ///
 """
 ensure-tmpdir: Ensures TMPDIR directory exists at session start.
@@ -27,7 +27,7 @@ def main():
 
     tmpdir = os.environ.get("TMPDIR")
     if tmpdir and not os.path.isdir(tmpdir):
-        os.makedirs(tmpdir, exist_ok=True)
+        os.makedirs(tmpdir, mode=0o700, exist_ok=True)
 
     print("{}")
     sys.exit(0)

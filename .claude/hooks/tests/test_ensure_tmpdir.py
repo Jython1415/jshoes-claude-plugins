@@ -113,6 +113,34 @@ class TestEnsureTmpdir:
             assert output == {}, "Hook should return empty JSON"
             assert os.path.isdir(nested_dir), "Hook should create nested directories"
 
+    def test_works_via_uv_with_missing_tmpdir(self):
+        """Hook must work through uv run --script even when TMPDIR is missing.
+
+        This is the critical integration test: the hook is invoked via
+        run-with-fallback.sh which calls uv run --script. If the PEP 723
+        header includes `dependencies = [...]`, uv tries to write temp files
+        to TMPDIR during startup — failing before the hook code runs. The
+        hook avoids this by using requires-python instead of dependencies.
+        """
+        with tempfile.TemporaryDirectory() as parent:
+            missing_dir = os.path.join(parent, "uv-integration-test")
+            assert not os.path.isdir(missing_dir)
+
+            base_env = os.environ.copy()
+            base_env["TMPDIR"] = missing_dir
+
+            result = subprocess.run(
+                ["uv", "run", "--script", str(HOOK_PATH)],
+                input=json.dumps({"session_id": "test", "source": "startup"}),
+                capture_output=True,
+                text=True,
+                env=base_env,
+            )
+
+            assert result.returncode == 0, f"uv run --script failed: {result.stderr}"
+            assert json.loads(result.stdout) == {}
+            assert os.path.isdir(missing_dir), "Hook should have created TMPDIR via uv"
+
 
 def main():
     """Run tests when executed as a script"""
