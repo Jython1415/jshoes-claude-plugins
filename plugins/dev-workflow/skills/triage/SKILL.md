@@ -2,8 +2,8 @@
 name: triage
 description: >
   Analyze repo state, open issues, and recent activity to propose a
-  coherent batch of work for the session. Use at the start of a session
-  to decide what to tackle.
+  prioritized queue of work for the session. Use at the start of a
+  session to decide what to tackle.
 ---
 
 # Triage
