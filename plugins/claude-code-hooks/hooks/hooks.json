@@ -37,6 +37,10 @@
           {
             "type": "command",
             "command": "\"${CLAUDE_PLUGIN_ROOT}\"/hooks/run-with-fallback.sh open \"${CLAUDE_PLUGIN_ROOT}\"/hooks/markdown-commit-reminder.py"
+          },
+          {
+            "type": "command",
+            "command": "\"${CLAUDE_PLUGIN_ROOT}\"/hooks/run-with-fallback.sh open \"${CLAUDE_PLUGIN_ROOT}\"/hooks/ensure-tmpdir.py"
           }
         ]
       },
