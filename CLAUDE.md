@@ -89,7 +89,7 @@ After making changes:
 For Claude Code Web usage in other repositories, you can use the provided GitHub Actions workflow to automatically sync configuration.
 
 **Setup (per repository):**
-1. Copy `.github/workflow-templates/sync-claude-config.yml` to your target repo's `.github/workflows/`
+1. Copy `.github/workflow-templates/sync-claude-plugins.yml` to your target repo's `.github/workflows/`
 2. If source repo is private: add a `SOURCE_REPO_TOKEN` secret with read access
 3. The workflow runs weekly and creates PRs when updates are available
 4. Manually trigger via Actions tab for immediate sync
