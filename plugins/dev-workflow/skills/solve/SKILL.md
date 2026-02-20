@@ -42,6 +42,10 @@ Use subagents (Task tool, subagent_type=Explore) to:
 3. Identify conventions, test patterns, and architectural norms the solution
    must follow
 4. Search for related PRs or issues that provide additional context
+5. Look for analogous solutions already in the project or its ecosystem.
+   When the codebase has infrastructure, plugins, or related subsystems,
+   check whether an established pattern already handles the problem you're
+   solving. Adopting an existing pattern is preferable to reinventing it.
 
 **Do not ask the user anything yet.** Your questions in Phase 3 must be
 informed by what you learn here. Generic questions waste the user's time
