@@ -58,7 +58,7 @@ When working in this repository, you are managing the user's Claude Code configu
 - Document why permissions were added/changed in commit messages
 
 ### Plugin Versioning
-Each plugin has a `version` field in `.claude-plugin/plugin.json`. Use lightweight SemVer:
+Each plugin has a `version` field in `plugins/<name>/.claude-plugin/plugin.json`. Use lightweight SemVer:
 - **Patch** (1.0.x): Bug fixes, documentation updates, minor guidance changes
 - **Minor** (1.x.0): New hooks or skills added
 - **Major** (x.0.0): Breaking changes (removed hooks, renamed skills, changed interfaces)
