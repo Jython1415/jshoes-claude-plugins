@@ -117,6 +117,16 @@ class TestHeredocBlocking:
         assert "hookSpecificOutput" in output
         assert output["hookSpecificOutput"]["decision"] == "block"
 
+    def test_no_block_for_arithmetic_left_shift(self):
+        """Arithmetic left shift should not trigger the heredoc blocker"""
+        output = run_hook("Bash", "echo $((1 << 4))")
+        assert output == {}, "Arithmetic left shift should not trigger heredoc block"
+
+    def test_no_block_for_bitshift_with_variable(self):
+        """Bitwise shift with variable operand should not trigger the heredoc blocker"""
+        output = run_hook("Bash", 'python -c "x = 1 << n; print(x)"')
+        assert output == {}, "Bitwise shift should not trigger heredoc block"
+
 
 def main():
     """Run tests when executed as a script"""

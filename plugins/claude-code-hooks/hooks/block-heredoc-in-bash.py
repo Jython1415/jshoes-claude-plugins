@@ -26,7 +26,7 @@ import json
 import re
 import sys
 
-HEREDOC_PATTERN = re.compile(r"<<-?\s*['\"]?\w")
+HEREDOC_PATTERN = re.compile(r"<<-?['\"]?[A-Za-z_]")
 
 
 def main():
