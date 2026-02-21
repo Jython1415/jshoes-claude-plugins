@@ -2,9 +2,11 @@
 name: issue
 description: |
   File a well-researched GitHub issue from a brief description.
-  Explores the codebase, checks for duplicates, and drafts a
-  structured issue. Asks the user to clarify only when the
-  description is genuinely ambiguous.
+  Use when asked to file an issue, create an issue, open an issue,
+  or report a bug or feature request in a GitHub repo. Explores
+  the codebase, checks for duplicates, and drafts a structured
+  issue. Asks the user to clarify only when the description is
+  genuinely ambiguous.
 argument-hint: <description>
 ---
 

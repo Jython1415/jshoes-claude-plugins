@@ -3,7 +3,9 @@ name: reflect
 description: >
   End-of-session retrospective. Reviews what happened, extracts lessons,
   and proposes concrete improvements to docs, skills, and memory to
-  make future sessions better. Run before context is lost.
+  make future sessions better. Use at the end of a session, after a
+  notable misstep or discovery, or when the user asks to wrap up or
+  reflect. Run before context is lost.
 ---
 
 # Reflect
