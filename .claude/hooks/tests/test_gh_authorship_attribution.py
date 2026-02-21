@@ -37,9 +37,9 @@ def run_hook(tool_name: str, command: str, clear_cooldown: bool = True, session_
     # Clear cooldown state if requested (also clears session-shown for a clean slate)
     if clear_cooldown:
         state_dir = Path.home() / ".claude" / "hook-state"
-        state_file = state_dir / "gh-authorship-cooldown"
-        if state_file.exists():
-            state_file.unlink()
+        cooldown_file = state_dir / f"gh-authorship-cooldown-{session_id}"
+        if cooldown_file.exists():
+            cooldown_file.unlink()
         session_shown_file = state_dir / f"gh-authorship-session-shown-{session_id}"
         if session_shown_file.exists():
             session_shown_file.unlink()
@@ -234,15 +234,16 @@ class TestCooldownMechanism:
 
     def test_cooldown_state_file_created(self):
         """Cooldown state file should be created"""
+        session_id = "test-session-abc123"
         state_dir = Path.home() / ".claude" / "hook-state"
-        state_file = state_dir / "gh-authorship-cooldown"
+        state_file = state_dir / f"gh-authorship-cooldown-{session_id}"
 
         # Clear state first
         if state_file.exists():
             state_file.unlink()
 
-        # Trigger hook
-        run_hook("Bash", 'git commit -m "Test"', clear_cooldown=False)
+        # Trigger hook (clear_cooldown=True also clears session-shown so first trigger fires)
+        run_hook("Bash", 'git commit -m "Test"', clear_cooldown=True, session_id=session_id)
 
         # Check state file was created
         assert state_file.exists(), "State file should be created"
