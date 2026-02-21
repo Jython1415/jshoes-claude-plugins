@@ -4,7 +4,11 @@ A comprehensive set of productivity hooks for Claude Code, providing intelligent
 
 ## Features
 
-### 11 Productivity Hooks
+### 12 Productivity Hooks
+
+**SessionStart Hooks (At session initialization):**
+- **ensure-tmpdir** - Ensures the TMPDIR directory exists at session start
+- **reset-attribution-session** - Resets per-session attribution tracking for gh-authorship-attribution at session start
 
 **PreToolUse Hooks (Before tool execution):**
 - **normalize-line-endings** - Automatically converts CRLF/CR line endings to LF
@@ -65,6 +69,12 @@ claude --plugin-dir ./plugins/claude-code-hooks
 ```
 
 ## Hook Details
+
+### reset-attribution-session
+**Event:** SessionStart
+**Purpose:** Reset per-session attribution state so first-commit guidance fires on each new session
+**Triggers:** Every session start
+**Output:** Silent; deletes `~/.claude/hook-state/gh-authorship-session-shown` if present
 
 ### normalize-line-endings
 **Event:** PreToolUse (Write|Edit)

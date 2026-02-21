@@ -20,7 +20,6 @@ being valid throughout the session.
 import json
 import os
 import sys
-from pathlib import Path
 
 
 def main():
@@ -29,11 +28,6 @@ def main():
     tmpdir = os.environ.get("TMPDIR")
     if tmpdir and not os.path.isdir(tmpdir):
         os.makedirs(tmpdir, mode=0o700, exist_ok=True)
-
-    # Reset per-session attribution flag so each new session starts fresh
-    session_shown_file = Path.home() / ".claude" / "hook-state" / "gh-authorship-session-shown"
-    if session_shown_file.exists():
-        session_shown_file.unlink()
 
     print("{}")
     sys.exit(0)
