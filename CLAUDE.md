@@ -43,6 +43,17 @@ When working in this repository, you are managing the user's Claude Code configu
 7. Use `SessionStart` for session-initialization concerns (environment
    setup, directory creation). Use `PreToolUse`/`PostToolUse` only for
    per-command validation and guidance.
+8. Per-session state: use `session_id` from the hook's JSON input to scope
+   state filenames (e.g., `STATE_DIR / f"my-cooldown-{session_id}"`). All
+   hook events include `session_id`. This avoids cross-session contamination
+   — each Claude session is isolated and cannot see another session's
+   `additionalContext`, so a global cooldown from Session A incorrectly
+   suppresses Session B's reminders. Never use a SessionStart hook to reset
+   shared state; let `session_id` do the work.
+9. State location: use `~/.claude/hook-state/` (global) for cross-project
+   concerns (advisory reminders, general behavior nudges). Use project-local
+   `.claude/` for state semantically tied to a specific codebase. Marketplace
+   hooks should always use global storage.
 
 ### Hook Performance Assumptions
 - This repo assumes `uv` is available for running Python hooks
