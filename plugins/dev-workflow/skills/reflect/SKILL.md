@@ -73,39 +73,45 @@ than sequentially.
 
 For each question:
 
-- **Show the exact change** in the question text: absolute file path,
-  section heading, and the literal text to add or replace (not a
-  paraphrase -- the user needs to see the actual content to approve
-  efficiently)
+- **question text**: One sentence naming the insight and why it matters.
+  No file paths, no literal diff text — keep it scannable.
+- **header**: 2–4 word tag (e.g., "Push rule", "Recovery note")
 - **Options are the possible destinations**, not approve/skip. The
   recommended option goes first (add "(Recommended)" to its label) —
   that may be a specific file, a GitHub issue, or "Skip — not worth
   persisting" if that's genuinely the right call. List remaining
   alternatives after. "File a GitHub issue" is a valid option when the
   insight needs design work before it can be documented
-- **Include the motivation** (session event) and impact in the question
-  or option descriptions
+- **option description**: Include the literal change (absolute file
+  path + section + text to add or replace). This is where the detail
+  lives — not the question text.
 
 Example call structure for two insights:
 
 ```
 AskUserQuestion(questions=[
   {
-    question: "Save the 'always push after direct main commit' rule?\n\nFile: plugins/.../SKILL.md, Step 4\nAdd: 'Commit directly to main and push'",
+    question: "Always push immediately after committing directly to main.",
     header: "Push rule",
     options: [
-      { label: "Save to reflect SKILL.md (Recommended)", description: "..." },
-      { label: "Save to CLAUDE.md", description: "..." },
-      { label: "Skip — not worth persisting", description: "..." }
+      {
+        label: "Save to reflect SKILL.md (Recommended)",
+        description: "plugins/dev-workflow/skills/reflect/SKILL.md, Step 4 — add: 'Commit directly to main and push immediately.'"
+      },
+      { label: "Save to CLAUDE.md", description: "~/.claude/CLAUDE.md — add under Workflow section." },
+      { label: "Skip — not worth persisting", description: "One-time event, not a recurring pattern." }
     ]
   },
   {
-    question: "Save the recovery steps for a diverged local main?\n\nFile: MEMORY.md, Workflow Notes\nAdd: '- git show <sha> before git reset --hard'",
+    question: "Run git show before git reset --hard to verify the squash captured the diverged commit.",
     header: "Recovery note",
     options: [
-      { label: "Save to MEMORY.md (Recommended)", description: "..." },
-      { label: "Save to CLAUDE.md", description: "..." },
-      { label: "Skip — not worth persisting", description: "..." }
+      {
+        label: "Save to MEMORY.md (Recommended)",
+        description: "MEMORY.md, Workflow Notes — add: '- git show <sha> --stat before git reset --hard origin/main'"
+      },
+      { label: "Save to CLAUDE.md", description: "~/.claude/CLAUDE.md — add under Safety section." },
+      { label: "Skip — not worth persisting", description: "Already obvious from context." }
     ]
   }
 ])
