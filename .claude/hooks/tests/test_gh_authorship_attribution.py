@@ -32,12 +32,15 @@ def run_hook(tool_name: str, command: str, clear_cooldown: bool = True) -> dict:
         "tool_input": {"command": command}
     }
 
-    # Clear cooldown state if requested
+    # Clear cooldown state if requested (also clears session-shown for a clean slate)
     if clear_cooldown:
         state_dir = Path.home() / ".claude" / "hook-state"
         state_file = state_dir / "gh-authorship-cooldown"
         if state_file.exists():
             state_file.unlink()
+        session_shown_file = state_dir / "gh-authorship-session-shown"
+        if session_shown_file.exists():
+            session_shown_file.unlink()
 
     result = subprocess.run(
         ["uv", "run", "--script", str(HOOK_PATH)],
@@ -354,6 +357,47 @@ class TestOutputValidation:
         assert "hookSpecificOutput" in output
         assert "additionalContext" in output["hookSpecificOutput"]
         assert len(output["hookSpecificOutput"]["additionalContext"]) > 0
+
+
+class TestSessionFirstTrigger:
+    """Test per-session first-trigger enforcement"""
+
+    def test_first_trigger_always_shows_guidance(self):
+        """First trigger per session should always show guidance"""
+        output = run_hook("Bash", 'git commit -m "First commit"', clear_cooldown=True)
+        assert "hookSpecificOutput" in output, "First trigger should show guidance"
+        assert "additionalContext" in output["hookSpecificOutput"]
+        assert len(output["hookSpecificOutput"]["additionalContext"]) > 0
+
+    def test_second_trigger_within_cooldown_is_suppressed(self):
+        """Second trigger within cooldown window should be suppressed after first trigger fires"""
+        # First call clears state and triggers guidance (sets session-shown and cooldown)
+        output1 = run_hook("Bash", 'git commit -m "First"', clear_cooldown=True)
+        assert "hookSpecificOutput" in output1, "First trigger should show guidance"
+
+        # Second call back-to-back: session-shown is set, cooldown is active → suppress
+        output2 = run_hook("Bash", 'git commit -m "Second"', clear_cooldown=False)
+        assert output2 == {}, "Second trigger within cooldown should be suppressed"
+
+    def test_resetting_session_flag_restores_first_trigger_behavior(self):
+        """Deleting the session-shown file (simulating new session) makes next trigger show guidance"""
+        # First, run to set up session-shown and cooldown state
+        output1 = run_hook("Bash", 'git commit -m "During session"', clear_cooldown=True)
+        assert "hookSpecificOutput" in output1, "Initial trigger should show guidance"
+
+        # Confirm second call is suppressed (cooldown in effect)
+        output2 = run_hook("Bash", 'git commit -m "Still in session"', clear_cooldown=False)
+        assert output2 == {}, "Should be suppressed while cooldown and session-shown are set"
+
+        # Simulate new session: clear only the session-shown file (keep cooldown active)
+        session_shown_file = Path.home() / ".claude" / "hook-state" / "gh-authorship-session-shown"
+        if session_shown_file.exists():
+            session_shown_file.unlink()
+
+        # Next trigger should show guidance despite active cooldown (new session detected)
+        output3 = run_hook("Bash", 'git commit -m "New session"', clear_cooldown=False)
+        assert "hookSpecificOutput" in output3, "First trigger of new session should show guidance"
+        assert "additionalContext" in output3["hookSpecificOutput"]
 
 
 if __name__ == "__main__":

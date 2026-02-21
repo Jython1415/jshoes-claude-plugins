@@ -76,6 +76,7 @@ COOLDOWN_PERIOD = 60
 # State file location
 STATE_DIR = Path.home() / ".claude" / "hook-state"
 STATE_FILE = STATE_DIR / "gh-authorship-cooldown"
+SESSION_SHOWN_FILE = STATE_DIR / "gh-authorship-session-shown"
 
 # Patterns to detect operations that need attribution
 GIT_COMMIT_PATTERN = r'git\s+commit'
@@ -169,6 +170,17 @@ def record_suggestion():
         print(f"Warning: Could not record cooldown state: {e}", file=sys.stderr)
 
 
+def is_first_trigger_this_session():
+    """Check if this is the first trigger in the current session."""
+    return not SESSION_SHOWN_FILE.exists()
+
+
+def record_first_trigger():
+    """Record that the first trigger has been shown this session."""
+    STATE_DIR.mkdir(parents=True, exist_ok=True)
+    SESSION_SHOWN_FILE.touch()
+
+
 def format_cooldown_message():
     """Format the cooldown period message based on COOLDOWN_PERIOD constant."""
     if COOLDOWN_PERIOD < 60:
@@ -206,13 +218,15 @@ def main():
                 print("{}")
                 sys.exit(0)
 
-            # Check cooldown
-            if is_within_cooldown():
+            # First trigger always shows guidance; subsequent triggers use cooldown
+            if is_first_trigger_this_session():
+                record_first_trigger()
+                record_suggestion()
+            elif is_within_cooldown():
                 print("{}")
                 sys.exit(0)
-
-            # Record this suggestion
-            record_suggestion()
+            else:
+                record_suggestion()
 
             # Provide guidance for git commit attribution
             output = {
@@ -255,13 +269,15 @@ This promotes transparency about AI-assisted contributions. Use your judgment ba
                 print("{}")
                 sys.exit(0)
 
-            # Check cooldown
-            if is_within_cooldown():
+            # First trigger always shows guidance; subsequent triggers use cooldown
+            if is_first_trigger_this_session():
+                record_first_trigger()
+                record_suggestion()
+            elif is_within_cooldown():
                 print("{}")
                 sys.exit(0)
-
-            # Record this suggestion
-            record_suggestion()
+            else:
+                record_suggestion()
 
             # Provide guidance for GitHub API attribution
             output = {
@@ -301,13 +317,15 @@ This promotes transparency about AI-assisted contributions. Use your judgment ba
                 print("{}")
                 sys.exit(0)
 
-            # Check cooldown
-            if is_within_cooldown():
+            # First trigger always shows guidance; subsequent triggers use cooldown
+            if is_first_trigger_this_session():
+                record_first_trigger()
+                record_suggestion()
+            elif is_within_cooldown():
                 print("{}")
                 sys.exit(0)
-
-            # Record this suggestion
-            record_suggestion()
+            else:
+                record_suggestion()
 
             # Provide guidance for gh CLI attribution
             output = {
