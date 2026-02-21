@@ -66,21 +66,51 @@ is obvious, transient, or already documented, skip it.
 
 ## Step 3: Propose changes
 
-One AskUserQuestion call per proposed change — never bundle multiple
-improvements into a single call. Each question must stand alone so the
-user can approve or skip each insight independently.
+Pack all proposed changes into a **single AskUserQuestion call** with up
+to 4 questions — one question per proposed change. Each question is its
+own independent panel; the user can answer them simultaneously rather
+than sequentially.
 
 For each question:
 
-- **Show the exact change**: absolute file path, section heading, and the
-  literal text to add or replace (not a paraphrase -- the user needs to
-  see the actual content to approve efficiently)
-- **Options should cover**: the recommended location (lead with this), an
-  alternative location if meaningful, and "skip / not worth persisting"
-- **Include the motivation** (session event) and impact in the question or
-  option descriptions
+- **Show the exact change** in the question text: absolute file path,
+  section heading, and the literal text to add or replace (not a
+  paraphrase -- the user needs to see the actual content to approve
+  efficiently)
+- **Options are the possible destinations**, not approve/skip. Lead with
+  the recommended destination (add "(Recommended)" to its label), then
+  list meaningful alternatives. "File a GitHub issue" is a valid option
+  when the insight needs design work before it can be documented. "Skip
+  — not worth persisting" goes last
+- **Include the motivation** (session event) and impact in the question
+  or option descriptions
 
-Gather all approvals before applying any changes in Step 4.
+Example call structure for two insights:
+
+```
+AskUserQuestion(questions=[
+  {
+    question: "Save the 'always push after direct main commit' rule?\n\nFile: plugins/.../SKILL.md, Step 4\nAdd: 'Commit directly to main and push'",
+    header: "Push rule",
+    options: [
+      { label: "Save to reflect SKILL.md (Recommended)", description: "..." },
+      { label: "Save to CLAUDE.md", description: "..." },
+      { label: "Skip — not worth persisting", description: "..." }
+    ]
+  },
+  {
+    question: "Save the recovery steps for a diverged local main?\n\nFile: MEMORY.md, Workflow Notes\nAdd: '- git show <sha> before git reset --hard'",
+    header: "Recovery note",
+    options: [
+      { label: "Save to MEMORY.md (Recommended)", description: "..." },
+      { label: "Save to CLAUDE.md", description: "..." },
+      { label: "Skip — not worth persisting", description: "..." }
+    ]
+  }
+])
+```
+
+Gather all answers before applying any changes in Step 4.
 
 ## Step 4: Apply
 
