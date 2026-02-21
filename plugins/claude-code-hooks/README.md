@@ -4,7 +4,7 @@ A comprehensive set of productivity hooks for Claude Code, providing intelligent
 
 ## Features
 
-### 11 Productivity Hooks
+### 12 Productivity Hooks
 
 **SessionStart Hooks (At session initialization):**
 - **ensure-tmpdir** - Ensures the TMPDIR directory exists at session start
@@ -16,6 +16,7 @@ A comprehensive set of productivity hooks for Claude Code, providing intelligent
 - **prefer-modern-tools** - Suggests `fd`/`rg` over `find`/`grep` when available
 - **detect-cd-pattern** - Warns about global `cd` patterns, suggests absolute paths
 - **prefer-gh-for-own-repos** - Suggests `gh` CLI for Jython1415 repos
+- **block-heredoc-in-bash** - Blocks heredoc syntax that silently fails in sandbox mode
 
 **PostToolUse Hooks (After successful execution):**
 - **gpg-signing-helper** - Provides guidance for GPG signing errors in sandbox
@@ -93,6 +94,12 @@ claude --plugin-dir ./plugins/claude-code-hooks
 **Purpose:** Warn about global `cd` patterns
 **Triggers:** `cd dir && cmd` or `cd dir; cmd` (but NOT `(cd dir && cmd)`)
 **Output:** Suggestion to use absolute paths instead
+
+### block-heredoc-in-bash
+**Event:** PreToolUse (Bash)
+**Purpose:** Block heredoc syntax before it silently corrupts data in sandbox mode
+**Triggers:** Any `<<EOF`, `<<'EOF'`, `<<"EOF"`, `<<-EOF`, or variant (regex: `<<-?\s*['"]?\w`)
+**Output:** BLOCKS the command; provides three alternatives (multiple `-m` flags, `--body-file`, Write tool)
 
 ### prefer-gh-for-own-repos
 **Event:** PreToolUse (WebFetch|Bash)
