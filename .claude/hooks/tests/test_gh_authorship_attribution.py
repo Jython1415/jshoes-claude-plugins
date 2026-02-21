@@ -40,7 +40,7 @@ def run_hook(tool_name: str, command: str, clear_cooldown: bool = True, session_
         state_file = state_dir / "gh-authorship-cooldown"
         if state_file.exists():
             state_file.unlink()
-        session_shown_file = state_dir / "gh-authorship-session-shown"
+        session_shown_file = state_dir / f"gh-authorship-session-shown-{session_id}"
         if session_shown_file.exists():
             session_shown_file.unlink()
 

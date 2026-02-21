@@ -51,8 +51,8 @@ State management:
 - Contains Unix timestamp of last suggestion
 - 60-second (1-minute) cooldown period
 - Safe to delete if behavior needs to be reset
-- Session tracking stored in: `~/.claude/hook-state/gh-authorship-session-shown`
-- Contains the session_id of the session that last received first-trigger guidance
+- Session tracking stored in: `~/.claude/hook-state/gh-authorship-session-shown-{session_id}`
+- Empty flag file keyed by session_id; files accumulate but are zero-byte
 - First trigger per session always shows guidance regardless of cooldown
 
 Benefits:
@@ -79,7 +79,6 @@ COOLDOWN_PERIOD = 60
 # State file location
 STATE_DIR = Path.home() / ".claude" / "hook-state"
 STATE_FILE = STATE_DIR / "gh-authorship-cooldown"
-SESSION_SHOWN_FILE = STATE_DIR / "gh-authorship-session-shown"
 
 # Patterns to detect operations that need attribution
 GIT_COMMIT_PATTERN = r'git\s+commit'
@@ -176,20 +175,17 @@ def record_suggestion():
 def is_first_trigger_this_session(session_id):
     """Check if this is the first trigger in the current session.
 
-    Returns True if the session-shown file doesn't exist or contains a different session_id.
+    Returns True if no flag file exists for this session_id.
     """
-    if not SESSION_SHOWN_FILE.exists():
-        return True
-    try:
-        return SESSION_SHOWN_FILE.read_text().strip() != session_id
-    except Exception:
-        return True
+    session_file = STATE_DIR / f"gh-authorship-session-shown-{session_id}"
+    return not session_file.exists()
 
 
 def record_first_trigger(session_id):
     """Record that the first trigger has been shown this session."""
+    session_file = STATE_DIR / f"gh-authorship-session-shown-{session_id}"
     STATE_DIR.mkdir(parents=True, exist_ok=True)
-    SESSION_SHOWN_FILE.write_text(session_id)
+    session_file.touch()
 
 
 def format_cooldown_message():
