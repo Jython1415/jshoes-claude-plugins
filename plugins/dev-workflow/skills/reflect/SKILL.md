@@ -89,7 +89,7 @@ Make the approved changes:
 1. Edit documentation files
 2. Update or create skill files
 3. Update memory files
-4. Commit directly to main -- docs, skills, and memory are guidance,
+4. Commit directly to main and push -- docs, skills, and memory are guidance,
    not runtime code. Keeping the commit path lightweight encourages
    actually running /reflect rather than skipping it.
 
