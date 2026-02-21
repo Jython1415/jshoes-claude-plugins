@@ -51,6 +51,9 @@ State management:
 - Contains Unix timestamp of last suggestion
 - 60-second (1-minute) cooldown period
 - Safe to delete if behavior needs to be reset
+- Session tracking stored in: `~/.claude/hook-state/gh-authorship-session-shown`
+- Contains the session_id of the session that last received first-trigger guidance
+- First trigger per session always shows guidance regardless of cooldown
 
 Benefits:
 - Promotes transparency in AI-assisted development
@@ -170,15 +173,23 @@ def record_suggestion():
         print(f"Warning: Could not record cooldown state: {e}", file=sys.stderr)
 
 
-def is_first_trigger_this_session():
-    """Check if this is the first trigger in the current session."""
-    return not SESSION_SHOWN_FILE.exists()
+def is_first_trigger_this_session(session_id):
+    """Check if this is the first trigger in the current session.
+
+    Returns True if the session-shown file doesn't exist or contains a different session_id.
+    """
+    if not SESSION_SHOWN_FILE.exists():
+        return True
+    try:
+        return SESSION_SHOWN_FILE.read_text().strip() != session_id
+    except Exception:
+        return True
 
 
-def record_first_trigger():
+def record_first_trigger(session_id):
     """Record that the first trigger has been shown this session."""
     STATE_DIR.mkdir(parents=True, exist_ok=True)
-    SESSION_SHOWN_FILE.touch()
+    SESSION_SHOWN_FILE.write_text(session_id)
 
 
 def format_cooldown_message():
@@ -202,6 +213,7 @@ def main():
         input_data = json.load(sys.stdin)
         tool_name = input_data.get("tool_name", "")
         tool_input = input_data.get("tool_input", {})
+        session_id = input_data.get("session_id", "")
 
         # Only monitor Bash tool
         if tool_name != "Bash":
@@ -219,8 +231,8 @@ def main():
                 sys.exit(0)
 
             # First trigger always shows guidance; subsequent triggers use cooldown
-            if is_first_trigger_this_session():
-                record_first_trigger()
+            if is_first_trigger_this_session(session_id):
+                record_first_trigger(session_id)
                 record_suggestion()
             elif is_within_cooldown():
                 print("{}")
@@ -270,8 +282,8 @@ This promotes transparency about AI-assisted contributions. Use your judgment ba
                 sys.exit(0)
 
             # First trigger always shows guidance; subsequent triggers use cooldown
-            if is_first_trigger_this_session():
-                record_first_trigger()
+            if is_first_trigger_this_session(session_id):
+                record_first_trigger(session_id)
                 record_suggestion()
             elif is_within_cooldown():
                 print("{}")
@@ -318,8 +330,8 @@ This promotes transparency about AI-assisted contributions. Use your judgment ba
                 sys.exit(0)
 
             # First trigger always shows guidance; subsequent triggers use cooldown
-            if is_first_trigger_this_session():
-                record_first_trigger()
+            if is_first_trigger_this_session(session_id):
+                record_first_trigger(session_id)
                 record_suggestion()
             elif is_within_cooldown():
                 print("{}")

@@ -1,1 +1,0 @@
-../../plugins/claude-code-hooks/hooks/reset-attribution-session.py

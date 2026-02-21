@@ -15,7 +15,7 @@ import pytest
 HOOK_PATH = Path(__file__).parent.parent / "gh-authorship-attribution.py"
 
 
-def run_hook(tool_name: str, command: str, clear_cooldown: bool = True) -> dict:
+def run_hook(tool_name: str, command: str, clear_cooldown: bool = True, session_id: str = "test-session-abc123") -> dict:
     """
     Helper function to run the hook.
 
@@ -23,13 +23,15 @@ def run_hook(tool_name: str, command: str, clear_cooldown: bool = True) -> dict:
         tool_name: The name of the tool being used
         command: The bash command to test
         clear_cooldown: Whether to clear cooldown state before running
+        session_id: The session ID to include in the hook input
 
     Returns:
         Parsed JSON output from the hook
     """
     input_data = {
         "tool_name": tool_name,
-        "tool_input": {"command": command}
+        "tool_input": {"command": command},
+        "session_id": session_id,
     }
 
     # Clear cooldown state if requested (also clears session-shown for a clean slate)
@@ -380,22 +382,18 @@ class TestSessionFirstTrigger:
         assert output2 == {}, "Second trigger within cooldown should be suppressed"
 
     def test_resetting_session_flag_restores_first_trigger_behavior(self):
-        """Deleting the session-shown file (simulating new session) makes next trigger show guidance"""
-        # First, run to set up session-shown and cooldown state
-        output1 = run_hook("Bash", 'git commit -m "During session"', clear_cooldown=True)
+        """Using a different session_id (simulating new session) makes next trigger show guidance"""
+        # First, run to set up session-shown and cooldown state with session A
+        output1 = run_hook("Bash", 'git commit -m "During session"', clear_cooldown=True, session_id="test-session-abc123")
         assert "hookSpecificOutput" in output1, "Initial trigger should show guidance"
 
-        # Confirm second call is suppressed (cooldown in effect)
-        output2 = run_hook("Bash", 'git commit -m "Still in session"', clear_cooldown=False)
+        # Confirm second call with same session is suppressed (cooldown in effect)
+        output2 = run_hook("Bash", 'git commit -m "Still in session"', clear_cooldown=False, session_id="test-session-abc123")
         assert output2 == {}, "Should be suppressed while cooldown and session-shown are set"
 
-        # Simulate new session: clear only the session-shown file (keep cooldown active)
-        session_shown_file = Path.home() / ".claude" / "hook-state" / "gh-authorship-session-shown"
-        if session_shown_file.exists():
-            session_shown_file.unlink()
-
+        # Simulate new session: use a different session_id (keep cooldown active)
         # Next trigger should show guidance despite active cooldown (new session detected)
-        output3 = run_hook("Bash", 'git commit -m "New session"', clear_cooldown=False)
+        output3 = run_hook("Bash", 'git commit -m "New session"', clear_cooldown=False, session_id="test-session-xyz789")
         assert "hookSpecificOutput" in output3, "First trigger of new session should show guidance"
         assert "additionalContext" in output3["hookSpecificOutput"]
 
