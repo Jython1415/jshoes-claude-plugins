@@ -22,10 +22,11 @@ Follow these steps precisely:
 ## Step 1: Gather context (2 parallel agents)
 
 **Agent A (haiku):** Return a list of file paths for all relevant convention
-documents (CLAUDE.md and README.md files):
-- The root CLAUDE.md and README.md, if they exist
-- Any CLAUDE.md or README.md files in directories containing modified
-  files, and all parent directories up to the repo root
+documents (CLAUDE.md, README.md, CONTRIBUTING.md, ARCHITECTURE.md,
+DEVELOPMENT.md, and similar files that codify codebase practices):
+- Convention documents in the repo root, if they exist
+- Any convention documents in directories containing modified files, and
+  all parent directories up to the repo root
 
 Use `gh pr diff` and Glob to identify these.
 
