@@ -38,7 +38,7 @@ Use `gh pr diff` and Glob to identify these.
 
 Give each agent the PR title, description, and summary from Step 1. Each
 agent returns a list of issues. Each issue includes: description, file path,
-line range, and reason (e.g. "CLAUDE.md adherence", "bug").
+line range, and reason (e.g. "convention document violation", "bug").
 
 **Agents 1 + 2: Convention document compliance (sonnet)**
 Audit changes for compliance with convention documents (CLAUDE.md and
