@@ -3,7 +3,8 @@ name: session
 description: >
   Full dev session lifecycle: triage open issues, solve the top
   priority item, then reflect on lessons learned. Chains /triage,
-  /solve, and /reflect into a single workflow.
+  /solve, and /reflect into a single workflow. Use at the start of
+  a working session to run the full dev lifecycle end-to-end.
 ---
 
 # Session

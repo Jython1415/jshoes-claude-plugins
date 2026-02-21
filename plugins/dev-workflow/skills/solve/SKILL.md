@@ -1,9 +1,11 @@
 ---
 name: solve
 description: >
-  Turn GitHub issues into reviewed pull requests. Explores the codebase,
-  collaboratively scopes design decisions with the user, plans the
-  implementation, builds it, and runs code review before presenting the PR.
+  Turn GitHub issues into reviewed pull requests. Use when asked to
+  implement an issue, fix a bug from a GitHub issue, or build a
+  feature tracked in an issue. Explores the codebase, collaboratively
+  scopes design decisions with the user, plans the implementation,
+  builds it, and runs code review before presenting the PR.
 argument-hint: <issue> [<issue> ...]
 ---
 
