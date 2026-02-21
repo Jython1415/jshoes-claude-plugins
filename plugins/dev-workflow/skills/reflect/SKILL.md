@@ -77,11 +77,12 @@ For each question:
   section heading, and the literal text to add or replace (not a
   paraphrase -- the user needs to see the actual content to approve
   efficiently)
-- **Options are the possible destinations**, not approve/skip. Lead with
-  the recommended destination (add "(Recommended)" to its label), then
-  list meaningful alternatives. "File a GitHub issue" is a valid option
-  when the insight needs design work before it can be documented. "Skip
-  — not worth persisting" goes last
+- **Options are the possible destinations**, not approve/skip. The
+  recommended option goes first (add "(Recommended)" to its label) —
+  that may be a specific file, a GitHub issue, or "Skip — not worth
+  persisting" if that's genuinely the right call. List remaining
+  alternatives after. "File a GitHub issue" is a valid option when the
+  insight needs design work before it can be documented
 - **Include the motivation** (session event) and impact in the question
   or option descriptions
 
