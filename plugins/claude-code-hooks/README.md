@@ -6,6 +6,9 @@ A comprehensive set of productivity hooks for Claude Code, providing intelligent
 
 ### 11 Productivity Hooks
 
+**SessionStart Hooks (At session initialization):**
+- **ensure-tmpdir** - Ensures the TMPDIR directory exists at session start
+
 **PreToolUse Hooks (Before tool execution):**
 - **normalize-line-endings** - Automatically converts CRLF/CR line endings to LF
 - **gh-authorship-attribution** - Reminds about attribution for AI-assisted contributions
