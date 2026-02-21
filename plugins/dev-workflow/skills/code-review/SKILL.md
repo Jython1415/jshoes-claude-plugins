@@ -4,7 +4,7 @@ description: >
   Multi-agent code review for pull requests. Use when reviewing a PR,
   after creating or updating a pull request, when asked to check code
   quality before merging, or when doing a final review of changes.
-  Checks for bugs, logic errors, and CLAUDE.md compliance.
+  Checks for bugs, logic errors, and convention document compliance.
 ---
 
 # Code Review
@@ -21,11 +21,11 @@ Follow these steps precisely:
 
 ## Step 1: Gather context (2 parallel agents)
 
-**Agent A (haiku):** Return a list of file paths for all relevant CLAUDE.md
-files:
-- The root CLAUDE.md, if it exists
-- Any CLAUDE.md files in directories containing modified files, and all
-  parent directories up to the repo root
+**Agent A (haiku):** Return a list of file paths for all relevant convention
+documents (CLAUDE.md and README.md files):
+- The root CLAUDE.md and README.md, if they exist
+- Any CLAUDE.md or README.md files in directories containing modified
+  files, and all parent directories up to the repo root
 
 Use `gh pr diff` and Glob to identify these.
 
@@ -38,12 +38,13 @@ Use `gh pr diff` and Glob to identify these.
 
 Give each agent the PR title, description, and summary from Step 1. Each
 agent returns a list of issues. Each issue includes: description, file path,
-line range, and reason (e.g. "CLAUDE.md adherence", "bug").
+line range, and reason (e.g. "convention document violation", "bug").
 
-**Agents 1 + 2: CLAUDE.md compliance (sonnet)**
-Audit changes for CLAUDE.md compliance in parallel. When evaluating
-compliance for a file, only consider CLAUDE.md files that share a file path
-with the file or its parent directories. Each agent reviews independently
+**Agents 1 + 2: Convention document compliance (sonnet)**
+Audit changes for compliance with convention documents (CLAUDE.md and
+README.md files found in Step 1) in parallel. When evaluating compliance
+for a file, only consider convention documents that share a file path with
+the file or its parent directories. Each agent reviews independently
 for redundancy.
 
 **Agent 3: Bug detection -- diff only (opus)**
@@ -61,7 +62,7 @@ within the changed code.
   imports, unresolved references)
 - Code will definitely produce wrong results regardless of inputs (clear
   logic errors)
-- Clear, unambiguous CLAUDE.md violations where you can quote the exact rule
+- Clear, unambiguous convention document violations where you can quote the exact rule
 
 Do NOT flag:
 - Code style or quality concerns
@@ -70,10 +71,10 @@ Do NOT flag:
 - Pre-existing issues not introduced by this PR
 - Pedantic nitpicks a senior engineer would ignore
 - Issues a linter would catch (do not run the linter)
-- General code quality concerns (e.g. test coverage) unless CLAUDE.md
-  explicitly requires it
-- Issues mentioned in CLAUDE.md but silenced in code (e.g. lint ignore
-  comments)
+- General code quality concerns (e.g. test coverage) unless a convention
+  document explicitly requires it
+- Issues mentioned in a convention document but silenced in code (e.g. lint
+  ignore comments)
 - Something that appears to be a bug but is actually correct
 
 **If you are not certain an issue is real, do not flag it. False positives
@@ -90,11 +91,11 @@ subagent to validate it. Each validation agent receives:
 The agent's job: verify the issue is real with high confidence. Examples:
 - If "variable is not defined" was flagged, confirm it is actually undefined
   in scope.
-- For CLAUDE.md violations, confirm the rule is scoped to that file and is
-  actually violated.
+- For convention document violations, confirm the rule is scoped to that
+  file and is actually violated.
 
-Use opus subagents for bugs and logic issues. Use sonnet for CLAUDE.md
-violations.
+Use opus subagents for bugs and logic issues. Use sonnet for convention
+document violations.
 
 Filter out any issues not validated. This produces the final issue list.
 
@@ -105,11 +106,11 @@ Print a summary of findings to the terminal.
 If issues were found, list each with:
 - File path and line range
 - Brief description
-- Category (bug, CLAUDE.md violation, etc.)
+- Category (bug, convention document violation, etc.)
 
 If no issues were found:
 
-    No issues found. Checked for bugs and CLAUDE.md compliance.
+    No issues found. Checked for bugs and convention document compliance.
 
 If `--comment` was NOT passed as an argument, **stop here. Do not post any
 GitHub comments.**
@@ -120,7 +121,7 @@ If NO issues were found, post a single summary comment and stop:
 
     gh pr comment <PR_NUMBER> --body "## Code review
 
-    No issues found. Checked for bugs and CLAUDE.md compliance."
+    No issues found. Checked for bugs and convention document compliance."
 
 If issues WERE found, post inline review comments using `gh api`.
 
@@ -158,8 +159,8 @@ Comment formatting rules:
   locations), describe the issue and suggested approach without a suggestion
   block
 - Never post a suggestion unless committing it fully resolves the issue
-- When citing a CLAUDE.md violation, link to the relevant file using full
-  SHA:
+- When citing a convention document violation, link to the relevant file
+  using full SHA:
   `https://github.com/{owner}/{repo}/blob/{full_sha}/{path}#L{start}-L{end}`
 - You must use the full 40-character SHA in links. Do not use shell
   interpolation like `$(git rev-parse HEAD)` inside comment bodies -- the
