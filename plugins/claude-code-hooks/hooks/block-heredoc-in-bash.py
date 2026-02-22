@@ -48,8 +48,8 @@ def main():
     output = {
         "hookSpecificOutput": {
             "hookEventName": "PreToolUse",
-            "decision": "block",
-            "additionalContext": (
+            "permissionDecision": "deny",
+            "permissionDecisionReason": (
                 "**BLOCKED: Heredoc syntax detected**\n\n"
                 "Heredoc (`<<EOF`) silently fails in sandbox mode — the shell cannot "
                 "create the required temp file, which corrupts the command without any "

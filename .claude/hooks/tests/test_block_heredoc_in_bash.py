@@ -78,17 +78,17 @@ class TestHeredocBlocking:
         output = run_hook("Write", "cat <<EOF\nsome content\nEOF")
         assert output == {}
 
-    def test_block_output_has_decision_field(self):
-        """Blocked commands should have decision: block in hook output"""
+    def test_block_output_has_permission_decision_field(self):
+        """Blocked commands should have permissionDecision: deny in hook output"""
         output = run_hook("Bash", "cat <<EOF\nfoo\nEOF")
-        assert output["hookSpecificOutput"]["decision"] == "block"
+        assert output["hookSpecificOutput"]["permissionDecision"] == "deny"
 
-    def test_block_output_has_additional_context(self):
-        """Blocked commands should have non-empty additionalContext"""
+    def test_block_output_has_permission_decision_reason(self):
+        """Blocked commands should have non-empty permissionDecisionReason"""
         output = run_hook("Bash", "cat <<EOF\nfoo\nEOF")
         hook_output = output["hookSpecificOutput"]
-        assert "additionalContext" in hook_output
-        assert len(hook_output["additionalContext"]) > 0
+        assert "permissionDecisionReason" in hook_output
+        assert len(hook_output["permissionDecisionReason"]) > 0
 
     def test_block_output_has_hook_event_name(self):
         """Blocked output should include hookEventName"""
@@ -115,7 +115,7 @@ class TestHeredocBlocking:
         """Heredoc with a non-EOF delimiter should also be blocked"""
         output = run_hook("Bash", "cat <<BODY\nsome content\nBODY")
         assert "hookSpecificOutput" in output
-        assert output["hookSpecificOutput"]["decision"] == "block"
+        assert output["hookSpecificOutput"]["permissionDecision"] == "deny"
 
     def test_no_block_for_arithmetic_left_shift(self):
         """Arithmetic left shift should not trigger the heredoc blocker"""
