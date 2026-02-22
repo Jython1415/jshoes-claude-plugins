@@ -71,7 +71,7 @@ When working in this repository, you are managing the user's Claude Code configu
 ### Plugin Versioning
 Each plugin has a `version` field in `plugins/<name>/.claude-plugin/plugin.json`. Use lightweight SemVer:
 - **Patch** (1.0.x): Bug fixes, documentation updates, minor guidance changes
-- **Minor** (1.x.0): New hooks or skills added
+- **Minor** (1.x.0): New hooks or skills added; new capabilities or modes added to existing skills (e.g., a new `--flag` that meaningfully changes behavior)
 - **Major** (x.0.0): Breaking changes (removed hooks, renamed skills, changed interfaces)
 
 **Rule**: Bump the version in the same commit that ships the change. Never let `plugin.json` lag behind. CI enforces this on every PR that touches plugin files. Also keep `.claude-plugin/marketplace.json` in sync — CI verifies that its per-plugin version fields match `plugin.json` whenever a version is bumped.
