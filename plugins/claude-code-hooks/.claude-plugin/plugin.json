@@ -1,7 +1,7 @@
 {
   "name": "claude-code-hooks",
   "description": "Productivity hooks for Claude Code: line ending normalization, gh attribution reminders, modern tool suggestions, and more",
-  "version": "1.5.1",
+  "version": "1.5.2",
   "author": {
     "name": "Jython1415",
     "url": "https://github.com/Jython1415"
