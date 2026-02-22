@@ -175,9 +175,19 @@ Use `~/.claude/hook-state/` (global) for hooks installed via the marketplace. St
 
 ### Tests for stateful hooks
 
-Pass `session_id` in the hook input and clear per-session state files in cleanup:
+**Never reference `~/.claude/hook-state/` directly in test helpers.** Test code runs inside
+a sandboxed Bash tool call; `unlink()` and `write_text()` on that path will fail with
+`PermissionError`. (The hooks themselves work fine — they run as external subprocesses outside
+the sandbox.)
+
+Instead, redirect state to a writable temp dir via the `CLAUDE_HOOK_STATE_DIR` env var, which
+both hooks support. Use a module-level constant so state persists across multiple `run_hook()`
+calls within the same test (required for cooldown tests):
 
 ```python
+import os
+TEST_STATE_DIR = Path(os.environ.get("TMPDIR", "/tmp")) / "claude-hook-test-state"
+
 def run_hook(command: str, session_id: str = "test-session-abc123", clear_state: bool = True) -> dict:
     input_data = {
         "tool_name": "Bash",
@@ -185,11 +195,24 @@ def run_hook(command: str, session_id: str = "test-session-abc123", clear_state:
         "session_id": session_id,
     }
     if clear_state:
-        state_file = Path.home() / ".claude" / "hook-state" / f"my-hook-cooldown-{session_id}"
+        state_file = TEST_STATE_DIR / f"my-hook-cooldown-{session_id}"
         if state_file.exists():
             state_file.unlink()
-    # ... run hook ...
+    TEST_STATE_DIR.mkdir(parents=True, exist_ok=True)
+    env = os.environ.copy()
+    env["CLAUDE_HOOK_STATE_DIR"] = str(TEST_STATE_DIR)
+    result = subprocess.run(
+        ["uv", "run", "--script", str(HOOK_PATH)],
+        input=json.dumps(input_data),
+        capture_output=True,
+        text=True,
+        env=env,
+    )
+    return json.loads(result.stdout)
 ```
+
+Tests that write state directly (e.g., to simulate an expired cooldown) must also use
+`TEST_STATE_DIR`, not `Path.home() / ".claude" / "hook-state"`.
 
 ## Testing Philosophy
 
