@@ -5,12 +5,20 @@ description: >
   priority item, then reflect on lessons learned. Chains /triage,
   /solve, and /reflect into a single workflow. Use at the start of
   a working session to run the full dev lifecycle end-to-end.
+argument-hint: "[--light]"
 ---
 
 # Session
 
 Run a complete dev session from start to finish. This skill chains
 three phases, each backed by a dedicated skill.
+
+## Arguments
+
+- `--light`: Run the session in cost-efficient mode. Propagates to
+  `/solve`, which passes it to `/code-review`. Code review uses a single
+  Sonnet agent instead of the full multi-agent Opus pipeline. Use for
+  routine sessions where the PRs are likely to be small or low-risk.
 
 ## Phase 1: Triage
 
@@ -43,6 +51,8 @@ solve cycle (intake → implement → review → merge) consumes most of the
 available context, so one item per session is the normal case. If the
 user explicitly asks to continue with more items, repeat Phase 2 for
 the next queue item after merging the current PR.
+
+If `--light` was passed to `/session`, invoke `/solve --light <issue>`.
 
 `/solve` runs the full issue-to-PR workflow:
 

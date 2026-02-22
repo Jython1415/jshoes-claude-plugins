@@ -5,6 +5,7 @@ description: >
   after creating or updating a pull request, when asked to check code
   quality before merging, or when doing a final review of changes.
   Checks for bugs, logic errors, and convention document compliance.
+argument-hint: "[--light] [--comment]"
 ---
 
 # Code Review
@@ -17,7 +18,38 @@ parallel agents.
 - All tools are functional. Do not test tools or make exploratory calls.
 - Only call a tool if required. Every tool call should have a clear purpose.
 
-Follow these steps precisely:
+## Arguments
+
+- `--light`: Single-agent Sonnet review instead of the full multi-agent
+  pipeline. Appropriate for docs, version bumps, and small isolated changes.
+  Replaces Steps 1–3 with one structured pass; Steps 4–5 apply normally.
+- `--comment`: Post inline GitHub comments for each finding (applies in
+  both modes).
+
+## Light Mode (when --light is passed)
+
+Skip Steps 1–3. Launch **one Sonnet agent** with the PR number and these
+instructions:
+
+1. Run `gh pr view <PR_NUMBER>` to get the PR title and description.
+2. Run `gh pr diff <PR_NUMBER>` to get the full diff.
+3. Review the diff for real issues only. For each finding, it must have:
+   - **Category**: one of `correctness`, `security`, `convention`,
+     `performance`
+   - **Severity**: one of `critical`, `major`, `minor`
+   - **Evidence**: the exact code snippet from the diff that demonstrates
+     the issue — if you cannot cite a specific snippet, skip the finding
+   - **Confidence**: 0.0–1.0 — skip any finding below 0.7
+
+Apply the same HIGH SIGNAL ONLY standard as the full review: flag only
+issues where code will definitely fail, produce wrong results regardless
+of inputs, or clearly violate a stated convention. Return a list of
+findings with: file path, line range, category, severity, description,
+evidence, confidence.
+
+After this agent returns, proceed to Step 4.
+
+Follow these steps precisely (full mode only — skip if --light was passed):
 
 ## Step 1: Gather context (2 parallel agents)
 
