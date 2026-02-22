@@ -34,11 +34,18 @@ The triage agent should assess:
 - Recent context (handoff notes, session history)
 - A prioritized session queue of work items to tackle
 
-After the triage agent returns, use AskUserQuestion to present the queue
-for approval. Surface the key decision (which item to tackle) as structured
-options -- one option per queue item -- not freeform prose. Include enough
-context per option (complexity, what it unblocks) for the user to choose
-without re-reading the full triage output.
+After the triage agent returns, present the results in two steps:
+
+1. **Print the triage summary to the main response** — a prioritized list
+   or table with full context per item (complexity, what it unblocks, any
+   notable dependencies). This is where markdown renders properly and the
+   user can scroll at their leisure.
+
+2. **Call AskUserQuestion with a short, self-contained question** — one
+   option per queue item. Each option label should be the issue number +
+   one-line description; the option description should add one sentence of
+   essential context. The user can scroll up to the full summary if they
+   need more detail. Keep the question field itself brief.
 
 ## Phase 2: Solve
 
