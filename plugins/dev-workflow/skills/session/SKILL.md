@@ -59,6 +59,9 @@ available context, so one item per session is the normal case. If the
 user explicitly asks to continue with more items, repeat Phase 2 for
 the next queue item after merging the current PR.
 
+Use the issue number from the user's triage selection. Do not reuse
+issue numbers from prior context or previous sessions.
+
 If `--light` was passed to `/session`, invoke `/solve --light <issue>`.
 
 `/solve` runs the full issue-to-PR workflow:
