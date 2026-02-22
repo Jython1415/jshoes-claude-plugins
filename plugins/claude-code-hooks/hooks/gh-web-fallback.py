@@ -246,7 +246,7 @@ Use the GitHub REST API with curl instead.
 - Use `$(printenv GITHUB_TOKEN)` instead of `$GITHUB_TOKEN` when using pipes
 - GitHub API docs: https://docs.github.com/en/rest
 
-**This message appears once per session.**"""
+**This message will only appear once per 5 minutes within a session.**"""
             }
         }
 
