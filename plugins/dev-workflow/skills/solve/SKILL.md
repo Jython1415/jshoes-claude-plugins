@@ -6,7 +6,7 @@ description: >
   feature tracked in an issue. Explores the codebase, collaboratively
   scopes design decisions with the user, plans the implementation,
   builds it, and runs code review before presenting the PR.
-argument-hint: <issue> [<issue> ...]
+argument-hint: "<issue> [<issue> ...] [--light]"
 ---
 
 # Solve
@@ -16,9 +16,13 @@ these phases in order. Do not skip phases unless explicitly noted.
 
 ## Arguments
 
-`$ARGUMENTS` contains issue references separated by spaces. Each may be a
-number (`42`), prefixed (`#42`), or a full URL. Parse all references and
-normalize to issue numbers.
+`$ARGUMENTS` contains issue references and optional flags separated by
+spaces. Parse:
+- Issue references: numbers (`42`), prefixed (`#42`), or full URLs —
+  normalize to issue numbers
+- `--light`: If present, use light code review in Phase 7 (single Sonnet
+  agent instead of the full multi-agent pipeline). Pass as `--light` when
+  invoking `/code-review`.
 
 ## Phase 1: Intake
 
@@ -137,13 +141,14 @@ correct config in the wrong format is a silent failure.
 
 Before presenting the PR to the user:
 
-1. Invoke `/code-review` using the Skill tool to run a thorough review of
-   the PR
+1. Invoke `/code-review` using the Skill tool to run a review of the PR:
+   - If `--light` was passed as an argument, invoke `/code-review --light`
+   - Otherwise, invoke `/code-review` for the full multi-agent review
 2. If the review surfaces real issues, fix them and commit -- do not
    pause to report intermediate findings to the user; act on them
    autonomously
-3. Re-run `/code-review` until clean -- the PR must pass review before
-   being presented to the user
+3. Re-run the same review mode until clean -- the PR must pass review
+   before being presented to the user
 
 ## Phase 8: Confirm CI
 
