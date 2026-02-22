@@ -64,7 +64,8 @@ TARGET_OWNER = "Jython1415"
 COOLDOWN_PERIOD = 60
 
 # State file location
-STATE_DIR = Path.home() / ".claude" / "hook-state"
+_state_dir_env = os.environ.get("CLAUDE_HOOK_STATE_DIR")
+STATE_DIR = Path(_state_dir_env) if _state_dir_env else Path.home() / ".claude" / "hook-state"
 
 
 def is_gh_available():
