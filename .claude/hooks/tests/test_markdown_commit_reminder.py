@@ -28,13 +28,14 @@ def run_hook(tool_name: str, command: str, clear_cooldown: bool = True) -> dict:
     """
     input_data = {
         "tool_name": tool_name,
-        "tool_input": {"command": command}
+        "tool_input": {"command": command},
+        "session_id": "test-session-abc123"
     }
 
     # Clear cooldown state if requested
     if clear_cooldown:
         state_dir = Path.home() / ".claude" / "hook-state"
-        state_file = state_dir / "markdown-commit-cooldown"
+        state_file = state_dir / "markdown-commit-cooldown-test-session-abc123"
         if state_file.exists():
             state_file.unlink()
 
@@ -176,7 +177,7 @@ class TestCooldownMechanism:
     def test_cooldown_state_file_created(self):
         """Cooldown state file should be created"""
         state_dir = Path.home() / ".claude" / "hook-state"
-        state_file = state_dir / "markdown-commit-cooldown"
+        state_file = state_dir / "markdown-commit-cooldown-test-session-abc123"
 
         # Clear state first
         if state_file.exists():

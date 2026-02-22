@@ -40,7 +40,7 @@ All hooks use `run-with-fallback.sh` wrapper for safety:
 Smart rate limiting prevents repetitive suggestions:
 - Attribution reminders: 60 seconds
 - Prefer-gh suggestions: 60 seconds
-- Web fallback guidance: 300 seconds (5 minutes)
+- Web fallback guidance: 300 seconds (5 minutes), per session
 
 ## Installation
 
@@ -112,7 +112,7 @@ claude --plugin-dir ./plugins/claude-code-hooks
 **Event:** PreToolUse (Bash)
 **Purpose:** Guide to GitHub API when `gh` unavailable
 **Triggers:** Command contains `gh` + `gh` not available + GITHUB_TOKEN set
-**Cooldown:** 300 seconds
+**Cooldown:** 300 seconds, per session
 **Output:** GitHub API usage guidance
 
 ### gh-fallback-helper

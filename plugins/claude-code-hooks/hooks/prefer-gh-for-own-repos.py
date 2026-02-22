@@ -38,7 +38,8 @@ Example suggestions:
 - Get JSON: `gh issue view 10 --json title,body,comments --repo Jython1415/repo`
 
 State management:
-- Cooldown state stored in: `~/.claude/hook-state/prefer-gh-cooldown`
+- Cooldown state stored in: `~/.claude/hook-state/prefer-gh-cooldown-<session_id>`
+- Per-session-id scoping prevents cross-session contamination
 - Contains Unix timestamp of last suggestion
 - Safe to delete if behavior needs to be reset
 - Prevents duplicate suggestions when Claude uses fetch multiple times consecutively
@@ -64,7 +65,6 @@ COOLDOWN_PERIOD = 60
 
 # State file location
 STATE_DIR = Path.home() / ".claude" / "hook-state"
-STATE_FILE = STATE_DIR / "prefer-gh-cooldown"
 
 
 def is_gh_available():
@@ -75,13 +75,14 @@ def is_gh_available():
         return False
 
 
-def is_within_cooldown():
+def is_within_cooldown(session_id: str) -> bool:
     """Check if we're within the cooldown period since last suggestion."""
+    state_file = STATE_DIR / f"prefer-gh-cooldown-{session_id}"
     try:
-        if not STATE_FILE.exists():
+        if not state_file.exists():
             return False
 
-        last_suggestion_time = float(STATE_FILE.read_text().strip())
+        last_suggestion_time = float(state_file.read_text().strip())
         current_time = time.time()
 
         return (current_time - last_suggestion_time) < COOLDOWN_PERIOD
@@ -89,11 +90,12 @@ def is_within_cooldown():
         return False
 
 
-def record_suggestion():
+def record_suggestion(session_id: str):
     """Record that we just made a suggestion."""
+    state_file = STATE_DIR / f"prefer-gh-cooldown-{session_id}"
     try:
         STATE_DIR.mkdir(parents=True, exist_ok=True)
-        STATE_FILE.write_text(str(time.time()))
+        state_file.write_text(str(time.time()))
     except Exception as e:
         # Log but don't fail - cooldown is nice-to-have, not critical
         print(f"Warning: Could not record cooldown state: {e}", file=sys.stderr)
@@ -118,6 +120,7 @@ def matches_target_owner(url):
 def main():
     try:
         input_data = json.load(sys.stdin)
+        session_id = input_data.get("session_id", "")
         tool_name = input_data.get("tool_name", "")
         tool_input = input_data.get("tool_input", {})
 
@@ -127,7 +130,7 @@ def main():
             sys.exit(0)
 
         # Check if we're within cooldown period
-        if is_within_cooldown():
+        if is_within_cooldown(session_id):
             print("{}")
             sys.exit(0)
 
@@ -158,7 +161,7 @@ def main():
             sys.exit(0)
 
         # Record this suggestion to enable cooldown
-        record_suggestion()
+        record_suggestion(session_id)
 
         # Provide guidance to use gh CLI
         output = {

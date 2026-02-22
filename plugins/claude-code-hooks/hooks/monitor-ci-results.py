@@ -41,7 +41,8 @@ Why this matters:
 - Helps maintain code quality through automated testing
 
 State management:
-- Cooldown state stored in: `~/.claude/hook-state/monitor-ci-cooldown`
+- Cooldown state stored in: `~/.claude/hook-state/monitor-ci-cooldown-<session_id>`
+- Per-session-id scoping prevents cross-session contamination
 - Contains Unix timestamp of last reminder
 - 120-second (2-minute) cooldown period
 - Safe to delete if behavior needs to be reset
@@ -65,7 +66,6 @@ COOLDOWN_PERIOD = 120
 
 # State file location
 STATE_DIR = Path.home() / ".claude" / "hook-state"
-STATE_FILE = STATE_DIR / "monitor-ci-cooldown"
 
 # Patterns to detect push and PR creation
 GIT_PUSH_PATTERN = r'git\s+push'
@@ -122,13 +122,14 @@ def has_github_token() -> bool:
     return bool(os.environ.get("GITHUB_TOKEN"))
 
 
-def is_within_cooldown() -> bool:
+def is_within_cooldown(session_id: str) -> bool:
     """Check if we're within the cooldown period since last reminder."""
+    state_file = STATE_DIR / f"monitor-ci-cooldown-{session_id}"
     try:
-        if not STATE_FILE.exists():
+        if not state_file.exists():
             return False
 
-        last_reminder_time = float(STATE_FILE.read_text().strip())
+        last_reminder_time = float(state_file.read_text().strip())
         current_time = time.time()
 
         return (current_time - last_reminder_time) < COOLDOWN_PERIOD
@@ -137,11 +138,12 @@ def is_within_cooldown() -> bool:
         return False
 
 
-def record_reminder():
+def record_reminder(session_id: str):
     """Record that we just provided a reminder."""
+    state_file = STATE_DIR / f"monitor-ci-cooldown-{session_id}"
     try:
         STATE_DIR.mkdir(parents=True, exist_ok=True)
-        STATE_FILE.write_text(str(time.time()))
+        state_file.write_text(str(time.time()))
     except Exception as e:
         # Log but don't fail - cooldown is nice-to-have, not critical
         print(f"Warning: Could not record cooldown state: {e}", file=sys.stderr)
@@ -277,6 +279,7 @@ Visit the PR page on GitHub to monitor check status in the "Checks" tab.
 def main():
     try:
         input_data = json.load(sys.stdin)
+        session_id = input_data.get("session_id", "")
         tool_name = input_data.get("tool_name", "")
         tool_input = input_data.get("tool_input", {})
 
@@ -303,12 +306,12 @@ def main():
                 sys.exit(0)
 
             # Check cooldown
-            if is_within_cooldown():
+            if is_within_cooldown(session_id):
                 print("{}")
                 sys.exit(0)
 
             # Record this reminder
-            record_reminder()
+            record_reminder(session_id)
 
             # Provide CI monitoring guidance
             output = {
@@ -329,12 +332,12 @@ def main():
                 sys.exit(0)
 
             # Check cooldown
-            if is_within_cooldown():
+            if is_within_cooldown(session_id):
                 print("{}")
                 sys.exit(0)
 
             # Record this reminder
-            record_reminder()
+            record_reminder(session_id)
 
             # Provide CI monitoring guidance
             output = {
