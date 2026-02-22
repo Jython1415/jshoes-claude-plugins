@@ -96,6 +96,80 @@ except Exception:
 - `decision: "block"` is parsed but NOT acted upon by the system
 - Use `additionalContext` for guidance instead of `decision`
 
+## State Management
+
+Many hooks need to rate-limit guidance to avoid repetition. Use per-session-id state files — **not global files** — for all advisory reminder hooks.
+
+### Why per-session-id
+
+Each Claude session is an isolated instance. `additionalContext` injected into Session A has zero effect on Session B. A global cooldown from Session A incorrectly silences Session B (which never received the guidance). Per-session-id files ensure each session gets its own cooldown.
+
+### Per-session-id time-based cooldown (most hooks)
+
+```python
+COOLDOWN_PERIOD = 60  # seconds
+
+def is_within_cooldown(session_id: str) -> bool:
+    state_file = STATE_DIR / f"my-hook-cooldown-{session_id}"
+    try:
+        if not state_file.exists():
+            return False
+        return (time.time() - float(state_file.read_text().strip())) < COOLDOWN_PERIOD
+    except Exception:
+        return False
+
+def record_suggestion(session_id: str):
+    state_file = STATE_DIR / f"my-hook-cooldown-{session_id}"
+    try:
+        STATE_DIR.mkdir(parents=True, exist_ok=True)
+        state_file.write_text(str(time.time()))
+    except Exception as e:
+        print(f"Warning: {e}", file=sys.stderr)
+```
+
+In `main()`: `session_id = input_data.get("session_id", "")`
+
+**Critical distinction**: Per-session-id files isolate cooldowns **between** sessions but do NOT eliminate the time-based cooldown **within** a session. A 300s cooldown scoped to `session_id` still re-fires every 300s in a long session. The guidance text should say "appears once per 5 minutes within a session" — not "once per session."
+
+### True once-per-session (flag file)
+
+If you want "show exactly once per session regardless of session length":
+
+```python
+def has_shown_this_session(session_id: str) -> bool:
+    flag_file = STATE_DIR / f"my-hook-shown-{session_id}"
+    return flag_file.exists()
+
+def mark_shown(session_id: str):
+    flag_file = STATE_DIR / f"my-hook-shown-{session_id}"
+    STATE_DIR.mkdir(parents=True, exist_ok=True)
+    flag_file.touch()
+```
+
+Use empty flag files (existence = shown), no timestamp. Guidance text: "appears once per session."
+
+### State directory
+
+Use `~/.claude/hook-state/` (global) for hooks installed via the marketplace. State files are tiny; accumulation is negligible.
+
+### Tests for stateful hooks
+
+Pass `session_id` in the hook input and clear per-session state files in cleanup:
+
+```python
+def run_hook(command: str, session_id: str = "test-session-abc123", clear_state: bool = True) -> dict:
+    input_data = {
+        "tool_name": "Bash",
+        "tool_input": {"command": command},
+        "session_id": session_id,
+    }
+    if clear_state:
+        state_file = Path.home() / ".claude" / "hook-state" / f"my-hook-cooldown-{session_id}"
+        if state_file.exists():
+            state_file.unlink()
+    # ... run hook ...
+```
+
 ## Testing Philosophy
 
 **Test behavior, not content.** Guidance messages should be improvable without breaking tests.
