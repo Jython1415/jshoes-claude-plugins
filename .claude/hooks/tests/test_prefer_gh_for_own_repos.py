@@ -40,7 +40,8 @@ def run_hook(
     """
     input_data = {
         "tool_name": tool_name,
-        "tool_input": tool_input
+        "tool_input": tool_input,
+        "session_id": "test-session-abc123"
     }
 
     # Create a temporary directory for mock tools
@@ -48,7 +49,7 @@ def run_hook(
         # Clear cooldown state if requested
         if clear_cooldown:
             state_dir = Path.home() / ".claude" / "hook-state"
-            state_file = state_dir / "prefer-gh-cooldown"
+            state_file = state_dir / "prefer-gh-cooldown-test-session-abc123"
             if state_file.exists():
                 state_file.unlink()
 
@@ -219,7 +220,7 @@ class TestPreferGhForOwnRepos:
 
         # Manually modify the cooldown file to simulate expired cooldown
         state_dir = Path.home() / ".claude" / "hook-state"
-        state_file = state_dir / "prefer-gh-cooldown"
+        state_file = state_dir / "prefer-gh-cooldown-test-session-abc123"
         old_time = time.time() - 65  # 65 seconds ago (beyond 60 second cooldown)
         state_file.write_text(str(old_time))
 
@@ -236,7 +237,7 @@ class TestPreferGhForOwnRepos:
         """Hook should handle corrupted cooldown file gracefully"""
         # Create a corrupted cooldown file
         state_dir = Path.home() / ".claude" / "hook-state"
-        state_file = state_dir / "prefer-gh-cooldown"
+        state_file = state_dir / "prefer-gh-cooldown-test-session-abc123"
         state_dir.mkdir(parents=True, exist_ok=True)
         state_file.write_text("not-a-number-corrupted-data")
 

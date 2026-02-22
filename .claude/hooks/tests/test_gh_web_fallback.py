@@ -38,7 +38,8 @@ def run_hook(
     """
     input_data = {
         "tool_name": "Bash",
-        "tool_input": {"command": command}
+        "tool_input": {"command": command},
+        "session_id": "test-session-abc123"
     }
 
     # Create a temporary directory for mock tools
@@ -46,7 +47,7 @@ def run_hook(
         # Clear cooldown state if requested
         if clear_cooldown:
             state_dir = Path.home() / ".claude" / "hook-state"
-            state_file = state_dir / "gh-web-fallback-cooldown"
+            state_file = state_dir / "gh-web-fallback-cooldown-test-session-abc123"
             if state_file.exists():
                 state_file.unlink()
 
@@ -181,7 +182,7 @@ class TestGhWebFallback:
         with tempfile.TemporaryDirectory() as tmpdir:
             # Clear cooldown
             state_dir = Path.home() / ".claude" / "hook-state"
-            state_file = state_dir / "gh-web-fallback-cooldown"
+            state_file = state_dir / "gh-web-fallback-cooldown-test-session-abc123"
             if state_file.exists():
                 state_file.unlink()
 
@@ -243,7 +244,7 @@ class TestGhWebFallback:
 
         # Manually modify the cooldown file to simulate expired cooldown
         state_dir = Path.home() / ".claude" / "hook-state"
-        state_file = state_dir / "gh-web-fallback-cooldown"
+        state_file = state_dir / "gh-web-fallback-cooldown-test-session-abc123"
         old_time = time.time() - 305  # 305 seconds ago (beyond 300 second cooldown)
         state_file.write_text(str(old_time))
 
@@ -254,7 +255,7 @@ class TestGhWebFallback:
     def test_cooldown_file_creation(self):
         """Cooldown file should be created when suggestion is made"""
         state_dir = Path.home() / ".claude" / "hook-state"
-        state_file = state_dir / "gh-web-fallback-cooldown"
+        state_file = state_dir / "gh-web-fallback-cooldown-test-session-abc123"
         if state_file.exists():
             state_file.unlink()
 
@@ -266,7 +267,7 @@ class TestGhWebFallback:
         """Corrupted cooldown file should be handled gracefully"""
         # Create a corrupted cooldown file
         state_dir = Path.home() / ".claude" / "hook-state"
-        state_file = state_dir / "gh-web-fallback-cooldown"
+        state_file = state_dir / "gh-web-fallback-cooldown-test-session-abc123"
         state_dir.mkdir(parents=True, exist_ok=True)
         state_file.write_text("not-a-number-corrupted-data")
 
@@ -299,7 +300,7 @@ class TestGhWebFallback:
         with tempfile.TemporaryDirectory() as tmpdir:
             # Setup environment
             state_dir = Path.home() / ".claude" / "hook-state"
-            state_file = state_dir / "gh-web-fallback-cooldown"
+            state_file = state_dir / "gh-web-fallback-cooldown-test-session-abc123"
             if state_file.exists():
                 state_file.unlink()
 
