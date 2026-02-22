@@ -69,6 +69,7 @@ Limitations:
 - Only monitors Bash tool (not direct API operations from other tools)
 """
 import json
+import os
 import sys
 import re
 import time
@@ -78,7 +79,8 @@ from pathlib import Path
 COOLDOWN_PERIOD = 60
 
 # State directory location
-STATE_DIR = Path.home() / ".claude" / "hook-state"
+_state_dir_env = os.environ.get("CLAUDE_HOOK_STATE_DIR")
+STATE_DIR = Path(_state_dir_env) if _state_dir_env else Path.home() / ".claude" / "hook-state"
 
 # Patterns to detect operations that need attribution
 GIT_COMMIT_PATTERN = r'git\s+commit'
@@ -186,8 +188,11 @@ def is_first_trigger_this_session(session_id):
 def record_first_trigger(session_id):
     """Record that the first trigger has been shown this session."""
     session_file = STATE_DIR / f"gh-authorship-session-shown-{session_id}"
-    STATE_DIR.mkdir(parents=True, exist_ok=True)
-    session_file.touch()
+    try:
+        STATE_DIR.mkdir(parents=True, exist_ok=True)
+        session_file.touch()
+    except Exception as e:
+        print(f"Warning: Could not record session state: {e}", file=sys.stderr)
 
 
 def format_cooldown_message():

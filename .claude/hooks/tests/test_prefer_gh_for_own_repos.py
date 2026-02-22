@@ -19,6 +19,9 @@ HOOK_PATH = Path(__file__).parent.parent / "prefer-gh-for-own-repos.py"
 # Target owner from the hook
 TARGET_OWNER = "Jython1415"
 
+# Writable test state directory (redirects away from ~/.claude/hook-state/ for sandbox compat)
+TEST_STATE_DIR = Path(os.environ.get("TMPDIR", "/tmp")) / "claude-hook-test-state"
+
 
 def run_hook(
     tool_name: str,
@@ -48,8 +51,7 @@ def run_hook(
     with tempfile.TemporaryDirectory() as tmpdir:
         # Clear cooldown state if requested
         if clear_cooldown:
-            state_dir = Path.home() / ".claude" / "hook-state"
-            state_file = state_dir / "prefer-gh-cooldown-test-session-abc123"
+            state_file = TEST_STATE_DIR / "prefer-gh-cooldown-test-session-abc123"
             if state_file.exists():
                 state_file.unlink()
 
@@ -79,6 +81,8 @@ def run_hook(
 
         # Modify PATH based on gh_available to control whether real gh is accessible
         env = os.environ.copy()
+        env["CLAUDE_HOOK_STATE_DIR"] = str(TEST_STATE_DIR)
+        TEST_STATE_DIR.mkdir(parents=True, exist_ok=True)
 
         if gh_available:
             # When gh is available, prepend our mock to PATH
@@ -219,7 +223,8 @@ class TestPreferGhForOwnRepos:
         assert "hookSpecificOutput" in output1, "First call should suggest"
 
         # Manually modify the cooldown file to simulate expired cooldown
-        state_dir = Path.home() / ".claude" / "hook-state"
+        state_dir = TEST_STATE_DIR
+        state_dir.mkdir(parents=True, exist_ok=True)
         state_file = state_dir / "prefer-gh-cooldown-test-session-abc123"
         old_time = time.time() - 65  # 65 seconds ago (beyond 60 second cooldown)
         state_file.write_text(str(old_time))
@@ -236,9 +241,9 @@ class TestPreferGhForOwnRepos:
     def test_corrupted_cooldown_file(self):
         """Hook should handle corrupted cooldown file gracefully"""
         # Create a corrupted cooldown file
-        state_dir = Path.home() / ".claude" / "hook-state"
-        state_file = state_dir / "prefer-gh-cooldown-test-session-abc123"
+        state_dir = TEST_STATE_DIR
         state_dir.mkdir(parents=True, exist_ok=True)
+        state_file = state_dir / "prefer-gh-cooldown-test-session-abc123"
         state_file.write_text("not-a-number-corrupted-data")
 
         # Hook should still work and suggest (cooldown check fails gracefully)
