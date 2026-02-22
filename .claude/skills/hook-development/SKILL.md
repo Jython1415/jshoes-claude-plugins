@@ -71,6 +71,27 @@ Run hooks with `uv run --script hookname.py`.
 }
 ```
 
+### Blocking Tool Calls (PreToolUse only)
+
+To actually block a command in a `PreToolUse` hook, use `permissionDecision: "deny"`:
+
+```json
+{
+  "hookSpecificOutput": {
+    "hookEventName": "PreToolUse",
+    "permissionDecision": "deny",
+    "permissionDecisionReason": "Reason shown to Claude — explain why and what to do instead"
+  }
+}
+```
+
+**Common mistakes that do NOT block:**
+- `hookSpecificOutput.decision: "block"` — not a recognized field in any position
+- Top-level `decision: "block"` — the old deprecated format; avoid in new hooks
+- Using `additionalContext` instead of `permissionDecisionReason` — `additionalContext` is injected before execution and is irrelevant on a deny
+
+**Verify against docs:** When modifying blocking/decision fields, fetch the actual docs at `https://docs.anthropic.com/en/docs/claude-code/hooks` rather than trusting issue descriptions or AI-generated summaries. The hook API has deprecated fields that look plausible but do nothing.
+
 ### Error Handling Pattern
 
 ```python
