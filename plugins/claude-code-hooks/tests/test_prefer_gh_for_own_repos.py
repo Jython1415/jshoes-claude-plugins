@@ -14,7 +14,7 @@ from pathlib import Path
 import pytest
 
 # Path to the hook script
-HOOK_PATH = Path(__file__).parent.parent / "prefer-gh-for-own-repos.py"
+HOOK_PATH = Path(__file__).parent.parent / "hooks" / "prefer-gh-for-own-repos.py"
 
 # Target owner from the hook
 TARGET_OWNER = "Jython1415"

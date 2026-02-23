@@ -1,1 +1,0 @@
-../../plugins/claude-code-hooks/hooks/prefer-gh-for-own-repos.py

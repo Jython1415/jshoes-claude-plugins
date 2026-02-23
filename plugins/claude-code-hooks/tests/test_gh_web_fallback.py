@@ -15,7 +15,7 @@ from pathlib import Path
 import pytest
 
 # Path to the hook script
-HOOK_PATH = Path(__file__).parent.parent / "gh-web-fallback.py"
+HOOK_PATH = Path(__file__).parent.parent / "hooks" / "gh-web-fallback.py"
 
 
 def run_hook(

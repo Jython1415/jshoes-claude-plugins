@@ -15,7 +15,7 @@ from pathlib import Path
 import pytest
 
 # Path to the hook script
-HOOK_PATH = Path(__file__).parent.parent / "ensure-tmpdir.py"
+HOOK_PATH = Path(__file__).parent.parent / "hooks" / "ensure-tmpdir.py"
 
 
 def run_hook(env: dict | None = None) -> dict:

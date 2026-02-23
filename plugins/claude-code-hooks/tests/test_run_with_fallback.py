@@ -13,7 +13,7 @@ from pathlib import Path
 import pytest
 
 # Path to the wrapper script
-WRAPPER_PATH = Path(__file__).parent.parent / "run-with-fallback.sh"
+WRAPPER_PATH = Path(__file__).parent.parent / "hooks" / "run-with-fallback.sh"
 
 
 def run_wrapper(fail_mode: str, hook_path: str, stdin_data: str = '{"tool": "Test"}') -> dict:
@@ -41,14 +41,14 @@ class TestRunWithFallback:
     # Valid hook execution tests
     def test_valid_hook_execution_open_mode(self):
         """Valid hook should execute successfully in open mode"""
-        hook_path = str(Path(__file__).parent.parent / "normalize-line-endings.py")
+        hook_path = str(Path(__file__).parent.parent / "hooks" / "normalize-line-endings.py")
         output = run_wrapper("open", hook_path)
         # Empty output means hook executed and returned {}
         assert output == {}, "Valid hook should execute and return its output"
 
     def test_valid_hook_execution_closed_mode(self):
         """Valid hook should execute successfully in closed mode"""
-        hook_path = str(Path(__file__).parent.parent / "normalize-line-endings.py")
+        hook_path = str(Path(__file__).parent.parent / "hooks" / "normalize-line-endings.py")
         output = run_wrapper("closed", hook_path)
         # Empty output means hook executed and returned {}
         assert output == {}, "Valid hook should execute and return its output"
@@ -237,7 +237,7 @@ print(json.dumps({}))
 
     def test_all_current_hooks_work_through_wrapper(self):
         """All existing hooks should work when called through wrapper"""
-        hooks_dir = Path(__file__).parent.parent
+        hooks_dir = Path(__file__).parent.parent / "hooks"
         hook_files = [
             "normalize-line-endings.py",
             "gh-authorship-attribution.py",

@@ -11,7 +11,7 @@ from pathlib import Path
 import pytest
 
 # Path to the hook script
-HOOK_PATH = Path(__file__).parent.parent / "normalize-line-endings.py"
+HOOK_PATH = Path(__file__).parent.parent / "hooks" / "normalize-line-endings.py"
 
 
 def run_hook(tool_name: str, content: str, **extra_tool_input) -> dict:

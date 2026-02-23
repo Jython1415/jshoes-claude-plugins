@@ -1,1 +1,0 @@
-../../plugins/claude-code-hooks/hooks/suggest-uv-for-missing-deps.py

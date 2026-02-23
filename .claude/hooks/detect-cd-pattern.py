@@ -1,1 +1,0 @@
-../../plugins/claude-code-hooks/hooks/detect-cd-pattern.py

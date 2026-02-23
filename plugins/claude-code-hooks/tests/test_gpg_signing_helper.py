@@ -11,7 +11,7 @@ from pathlib import Path
 import pytest
 
 # Path to the hook script
-HOOK_PATH = Path(__file__).parent.parent / "gpg-signing-helper.py"
+HOOK_PATH = Path(__file__).parent.parent / "hooks" / "gpg-signing-helper.py"
 
 
 def run_hook_post_tool_use_failure(error_output: str, tool_name: str = "Bash") -> dict:

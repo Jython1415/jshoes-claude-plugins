@@ -1,1 +1,0 @@
-../../plugins/claude-code-hooks/hooks/prefer-modern-tools.py

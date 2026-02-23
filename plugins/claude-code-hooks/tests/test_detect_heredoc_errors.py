@@ -11,7 +11,7 @@ from pathlib import Path
 import pytest
 
 # Path to the hook script
-HOOK_PATH = Path(__file__).parent.parent / "detect-heredoc-errors.py"
+HOOK_PATH = Path(__file__).parent.parent / "hooks" / "detect-heredoc-errors.py"
 
 # The specific error message that triggers the hook
 HEREDOC_ERROR = "can't create temp file for here document"

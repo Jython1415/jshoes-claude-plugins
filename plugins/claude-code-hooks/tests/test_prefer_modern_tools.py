@@ -15,7 +15,7 @@ from pathlib import Path
 import pytest
 
 # Path to the hook script
-HOOK_PATH = Path(__file__).parent.parent / "prefer-modern-tools.py"
+HOOK_PATH = Path(__file__).parent.parent / "hooks" / "prefer-modern-tools.py"
 
 
 def run_hook(tool_name: str, command: str, fd_available: bool = True, rg_available: bool = True) -> dict:
