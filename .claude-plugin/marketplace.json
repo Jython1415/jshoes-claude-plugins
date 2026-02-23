@@ -92,7 +92,7 @@
     {
       "name": "dev-workflow",
       "description": "Development workflow skills for GitHub-based repos. Includes /session (full dev lifecycle), /triage (issue prioritization), /solve (issue-to-PR), /code-review (multi-agent PR review), /consult (structured decisions), /reflect (session retrospective), and /issue (file well-researched issues).",
-      "version": "1.1.2",
+      "version": "1.2.0",
       "author": {
         "name": "Jython1415",
         "url": "https://github.com/Jython1415"
