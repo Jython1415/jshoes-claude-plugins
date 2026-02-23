@@ -72,7 +72,9 @@ to Phase 4.
 
 **Needs design decisions** -- There are open questions about approach,
 trade-offs, or how the solution fits into the existing architecture.
-Follow `/consult` principles for structured decision-making:
+Invoke `/consult` via the Skill tool to handle this phase -- do not call
+AskUserQuestion directly. The Skill tool ensures the full consult discipline
+is applied:
 
 - Present only high-leverage decisions where the user's input changes the
   outcome

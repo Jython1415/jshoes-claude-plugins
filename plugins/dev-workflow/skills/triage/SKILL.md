@@ -56,7 +56,10 @@ context, handoff notes, or activity logs are stored. Look for:
 
 Analyze issues along these dimensions:
 
-- **Dependencies**: Which issues unblock others? Those go first.
+- **Dependencies**: Which issues unblock others? Those go first. Verify
+  that claimed blockers are hard dependencies (overlapping files, required
+  migrations, shared prerequisites) -- not just thematic predecessors.
+  Overstating a block misleads the user about what can be parallelized.
 - **Effort**: Roughly how large is each issue? Can it fit in a single
   PR or does it need splitting?
 - **Urgency**: Is anything broken or degraded right now?
