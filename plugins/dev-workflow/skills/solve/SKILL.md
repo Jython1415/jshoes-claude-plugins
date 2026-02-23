@@ -39,8 +39,11 @@ If multiple issues were provided, note how they relate to each other.
 
 ## Phase 2: Explore
 
-Build a deep understanding of the codebase as it relates to the issues.
-Use subagents (Task tool, subagent_type=Explore) to:
+Build a complete understanding of everything the issue requires before
+you can choose an approach. By the end of this phase you should be able
+to answer every design question the issue raises. Use subagents
+(Task tool, subagent_type=Explore) for codebase work, but own external
+research directly:
 
 1. Read CLAUDE.md and any project documentation
 2. Find code directly relevant to the issue(s) -- modules, files, patterns,
@@ -52,6 +55,13 @@ Use subagents (Task tool, subagent_type=Explore) to:
    When the codebase has infrastructure, plugins, or related subsystems,
    check whether an established pattern already handles the problem you're
    solving. Adopting an existing pattern is preferable to reinventing it.
+6. **Follow every link in the issue.** If the issue references papers,
+   docs, blog posts, or external resources, fetch and read them with
+   WebFetch before moving on. If it references specific code or files,
+   read them. If it says "investigation required," complete that
+   investigation here. Do not delegate external URL fetching to a
+   subagent -- subagents may summarize from training data rather than
+   actually fetching the content.
 
 **Do not ask the user anything yet.** Your questions in Phase 3 must be
 informed by what you learn here. Generic questions waste the user's time
