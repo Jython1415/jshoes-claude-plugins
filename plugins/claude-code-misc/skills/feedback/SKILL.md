@@ -1,10 +1,11 @@
 ---
 name: feedback
 description: |
-  Report a bug, feature request, or optimization idea for jshoes-claude-plugins.
-  Use when a plugin consumer wants to file an issue against the hooks, skills,
-  or any component of this plugin ecosystem. Gathers the right context for the
-  specific issue type and files a structured GitHub issue.
+  ONLY for filing issues and suggestions against jshoes-claude-plugins
+  (https://github.com/Jython1415/jshoes-claude-plugins). Do NOT use for
+  filing issues in any other repository. Use when a consumer of the
+  jshoes-claude-plugins hooks or skills wants to report a bug, request a
+  feature, or suggest an optimization back to this plugin ecosystem.
 argument-hint: "<description>"
 ---
 
