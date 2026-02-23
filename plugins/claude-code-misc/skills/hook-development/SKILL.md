@@ -1,31 +1,31 @@
 ---
 name: hook-development
-description: Read this skill when working on hooks in plugins/claude-code-hooks/hooks/ - covers development process, PEP 723 patterns, JSON output, and testing philosophy
+description: Read this skill when working on Claude Code hook development - covers hook architecture, PEP 723 patterns, JSON output, and testing philosophy
 ---
 
 # Hook Development Skill
 
-When working on hooks in `plugins/claude-code-hooks/hooks/`, follow these guidelines.
+When working on Claude Code hooks, follow these guidelines.
 
 ## Hook Architecture
 
-Hooks in this repository use a **plugin architecture**:
+Claude Code hooks are Python scripts executed by the Claude Code CLI at specific lifecycle events. They are configured in `.claude/settings.json` (or `settings.local.json`) and run outside the Claude Code process.
 
-- **Source of truth**: `plugins/claude-code-hooks/hooks/`
-- **Tests**: `plugins/claude-code-hooks/tests/`
-- **Distribution**: via plugin marketplace
+Hooks live wherever you put them — common locations:
+- `~/.claude/hooks/` — global hooks (apply to all projects)
+- `.claude/hooks/` — project-local hooks (checked in or gitignored)
+- A plugin directory distributed via the marketplace
 
-When editing hooks, edit the plugin source files in `plugins/claude-code-hooks/hooks/`.
+When editing hooks, edit the source files directly (not symlinks or copies).
 
 ## Hook Development Process
 
-1. Create Python script with PEP 723 header in `plugins/claude-code-hooks/hooks/`
+1. Create a Python script with a PEP 723 header
 2. Implement JSON input/output handling
-3. Create test file in `plugins/claude-code-hooks/tests/test_<hookname>.py`
-4. Write comprehensive tests and verify they pass (`uv run pytest`)
-5. Add to settings hooks configuration
-6. Document in `plugins/claude-code-misc/README.md`
-7. User restarts Claude Code session to apply
+3. Add the hook to your `.claude/settings.json` hooks configuration
+4. Create a test file alongside or near the hook
+5. Write comprehensive tests and verify they pass (`uv run pytest`)
+6. Restart the Claude Code session to apply changes
 
 ## PEP 723 Inline Dependencies
 
@@ -191,18 +191,13 @@ Use empty flag files (existence = shown), no timestamp. Guidance text: "appears 
 
 ### State directory
 
-Use `~/.claude/hook-state/` (global) for hooks installed via the marketplace. State files are tiny; accumulation is negligible.
+Use `~/.claude/hook-state/` for state files. State files are tiny; accumulation is negligible. Support a `CLAUDE_HOOK_STATE_DIR` env var override so tests can redirect state to a temp directory.
 
 ### Tests for stateful hooks
 
-**Never reference `~/.claude/hook-state/` directly in test helpers.** Test code runs inside
-a sandboxed Bash tool call; `unlink()` and `write_text()` on that path will fail with
-`PermissionError`. (The hooks themselves work fine — they run as external subprocesses outside
-the sandbox.)
+**Never reference `~/.claude/hook-state/` directly in test helpers.** Test code that calls `unlink()` or `write_text()` on that path can fail in sandboxed environments. (Hooks themselves work fine — they run as external subprocesses.)
 
-Instead, redirect state to a writable temp dir via the `CLAUDE_HOOK_STATE_DIR` env var, which
-both hooks support. Use a module-level constant so state persists across multiple `run_hook()`
-calls within the same test (required for cooldown tests):
+Instead, redirect state via a `CLAUDE_HOOK_STATE_DIR` env var. Use a module-level constant so state persists across multiple `run_hook()` calls within the same test (required for cooldown tests):
 
 ```python
 import os
@@ -269,7 +264,7 @@ from pathlib import Path
 
 import pytest
 
-HOOK_PATH = Path(__file__).parent.parent / "hooks" / "hookname.py"
+HOOK_PATH = Path(__file__).parent / "hookname.py"  # adjust relative path as needed
 
 
 def run_hook(tool_name: str, command: str) -> dict:
@@ -301,25 +296,31 @@ class TestMyHook:
 ## Running Tests
 
 ```bash
-# Run all hook tests
+# Run all tests
 uv run pytest
 
-# Run specific hook test
-uv run pytest plugins/claude-code-hooks/tests/test_hookname.py
+# Run a specific test file
+uv run pytest tests/test_hookname.py
 
 # Verbose output
 uv run pytest -v
 
-# Run tests matching pattern
+# Run tests matching a pattern
 uv run pytest -k "subshell"
 ```
 
 ## Hook Path Convention in settings.json
 
-**Always use `$CLAUDE_PROJECT_DIR` for hook paths:**
+For project-local hooks, use `$CLAUDE_PROJECT_DIR` so paths resolve correctly regardless of working directory or user:
 
 ```json
-"command": "uv run --script \"$CLAUDE_PROJECT_DIR\"/plugins/claude-code-hooks/hooks/hookname.py"
+"command": "uv run --script \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/hookname.py"
+```
+
+For global hooks installed to `~/.claude/hooks/`, you can use the full path directly:
+
+```json
+"command": "uv run --script \"/Users/yourname/.claude/hooks/hookname.py\""
 ```
 
 Why not `~`? Tilde expands to current user's home, which differs in Claude Code Web.
@@ -330,7 +331,7 @@ Why not relative paths? They break when working directory changes.
 Test hooks before committing:
 
 ```bash
-echo '{"tool_name":"Bash","tool_input":{"command":"test"}}' | uv run --script plugins/claude-code-hooks/hooks/hookname.py
+echo '{"tool_name":"Bash","tool_input":{"command":"test"}}' | uv run --script path/to/hookname.py
 ```
 
 ## Performance
@@ -339,10 +340,8 @@ echo '{"tool_name":"Bash","tool_input":{"command":"test"}}' | uv run --script pl
 - No network requests in hook code. Latency is unacceptable in the hot path.
 - No heavy computation. Parse input, check a condition, write a state file, output JSON — that's the expected pattern.
 - Focus on correctness and lifecycle placement over micro-optimization.
-- This repo assumes `uv` is available; `uv run --script` overhead is acceptable.
+- This skill assumes `uv` is available; `uv run --script` overhead is acceptable.
 
 ## See Also
 
-- `plugins/claude-code-misc/README.md` - Comprehensive hook documentation and coverage details
-- `plugins/claude-code-hooks/tests/` - Test examples and patterns
-- `plugins/claude-code-hooks/` - Plugin source (marketplace distribution)
+- [Claude Code Hooks documentation](https://docs.anthropic.com/en/docs/claude-code/hooks)

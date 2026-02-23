@@ -1,7 +1,7 @@
 {
   "name": "claude-code-misc",
   "description": "Miscellaneous skills and documentation for Claude Code development: hook authoring guide and hook reference",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "author": {
     "name": "Jython1415",
     "url": "https://github.com/Jython1415"
