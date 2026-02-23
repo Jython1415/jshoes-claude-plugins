@@ -4,7 +4,7 @@ This repository contains version-controlled configuration for **Claude Code CLI*
 
 ## Repository Structure
 - `plugins/claude-code-hooks/` - Hook scripts and tests (published to marketplace)
-- `plugins/claude-code-misc/` - Hook development skill and hook reference docs
+- `plugins/claude-code-misc/` - Hook development skill, hook reference docs, and `/feedback` skill (consumer issue filing)
 - `plugins/dev-workflow/` - Dev workflow skills (if present)
 - Root `CLAUDE.md` - Project instructions for Claude
 
@@ -34,6 +34,7 @@ Each plugin has a `version` field in `plugins/<name>/.claude-plugin/plugin.json`
 ### Writing Skills
 - Do not use `allowed-tools` in skill frontmatter
 - Skills should be self-contained SKILL.md files under `plugins/<name>/skills/<skill-name>/`
+- When a skill has a deliberately limited scope, lead the description with explicit constraint language (e.g., "ONLY for X"). Contextual hints are not enough — ambiguous descriptions invite misuse in unintended contexts.
 
 ### Workflow
 Always create a feature branch before committing changes. Never commit directly to `main`. Use the `/solve` pattern (or create a branch manually) before making the first commit.
