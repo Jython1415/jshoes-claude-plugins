@@ -264,7 +264,8 @@ from pathlib import Path
 
 import pytest
 
-HOOK_PATH = Path(__file__).parent / "hookname.py"  # adjust relative path as needed
+HOOK_PATH = Path(__file__).parent.parent / "hooks" / "hookname.py"
+# ^ assumes tests/test_hookname.py → hooks/hookname.py sibling layout
 
 
 def run_hook(tool_name: str, command: str) -> dict:
