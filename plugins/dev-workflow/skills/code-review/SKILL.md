@@ -20,9 +20,10 @@ parallel agents.
 
 ## Arguments
 
-- `--light`: Single-agent Sonnet review instead of the full multi-agent
-  pipeline. Appropriate for docs, version bumps, and small isolated changes.
-  Replaces Steps 1–3 with one structured pass; Steps 4–5 apply normally.
+- `--light`: Cost-optimized single-agent review. Same quality bar as the
+  full pipeline; uses Sonnet instead of Opus and one agent instead of many.
+  A good default for any PR when cost matters. Replaces Steps 1–3 with one
+  structured pass; Steps 4–5 apply normally.
 - `--comment`: Post inline GitHub comments for each finding (applies in
   both modes).
 
@@ -33,7 +34,20 @@ instructions:
 
 1. Run `gh pr view <PR_NUMBER>` to get the PR title and description.
 2. Run `gh pr diff <PR_NUMBER>` to get the full diff.
-3. Review the diff for real issues only. For each finding, it must have:
+3. Do a thorough review. Work through these passes in order:
+
+   **Pass 1 — Category sweep (before synthesizing anything):**
+   For each category below, scan the entire diff and note candidates:
+   - `correctness`: logic errors, wrong results, missing edge cases
+   - `security`: injection, auth bypass, data exposure, unsafe operations
+   - `convention`: CLAUDE.md and README.md violations (read them if present)
+   - `performance`: algorithmic issues, unnecessary work in hot paths
+
+   **Pass 2 — Validate candidates:**
+   For each candidate from Pass 1, apply the HIGH SIGNAL ONLY bar:
+   flag only issues where code will definitely fail, produce wrong results
+   regardless of inputs, or clearly violate a stated convention.
+   For each surviving finding, it must have:
    - **Category**: one of `correctness`, `security`, `convention`,
      `performance`
    - **Severity**: one of `critical`, `major`, `minor`
@@ -41,11 +55,13 @@ instructions:
      the issue — if you cannot cite a specific snippet, skip the finding
    - **Confidence**: 0.0–1.0 — skip any finding below 0.7
 
-Apply the same HIGH SIGNAL ONLY standard as the full review: flag only
-issues where code will definitely fail, produce wrong results regardless
-of inputs, or clearly violate a stated convention. Return a list of
-findings with: file path, line range, category, severity, description,
-evidence, confidence.
+   **Pass 3 — Self-check:**
+   Before returning, ask: "Is there anything I missed?" Re-read the diff
+   summary and any high-risk areas (auth, data mutation, external calls).
+   Add any new findings that pass the bar above.
+
+4. Return a list of findings with: file path, line range, category,
+   severity, description, evidence, confidence.
 
 After this agent returns, proceed to Step 4.
 
