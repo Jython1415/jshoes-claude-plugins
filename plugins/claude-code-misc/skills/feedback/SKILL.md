@@ -121,9 +121,14 @@ exists, note it for cross-referencing in the body.
 
 **Filing rules:**
 - Repo: `Jython1415/jshoes-claude-plugins`
-- Use `gh issue create -R Jython1415/jshoes-claude-plugins --title "..." --body-file <tmpfile>`
+- Write the issue body to a temp file in the current project directory, then use
+  `gh issue create -R Jython1415/jshoes-claude-plugins --title "..." --body-file <tmpfile>`
 - Title format: `<Component>: <short description>` (e.g., `detect-cd-pattern: false positive on subshell cd`)
-- Add footer: `---\n*Filed with /feedback — jshoes-claude-plugins*`
+- Add a footer as the last two lines of the body:
+  ```
+  ---
+  *Filed with /feedback — jshoes-claude-plugins*
+  ```
 - Show the issue URL after filing
 
 ## Guidelines
