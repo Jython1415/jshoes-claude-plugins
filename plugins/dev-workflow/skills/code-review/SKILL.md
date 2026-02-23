@@ -34,13 +34,25 @@ instructions:
 
 1. Run `gh pr view <PR_NUMBER>` to get the PR title and description.
 2. Run `gh pr diff <PR_NUMBER>` to get the full diff.
-3. Do a thorough review. Work through these passes in order:
+3. **Fetch convention docs (mandatory):** Check for CLAUDE.md and README.md
+   in the repo root and in every directory that contains a modified file.
+   Read each file you find. Do this before any review passes begin.
+4. **Enumerate changed files:** List every file modified in the diff. Mark
+   any that are high-risk: authentication/authorization logic, state
+   mutation, external API calls, data serialization, security-adjacent code.
+   This list is your coverage checklist for Pass 3.
+5. **Orient:** Write 2–3 sentences summarizing what this PR does, in plain
+   language. This grounds the review passes that follow.
+6. Do a thorough review. Work through these passes in order:
 
-   **Pass 1 — Category sweep (before synthesizing anything):**
-   For each category below, scan the entire diff and note candidates:
+   **Pass 1 — Category sweep:**
+   Using the convention docs from step 3, work through each file from
+   step 4, starting with high-risk files. For each file, scan for
+   candidates in each category:
    - `correctness`: logic errors, wrong results, missing edge cases
    - `security`: injection, auth bypass, data exposure, unsafe operations
-   - `convention`: CLAUDE.md and README.md violations (read them if present)
+   - `convention`: violations of CLAUDE.md and README.md rules found in
+     step 3
    - `performance`: algorithmic issues, unnecessary work in hot paths
 
    **Pass 2 — Validate candidates:**
@@ -55,12 +67,14 @@ instructions:
      the issue — if you cannot cite a specific snippet, skip the finding
    - **Confidence**: 0.0–1.0 — skip any finding below 0.7
 
-   **Pass 3 — Self-check:**
-   Before returning, ask: "Is there anything I missed?" Re-read the diff
-   summary and any high-risk areas (auth, data mutation, external calls).
-   Add any new findings that pass the bar above.
+   **Pass 3 — Coverage check, then self-check:**
+   List every file from step 4. Confirm you examined each one in Pass 1.
+   For any file not yet examined, scan it now using the Pass 1 categories.
+   Then ask: "Is there anything I missed?" Re-read any high-risk areas
+   (auth, data mutation, external calls). Add new findings that pass the
+   bar above.
 
-4. Return a list of findings with: file path, line range, category,
+7. Return a list of findings with: file path, line range, category,
    severity, description, evidence, confidence.
 
 After this agent returns, proceed to Step 4.
