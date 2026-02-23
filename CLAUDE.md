@@ -13,42 +13,9 @@ This repository contains version-controlled configuration for **Claude Code CLI*
 When working in this repository, you are managing the user's Claude Code configuration.
 
 ### Modifying Hooks
-- Hooks are Python scripts with PEP 723 inline dependency declarations
-- All hooks must output valid JSON (even empty `{}` when no action needed)
-- Use `uv run --script` to execute hooks
-- Test hooks manually before committing: `echo '{"test":"data"}' | uv run --script plugins/claude-code-hooks/hooks/hookname.py`
+Use the `/hook-development` skill (`plugins/claude-code-misc/skills/hook-development/SKILL.md`) for all hook authoring, testing, lifecycle, and performance guidance.
 
-### Hook Development Guidelines
-1. Always include PEP 723 header. Use `requires-python` for hooks with no
-   dependencies. Only add `dependencies = [...]` when the hook actually
-   imports third-party packages — `uv` does extra work (writing to TMPDIR)
-   when `dependencies` is present, even as an empty list.
-2. Use try-except to catch errors and output `{}` on failure
-3. For PostToolUseFailure hooks, check both `error` and `tool_result.error` fields
-4. Use `additionalContext` for guidance, not `decision` in PostToolUseFailure
-5. Test locally before deploying
-6. Document hook behavior in `plugins/claude-code-misc/README.md`
-7. Use `SessionStart` for session-initialization concerns (environment
-   setup, directory creation). Use `PreToolUse`/`PostToolUse` only for
-   per-command validation and guidance.
-8. Per-session state: use `session_id` from the hook's JSON input to scope
-   state filenames (e.g., `STATE_DIR / f"my-cooldown-{session_id}"`). All
-   hook events include `session_id`. This avoids cross-session contamination
-   — each Claude session is isolated and cannot see another session's
-   `additionalContext`, so a global cooldown from Session A incorrectly
-   suppresses Session B's reminders. Never use a SessionStart hook to reset
-   shared state; let `session_id` do the work.
-9. State location: use `~/.claude/hook-state/` (global) for cross-project
-   concerns (advisory reminders, general behavior nudges). Use project-local
-   `.claude/` for state semantically tied to a specific codebase. Marketplace
-   hooks should always use global storage.
-
-### Hook Performance Assumptions
-- This repo assumes `uv` is available for running Python hooks
-- Python hooks via `uv run --script` are acceptable overhead as long as
-  hooks are written with performance in mind (no network requests, no
-  heavy computation in the hot path)
-- Focus on correctness and lifecycle placement over micro-optimization
+Quick manual test: `echo '{"tool_name":"Bash","tool_input":{"command":"test"}}' | uv run --script plugins/claude-code-hooks/hooks/hookname.py`
 
 ### Modifying Settings
 - Edit your local `.claude/settings.json` directly (not tracked in git)
@@ -140,51 +107,4 @@ For Claude Code Web usage in other repositories, you can use the provided GitHub
 
 ## Testing Philosophy for Hooks
 
-When writing tests for hooks in this repository:
-
-### Test Behavior, Not Content
-
-**DO**:
-- Verify that guidance is presented when expected
-- Test trigger conditions (what activates the hook)
-- Validate JSON output structure
-- Check that hook activates/deactivates correctly
-
-**DON'T**:
-- Validate specific strings or phrases in guidance text
-- Check for particular examples in output
-- Assert on exact wording or formatting
-- Test content that may evolve over time
-
-### Rationale
-
-Guidance messages should be improvable without breaking tests. Tests should validate that hooks work correctly, not freeze the specific content of their messages.
-
-### Examples
-
-❌ **Bad Test** (brittle, tests content):
-```python
-def test_guidance_includes_examples():
-    output = run_hook("Bash", 'git commit -m "Test"')
-    context = output["hookSpecificOutput"]["additionalContext"]
-    assert "Co-authored-by" in context  # Breaks if wording changes
-    assert "claude.ai/code" in context  # Brittle
-```
-
-✅ **Good Test** (robust, tests behavior):
-```python
-def test_guidance_presented_for_commit():
-    output = run_hook("Bash", 'git commit -m "Test"')
-    assert "hookSpecificOutput" in output  # Hook triggered
-    assert "additionalContext" in output["hookSpecificOutput"]  # Guidance exists
-    assert len(output["hookSpecificOutput"]["additionalContext"]) > 0  # Non-empty
-```
-
-### Test Categories
-
-1. **Trigger Tests**: Verify hook activates on correct inputs
-2. **Non-Trigger Tests**: Verify hook stays silent on incorrect inputs
-3. **Structure Tests**: Validate JSON format and required fields
-4. **Edge Case Tests**: Handle malformed input, missing fields, etc.
-
-This philosophy applies to all hooks in `plugins/claude-code-hooks/hooks/`.
+See the `/hook-development` skill for the full testing philosophy. The key principle: **test behavior, not content** — verify that hooks trigger correctly and produce valid JSON, not the specific wording of guidance messages.

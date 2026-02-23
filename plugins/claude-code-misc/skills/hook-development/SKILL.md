@@ -29,21 +29,26 @@ When editing hooks, edit the plugin source files in `plugins/claude-code-hooks/h
 
 ## PEP 723 Inline Dependencies
 
-All hooks must include a PEP 723 header for inline script dependencies:
+All hooks must include a PEP 723 header:
 
+**No third-party dependencies** — use `requires-python` only:
 ```python
 #!/usr/bin/env python3
 # /// script
-# dependencies = []
+# requires-python = ">=3.8"
 # ///
 ```
 
-Add dependencies as needed:
+**With third-party dependencies** — use `dependencies`:
 ```python
 # /// script
 # dependencies = ["requests>=2.28.0"]
 # ///
 ```
+
+Do not use `dependencies = []` (an empty list). `uv` does extra work
+(writing to TMPDIR) when `dependencies` is present, even as an empty
+list. Use `requires-python` for dependency-free hooks instead.
 
 Run hooks with `uv run --script hookname.py`.
 
@@ -115,6 +120,22 @@ except Exception:
 - Error is in top-level `"error"` field (not `tool_result.error`)
 - `decision: "block"` is parsed but NOT acted upon by the system
 - Use `additionalContext` for guidance instead of `decision`
+
+## Hook Lifecycle Placement
+
+Choose the right event type for your hook's concern:
+
+| Event | Use for |
+|-------|---------|
+| `SessionStart` | One-time session setup: creating directories, environment checks |
+| `PreToolUse` | Per-command validation, blocking, or pre-execution guidance |
+| `PostToolUse` | Per-command post-execution guidance or logging |
+| `PostToolUseFailure` | Guidance when a tool call fails |
+
+**Rules:**
+- Use `SessionStart` for setup that should happen once per session, not on every tool call.
+- Use `PreToolUse`/`PostToolUse` only for per-command concerns — they run on every matching tool call.
+- Never use a `SessionStart` hook to reset shared state. Use `session_id` scoping so each session manages its own state independently.
 
 ## State Management
 
@@ -312,9 +333,16 @@ Test hooks before committing:
 echo '{"tool_name":"Bash","tool_input":{"command":"test"}}' | uv run --script plugins/claude-code-hooks/hooks/hookname.py
 ```
 
+## Performance
+
+- Hooks run on every matching tool call — keep them fast.
+- No network requests in hook code. Latency is unacceptable in the hot path.
+- No heavy computation. Parse input, check a condition, write a state file, output JSON — that's the expected pattern.
+- Focus on correctness and lifecycle placement over micro-optimization.
+- This repo assumes `uv` is available; `uv run --script` overhead is acceptable.
+
 ## See Also
 
 - `plugins/claude-code-misc/README.md` - Comprehensive hook documentation and coverage details
 - `plugins/claude-code-hooks/tests/` - Test examples and patterns
 - `plugins/claude-code-hooks/` - Plugin source (marketplace distribution)
-- Root `CLAUDE.md` - Repository management instructions
