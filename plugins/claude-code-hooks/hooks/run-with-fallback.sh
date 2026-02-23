@@ -24,13 +24,17 @@ _log_hook_event() {
     local log_dir="${CLAUDE_HOOK_LOG_DIR:-}"
     [[ -z "$log_dir" ]] && return 0
     mkdir -p "$log_dir" 2>/dev/null || return 0
-    python3 -c "
-import json, datetime, sys
+    HOOK_LOG_HOOK_NAME="$HOOK_NAME" \
+    HOOK_LOG_DIR="$log_dir" \
+    HOOK_LOG_INPUT="$INPUT" \
+    HOOK_LOG_OUTPUT="$output" \
+    uv run python -c "
+import json, datetime, os
 
-hook_name = sys.argv[1]
-log_dir   = sys.argv[2]
-raw_input = sys.argv[3]
-raw_output = sys.argv[4]
+hook_name  = os.environ['HOOK_LOG_HOOK_NAME']
+log_dir    = os.environ['HOOK_LOG_DIR']
+raw_input  = os.environ['HOOK_LOG_INPUT']
+raw_output = os.environ['HOOK_LOG_OUTPUT']
 
 try:
     input_data = json.loads(raw_input)
@@ -53,7 +57,7 @@ entry = {
 
 with open(f'{log_dir}/{session_id}.jsonl', 'a') as f:
     f.write(json.dumps(entry) + '\n')
-" "$HOOK_NAME" "$log_dir" "$INPUT" "$output" 2>/dev/null || return 0
+" 2>/dev/null || return 0
 }
 
 # Check if hook file exists

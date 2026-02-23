@@ -315,13 +315,13 @@ class TestLogging:
         """No log file should be created when CLAUDE_HOOK_LOG_DIR is not set"""
         hook_path = str(Path(__file__).parent.parent / "hooks" / "normalize-line-endings.py")
         # Explicitly unset the env var to guarantee no logging
-        env = {k: v for k, v in __import__("os").environ.items() if k != "CLAUDE_HOOK_LOG_DIR"}
-        result = __import__("subprocess").run(
+        clean_env = {k: v for k, v in os.environ.items() if k != "CLAUDE_HOOK_LOG_DIR"}
+        result = subprocess.run(
             [str(WRAPPER_PATH), "open", hook_path],
             input='{"session_id": "test-session", "tool": "Test"}',
             capture_output=True,
             text=True,
-            env=env,
+            env=clean_env,
         )
         assert result.returncode == 0
         # tmp_path is empty — no log file was created anywhere unexpected
@@ -348,9 +348,9 @@ class TestLogging:
             stdin_data='{"session_id": "sess1", "tool": "Test"}',
             env={"CLAUDE_HOOK_LOG_DIR": str(log_dir)},
         )
-        entries = [(log_dir / "sess1.jsonl").read_text().strip().splitlines()]
-        assert len(entries[0]) == 1, "Should have exactly one log entry"
-        entry = json.loads(entries[0][0])
+        lines = (log_dir / "sess1.jsonl").read_text().strip().splitlines()
+        assert len(lines) == 1, "Should have exactly one log entry"
+        entry = json.loads(lines[0])
         assert "ts" in entry, "Entry should have timestamp"
         assert "hook" in entry, "Entry should have hook name"
         assert "input" in entry, "Entry should have input"
@@ -413,6 +413,23 @@ class TestLogging:
             env={"CLAUDE_HOOK_LOG_DIR": ""},
         )
         assert list(tmp_path.iterdir()) == [], "No log files should be created with empty env var"
+
+    def test_logging_separate_files_per_session(self, tmp_path):
+        """Two invocations with different session_ids should produce separate log files"""
+        hook_path = str(Path(__file__).parent.parent / "hooks" / "normalize-line-endings.py")
+        log_dir = tmp_path / "hook-logs"
+        run_wrapper(
+            "open", hook_path,
+            stdin_data='{"session_id": "session-A", "tool": "Test"}',
+            env={"CLAUDE_HOOK_LOG_DIR": str(log_dir)},
+        )
+        run_wrapper(
+            "open", hook_path,
+            stdin_data='{"session_id": "session-B", "tool": "Test"}',
+            env={"CLAUDE_HOOK_LOG_DIR": str(log_dir)},
+        )
+        assert (log_dir / "session-A.jsonl").exists(), "File for session-A should exist"
+        assert (log_dir / "session-B.jsonl").exists(), "File for session-B should exist"
 
 
 def main():
