@@ -5,6 +5,7 @@ This test suite validates that the wrapper properly handles hook execution failu
 and prevents deadlocks as described in issue #26.
 """
 import json
+import os
 import subprocess
 import sys
 import tempfile
@@ -16,13 +17,15 @@ import pytest
 WRAPPER_PATH = Path(__file__).parent.parent / "hooks" / "run-with-fallback.sh"
 
 
-def run_wrapper(fail_mode: str, hook_path: str, stdin_data: str = '{"tool": "Test"}') -> dict:
+def run_wrapper(fail_mode: str, hook_path: str, stdin_data: str = '{"tool": "Test"}', env: dict | None = None) -> dict:
     """Helper function to run the wrapper with given input and return parsed output"""
+    merged_env = {**os.environ, **(env or {})}
     result = subprocess.run(
         [str(WRAPPER_PATH), fail_mode, hook_path],
         input=stdin_data,
         capture_output=True,
-        text=True
+        text=True,
+        env=merged_env,
     )
 
     # Wrapper should always exit 0 (non-blocking)
@@ -303,6 +306,113 @@ print(json.dumps({}))
             # If it has a decision, it should not be deny (unknown mode != closed)
             assert hook_output["permissionDecision"] != "deny", \
                 "Unknown mode should not block like closed mode"
+
+
+class TestLogging:
+    """Tests for the CLAUDE_HOOK_LOG_DIR tee-logging feature"""
+
+    def test_logging_disabled_by_default(self, tmp_path):
+        """No log file should be created when CLAUDE_HOOK_LOG_DIR is not set"""
+        hook_path = str(Path(__file__).parent.parent / "hooks" / "normalize-line-endings.py")
+        # Explicitly unset the env var to guarantee no logging
+        env = {k: v for k, v in __import__("os").environ.items() if k != "CLAUDE_HOOK_LOG_DIR"}
+        result = __import__("subprocess").run(
+            [str(WRAPPER_PATH), "open", hook_path],
+            input='{"session_id": "test-session", "tool": "Test"}',
+            capture_output=True,
+            text=True,
+            env=env,
+        )
+        assert result.returncode == 0
+        # tmp_path is empty — no log file was created anywhere unexpected
+        assert list(tmp_path.iterdir()) == []
+
+    def test_logging_creates_jsonl_file(self, tmp_path):
+        """Log file should be created when CLAUDE_HOOK_LOG_DIR is set"""
+        hook_path = str(Path(__file__).parent.parent / "hooks" / "normalize-line-endings.py")
+        log_dir = tmp_path / "hook-logs"
+        run_wrapper(
+            "open", hook_path,
+            stdin_data='{"session_id": "abc123", "tool": "Test"}',
+            env={"CLAUDE_HOOK_LOG_DIR": str(log_dir)},
+        )
+        log_file = log_dir / "abc123.jsonl"
+        assert log_file.exists(), "Log file should be created for the session"
+
+    def test_logging_entry_format(self, tmp_path):
+        """Each JSONL entry should have ts, hook, input, and output fields"""
+        hook_path = str(Path(__file__).parent.parent / "hooks" / "normalize-line-endings.py")
+        log_dir = tmp_path / "hook-logs"
+        run_wrapper(
+            "open", hook_path,
+            stdin_data='{"session_id": "sess1", "tool": "Test"}',
+            env={"CLAUDE_HOOK_LOG_DIR": str(log_dir)},
+        )
+        entries = [(log_dir / "sess1.jsonl").read_text().strip().splitlines()]
+        assert len(entries[0]) == 1, "Should have exactly one log entry"
+        entry = json.loads(entries[0][0])
+        assert "ts" in entry, "Entry should have timestamp"
+        assert "hook" in entry, "Entry should have hook name"
+        assert "input" in entry, "Entry should have input"
+        assert "output" in entry, "Entry should have output"
+
+    def test_logging_captures_input_and_output(self, tmp_path):
+        """Log entry should contain the actual input and hook output"""
+        hook_path = str(Path(__file__).parent.parent / "hooks" / "normalize-line-endings.py")
+        log_dir = tmp_path / "hook-logs"
+        stdin_data = '{"session_id": "sess2", "tool": "Write", "content": "hello"}'
+        run_wrapper(
+            "open", hook_path,
+            stdin_data=stdin_data,
+            env={"CLAUDE_HOOK_LOG_DIR": str(log_dir)},
+        )
+        entry_line = (log_dir / "sess2.jsonl").read_text().strip()
+        entry = json.loads(entry_line)
+        assert isinstance(entry["input"], dict), "Input should be parsed JSON"
+        assert entry["input"]["tool"] == "Write", "Input should contain original data"
+        assert "hook" in entry and "normalize-line-endings.py" in entry["hook"]
+
+    def test_logging_error_hook(self, tmp_path):
+        """Logging should capture fallback output when hook is missing"""
+        log_dir = tmp_path / "hook-logs"
+        run_wrapper(
+            "open", "/nonexistent/hook.py",
+            stdin_data='{"session_id": "sess3"}',
+            env={"CLAUDE_HOOK_LOG_DIR": str(log_dir)},
+        )
+        log_file = log_dir / "sess3.jsonl"
+        assert log_file.exists(), "Log file should be created even for missing hook"
+        entry = json.loads(log_file.read_text().strip())
+        assert "output" in entry
+        assert "hookSpecificOutput" in entry["output"]
+
+    def test_logging_failure_doesnt_affect_hook_output(self, tmp_path):
+        """Hook output should be unaffected if logging fails (e.g. unwritable dir)"""
+        hook_path = str(Path(__file__).parent.parent / "hooks" / "normalize-line-endings.py")
+        # Point to an unwritable directory
+        log_dir = tmp_path / "readonly-logs"
+        log_dir.mkdir()
+        log_dir.chmod(0o444)  # read-only
+        try:
+            output = run_wrapper(
+                "open", hook_path,
+                stdin_data='{"session_id": "sess4", "tool": "Test"}',
+                env={"CLAUDE_HOOK_LOG_DIR": str(log_dir)},
+            )
+            # Hook output should still be valid JSON
+            assert isinstance(output, dict), "Hook output must be returned even if logging fails"
+        finally:
+            log_dir.chmod(0o755)  # restore for cleanup
+
+    def test_logging_empty_env_var_disables_logging(self, tmp_path):
+        """CLAUDE_HOOK_LOG_DIR='' should not create any log files"""
+        hook_path = str(Path(__file__).parent.parent / "hooks" / "normalize-line-endings.py")
+        run_wrapper(
+            "open", hook_path,
+            stdin_data='{"session_id": "sess5", "tool": "Test"}',
+            env={"CLAUDE_HOOK_LOG_DIR": ""},
+        )
+        assert list(tmp_path.iterdir()) == [], "No log files should be created with empty env var"
 
 
 def main():
