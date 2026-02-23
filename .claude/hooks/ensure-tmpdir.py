@@ -1,1 +1,0 @@
-../../plugins/claude-code-hooks/hooks/ensure-tmpdir.py

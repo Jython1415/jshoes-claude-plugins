@@ -1,1 +1,0 @@
-../../plugins/claude-code-hooks/hooks/gpg-signing-helper.py

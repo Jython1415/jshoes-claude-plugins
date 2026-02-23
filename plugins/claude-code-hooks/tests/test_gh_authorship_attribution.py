@@ -13,7 +13,7 @@ from pathlib import Path
 import pytest
 
 # Path to the hook script
-HOOK_PATH = Path(__file__).parent.parent / "gh-authorship-attribution.py"
+HOOK_PATH = Path(__file__).parent.parent / "hooks" / "gh-authorship-attribution.py"
 
 # Writable test state directory (redirects away from ~/.claude/hook-state/ for sandbox compat)
 TEST_STATE_DIR = Path(os.environ.get("TMPDIR", "/tmp")) / "claude-hook-test-state"

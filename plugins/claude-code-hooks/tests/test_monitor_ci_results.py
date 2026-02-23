@@ -20,7 +20,7 @@ from unittest.mock import patch
 import pytest
 
 # Path to the hook script
-HOOK_PATH = Path(__file__).parent.parent / "monitor-ci-results.py"
+HOOK_PATH = Path(__file__).parent.parent / "hooks" / "monitor-ci-results.py"
 
 
 def run_hook(

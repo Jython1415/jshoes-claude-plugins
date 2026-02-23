@@ -1,24 +1,12 @@
 # Claude Code Configuration Repository
 
-This repository contains version-controlled configuration for **Claude Code CLI and Web**.
+This repository contains version-controlled configuration for **Claude Code CLI**.
 
 ## Repository Structure
-- `.claude/` - Project-scoped configuration directory (works for both CLI and Web)
-  - `settings.json` - Core configuration (permissions, hooks, model selection)
-  - `CLAUDE.md` - User instructions for Claude
-  - `hooks/` - Custom hook scripts (symlinked to plugin)
-  - `plugins/` - Plugin configuration
-- `plugins/claude-code-hooks/` - Hook plugin source (published to marketplace)
-
-## How It Works
-
-**For Claude Code Web:**
-- Configuration in `.claude/` is automatically available (project scope)
-- No setup required when using this repository
-
-**For Claude Code CLI:**
-- Configuration in `.claude/` is automatically available when working in this project directory
-- For global configuration: Install hooks via plugin marketplace or manually symlink files
+- `plugins/claude-code-hooks/` - Hook scripts and tests (published to marketplace)
+- `plugins/claude-code-misc/` - Hook development skill and hook reference docs
+- `plugins/dev-workflow/` - Dev workflow skills (if present)
+- Root `CLAUDE.md` - Project instructions for Claude
 
 ## Self-Management Instructions for Claude
 
@@ -28,7 +16,7 @@ When working in this repository, you are managing the user's Claude Code configu
 - Hooks are Python scripts with PEP 723 inline dependency declarations
 - All hooks must output valid JSON (even empty `{}` when no action needed)
 - Use `uv run --script` to execute hooks
-- Test hooks manually before committing: `echo '{"test":"data"}' | uv run --script .claude/hooks/hookname.py`
+- Test hooks manually before committing: `echo '{"test":"data"}' | uv run --script plugins/claude-code-hooks/hooks/hookname.py`
 
 ### Hook Development Guidelines
 1. Always include PEP 723 header. Use `requires-python` for hooks with no
@@ -39,7 +27,7 @@ When working in this repository, you are managing the user's Claude Code configu
 3. For PostToolUseFailure hooks, check both `error` and `tool_result.error` fields
 4. Use `additionalContext` for guidance, not `decision` in PostToolUseFailure
 5. Test locally before deploying
-6. Document hook behavior in .claude/hooks/README.md
+6. Document hook behavior in `plugins/claude-code-misc/README.md`
 7. Use `SessionStart` for session-initialization concerns (environment
    setup, directory creation). Use `PreToolUse`/`PostToolUse` only for
    per-command validation and guidance.
@@ -63,8 +51,8 @@ When working in this repository, you are managing the user's Claude Code configu
 - Focus on correctness and lifecycle placement over micro-optimization
 
 ### Modifying Settings
-- Edit `.claude/settings.json` directly
-- Validate JSON syntax before committing
+- Edit your local `.claude/settings.json` directly (not tracked in git)
+- Validate JSON syntax before making changes
 - Test permission changes carefully
 - Document why permissions were added/changed in commit messages
 
@@ -108,17 +96,26 @@ After making changes:
 - Keep backups before major configuration changes
 - Test hook changes thoroughly: `uv run pytest`
 
-## Using This Configuration on Other Machines
+### Python and Tooling Conventions
+- Use `uv run` or `uv run --script` over `python` when running Python files, unless specified otherwise
+- For temporary Python scripts: write the script, `uv run` to execute it, then clean up with `rm`
+  - Works in sandbox mode (unlike heredoc which creates files in `/tmp/`)
+  - For temporary Python scripts, use inline dependencies (PEP 723) and run with `uv`
+- When creating temporary files, DO NOT put them in `/tmp/claude/`. Put them in the project directory.
+- If you create any temporary new files, scripts, or helper files for iteration, clean up these files by removing them at the end of the task.
 
-**Option 1: Project-scoped (Recommended for development)**
-1. Clone this repo: `git clone https://github.com/Jython1415/jshoes-claude-plugins.git`
-2. Work in the repository directory: `cd jshoes-claude-plugins && claude`
-3. Configuration in `.claude/` is automatically available
+### General Instructions
+- Use emojis only when directed to do so
+- If you intend to call multiple tools and there are no dependencies between the tool calls, make all of the independent tool calls in parallel. Prioritize calling tools simultaneously whenever the actions can be done in parallel rather than sequentially. Maximize use of parallel tool calls where possible to increase speed and efficiency. However, if some tool calls depend on previous calls to inform dependent values like the parameters, do NOT call these tools in parallel and instead call them sequentially.
+- If a task will take more than 5–8 tool calls, then prefer to hand it off to a subagent and have it report back to you. You are the orchestrator. Use subagents in a "call stack" style.
+- Take ownership over the tasks in the repositories and projects you manage, responding in ways that lessen the user's mental overhead.
 
-**Option 2: Global via plugin marketplace (Recommended for global use)**
+## Using This Configuration
+
+**Global via plugin marketplace (recommended):**
 1. Add marketplace: `claude plugin marketplace add https://github.com/Jython1415/jshoes-claude-plugins`
 2. Install plugin: `claude plugin install claude-code-hooks@jshoes-claude-plugins --scope user`
-3. Hooks are now active globally. Optionally copy custom permissions from `.claude/settings.json` to `~/.claude/settings.json`
+3. Hooks are now active globally
 
 ## Syncing Config to Other GitHub Repositories
 
@@ -140,3 +137,54 @@ For Claude Code Web usage in other repositories, you can use the provided GitHub
 - `.claude/.local-config` - Create this file to opt out of automatic syncs
 
 **Note:** This is a pull-based approach. Each target repository controls its own sync timing and can review changes via PR before merging.
+
+## Testing Philosophy for Hooks
+
+When writing tests for hooks in this repository:
+
+### Test Behavior, Not Content
+
+**DO**:
+- Verify that guidance is presented when expected
+- Test trigger conditions (what activates the hook)
+- Validate JSON output structure
+- Check that hook activates/deactivates correctly
+
+**DON'T**:
+- Validate specific strings or phrases in guidance text
+- Check for particular examples in output
+- Assert on exact wording or formatting
+- Test content that may evolve over time
+
+### Rationale
+
+Guidance messages should be improvable without breaking tests. Tests should validate that hooks work correctly, not freeze the specific content of their messages.
+
+### Examples
+
+❌ **Bad Test** (brittle, tests content):
+```python
+def test_guidance_includes_examples():
+    output = run_hook("Bash", 'git commit -m "Test"')
+    context = output["hookSpecificOutput"]["additionalContext"]
+    assert "Co-authored-by" in context  # Breaks if wording changes
+    assert "claude.ai/code" in context  # Brittle
+```
+
+✅ **Good Test** (robust, tests behavior):
+```python
+def test_guidance_presented_for_commit():
+    output = run_hook("Bash", 'git commit -m "Test"')
+    assert "hookSpecificOutput" in output  # Hook triggered
+    assert "additionalContext" in output["hookSpecificOutput"]  # Guidance exists
+    assert len(output["hookSpecificOutput"]["additionalContext"]) > 0  # Non-empty
+```
+
+### Test Categories
+
+1. **Trigger Tests**: Verify hook activates on correct inputs
+2. **Non-Trigger Tests**: Verify hook stays silent on incorrect inputs
+3. **Structure Tests**: Validate JSON format and required fields
+4. **Edge Case Tests**: Handle malformed input, missing fields, etc.
+
+This philosophy applies to all hooks in `plugins/claude-code-hooks/hooks/`.

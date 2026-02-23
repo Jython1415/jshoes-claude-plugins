@@ -28,7 +28,7 @@ For hook development guidelines, invoke the skill:
 /hook-development
 ```
 
-Or read the skill directly: `.claude/skills/hook-development/SKILL.md`
+Or read the skill directly: `plugins/claude-code-misc/skills/hook-development/SKILL.md`
 
 ## Running Tests
 

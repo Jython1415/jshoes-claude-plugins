@@ -11,7 +11,7 @@ from pathlib import Path
 import pytest
 
 # Path to the hook script
-HOOK_PATH = Path(__file__).parent.parent / "markdown-commit-reminder.py"
+HOOK_PATH = Path(__file__).parent.parent / "hooks" / "markdown-commit-reminder.py"
 
 
 def run_hook(tool_name: str, command: str, clear_cooldown: bool = True) -> dict:

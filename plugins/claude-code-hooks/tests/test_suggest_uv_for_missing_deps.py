@@ -13,7 +13,7 @@ from pathlib import Path
 import pytest
 
 # Path to the hook script
-HOOK_PATH = Path(__file__).parent.parent / "suggest-uv-for-missing-deps.py"
+HOOK_PATH = Path(__file__).parent.parent / "hooks" / "suggest-uv-for-missing-deps.py"
 
 
 def run_hook_with_error(tool_name: str, command: str, error: str, use_tool_result: bool = False, uv_available: bool = True) -> dict:

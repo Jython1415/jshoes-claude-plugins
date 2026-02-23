@@ -1,1 +1,0 @@
-../../plugins/claude-code-hooks/hooks/gh-fallback-helper.py

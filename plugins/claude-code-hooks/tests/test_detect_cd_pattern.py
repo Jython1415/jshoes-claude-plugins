@@ -11,7 +11,7 @@ from pathlib import Path
 import pytest
 
 # Path to the hook script
-HOOK_PATH = Path(__file__).parent.parent / "detect-cd-pattern.py"
+HOOK_PATH = Path(__file__).parent.parent / "hooks" / "detect-cd-pattern.py"
 
 
 def run_hook(tool_name: str, command: str) -> dict:

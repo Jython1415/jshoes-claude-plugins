@@ -1,1 +1,0 @@
-../../plugins/claude-code-hooks/hooks/normalize-line-endings.py

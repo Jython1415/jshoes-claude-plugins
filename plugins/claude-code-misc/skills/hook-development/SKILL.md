@@ -1,19 +1,19 @@
 ---
 name: hook-development
-description: Read this skill when working on hooks in .claude/hooks/ or plugins/claude-code-hooks/hooks/ - covers development process, PEP 723 patterns, JSON output, and testing philosophy
+description: Read this skill when working on hooks in plugins/claude-code-hooks/hooks/ - covers development process, PEP 723 patterns, JSON output, and testing philosophy
 ---
 
 # Hook Development Skill
 
-When working on hooks in `.claude/hooks/`, follow these guidelines.
+When working on hooks in `plugins/claude-code-hooks/hooks/`, follow these guidelines.
 
 ## Hook Architecture
 
-Hooks in this repository use a **symlink architecture** for cross-platform compatibility:
+Hooks in this repository use a **plugin architecture**:
 
 - **Source of truth**: `plugins/claude-code-hooks/hooks/`
-- **Symlinks**: `.claude/hooks/*.py` -> `../../plugins/claude-code-hooks/hooks/*.py`
-- **Why**: Claude Code Web uses `.claude/hooks/` directly; CLI can use plugins
+- **Tests**: `plugins/claude-code-hooks/tests/`
+- **Distribution**: via plugin marketplace
 
 When editing hooks, edit the plugin source files in `plugins/claude-code-hooks/hooks/`.
 
@@ -21,12 +21,11 @@ When editing hooks, edit the plugin source files in `plugins/claude-code-hooks/h
 
 1. Create Python script with PEP 723 header in `plugins/claude-code-hooks/hooks/`
 2. Implement JSON input/output handling
-3. Create symlink in `.claude/hooks/` pointing to the plugin file
-4. Create test file in `.claude/hooks/tests/test_<hookname>.py`
-5. Write comprehensive tests and verify they pass (`uv run pytest`)
-6. Add to `.claude/settings.json` hooks configuration
-7. Document in `.claude/hooks/README.md`
-8. User restarts Claude Code session to apply
+3. Create test file in `plugins/claude-code-hooks/tests/test_<hookname>.py`
+4. Write comprehensive tests and verify they pass (`uv run pytest`)
+5. Add to settings hooks configuration
+6. Document in `plugins/claude-code-misc/README.md`
+7. User restarts Claude Code session to apply
 
 ## PEP 723 Inline Dependencies
 
@@ -249,7 +248,7 @@ from pathlib import Path
 
 import pytest
 
-HOOK_PATH = Path(__file__).parent.parent / "hookname.py"
+HOOK_PATH = Path(__file__).parent.parent / "hooks" / "hookname.py"
 
 
 def run_hook(tool_name: str, command: str) -> dict:
@@ -281,11 +280,11 @@ class TestMyHook:
 ## Running Tests
 
 ```bash
-# Run all hook tests (481 tests)
+# Run all hook tests
 uv run pytest
 
 # Run specific hook test
-uv run pytest .claude/hooks/tests/test_hookname.py
+uv run pytest plugins/claude-code-hooks/tests/test_hookname.py
 
 # Verbose output
 uv run pytest -v
@@ -299,7 +298,7 @@ uv run pytest -k "subshell"
 **Always use `$CLAUDE_PROJECT_DIR` for hook paths:**
 
 ```json
-"command": "uv run --script \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/hookname.py"
+"command": "uv run --script \"$CLAUDE_PROJECT_DIR\"/plugins/claude-code-hooks/hooks/hookname.py"
 ```
 
 Why not `~`? Tilde expands to current user's home, which differs in Claude Code Web.
@@ -310,12 +309,12 @@ Why not relative paths? They break when working directory changes.
 Test hooks before committing:
 
 ```bash
-echo '{"tool_name":"Bash","tool_input":{"command":"test"}}' | uv run --script .claude/hooks/hookname.py
+echo '{"tool_name":"Bash","tool_input":{"command":"test"}}' | uv run --script plugins/claude-code-hooks/hooks/hookname.py
 ```
 
 ## See Also
 
-- `.claude/hooks/README.md` - Comprehensive hook documentation and coverage details
-- `.claude/hooks/tests/` - Test examples and patterns
+- `plugins/claude-code-misc/README.md` - Comprehensive hook documentation and coverage details
+- `plugins/claude-code-hooks/tests/` - Test examples and patterns
 - `plugins/claude-code-hooks/` - Plugin source (marketplace distribution)
 - Root `CLAUDE.md` - Repository management instructions
