@@ -335,6 +335,21 @@ Test hooks before committing:
 echo '{"tool_name":"Bash","tool_input":{"command":"test"}}' | uv run --script path/to/hookname.py
 ```
 
+## Shell Wrapper Patterns
+
+When `run-with-fallback.sh` or a similar shell wrapper needs to spawn Python and pass hook data:
+
+**Pass large payloads via env vars, not `sys.argv`.** Hook input can be large — a Write hook carrying a big file can exceed the shell's ARG_MAX (~1 MB on macOS), causing the `python3` call to silently fail and drop the log entry with no error. Use env vars instead:
+
+```bash
+HOOK_LOG_INPUT="$INPUT" HOOK_LOG_OUTPUT="$output" uv run python -c "
+import os, json
+raw = os.environ['HOOK_LOG_INPUT']
+..."
+```
+
+Read with `os.environ['HOOK_LOG_INPUT']` on the Python side. Env vars are not subject to the same ARG_MAX constraint as positional arguments.
+
 ## Performance
 
 - Hooks run on every matching tool call — keep them fast.

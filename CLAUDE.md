@@ -31,6 +31,10 @@ Each plugin has a `version` field in `plugins/<name>/.claude-plugin/plugin.json`
 
 **Rule**: Bump the version in the same commit that ships the change. Never let `plugin.json` lag behind. CI enforces this on every PR that touches plugin files. Also keep `.claude-plugin/marketplace.json` in sync — CI verifies that its per-plugin version fields match `plugin.json` whenever a version is bumped.
 
+**Changelog**: Every minor or major version bump must include a `CHANGELOG.md` entry in `plugins/<name>/CHANGELOG.md`. Create the file if it doesn't exist. Format: `## [x.y.z] - YYYY-MM-DD` followed by a `### Added`/`### Changed`/`### Fixed` section.
+
+**Consumer documentation**: When shipping a configurable feature (new env var, new opt-in behavior), include README documentation for plugin consumers in the same commit. Docs are part of the feature — not a follow-up.
+
 ### Writing Skills
 - Do not use `allowed-tools` in skill frontmatter
 - Skills should be self-contained SKILL.md files under `plugins/<name>/skills/<skill-name>/`
