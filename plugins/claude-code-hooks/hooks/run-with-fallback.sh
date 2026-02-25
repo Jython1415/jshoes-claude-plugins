@@ -3,8 +3,8 @@
 # Usage: run-with-fallback.sh <fail-mode> <hook-script>
 # fail-mode: "open" (advisory) or "closed" (safety-critical)
 #
-# Optional env var: CLAUDE_HOOK_LOG_DIR — if set, appends a JSONL entry per
-# invocation to $CLAUDE_HOOK_LOG_DIR/{session_id}.jsonl capturing both the
+# Optional env var: JSHOES_HOOK_LOG_DIR — if set, appends a JSONL entry per
+# invocation to $JSHOES_HOOK_LOG_DIR/{session_id}.jsonl capturing both the
 # hook input and output. Logging errors are silently swallowed.
 
 set -uo pipefail
@@ -17,11 +17,11 @@ HOOK_NAME="$(basename "$HOOK_SCRIPT")"
 INPUT=$(cat)
 
 # _log_hook_event <output>
-# Appends a JSONL entry to $CLAUDE_HOOK_LOG_DIR/{session_id}.jsonl.
-# No-op when CLAUDE_HOOK_LOG_DIR is unset or empty. Never fails.
+# Appends a JSONL entry to $JSHOES_HOOK_LOG_DIR/{session_id}.jsonl.
+# No-op when JSHOES_HOOK_LOG_DIR is unset or empty. Never fails.
 _log_hook_event() {
     local output="$1"
-    local log_dir="${CLAUDE_HOOK_LOG_DIR:-}"
+    local log_dir="${JSHOES_HOOK_LOG_DIR:-}"
     [[ -z "$log_dir" ]] && return 0
     mkdir -p "$log_dir" 2>/dev/null || return 0
     HOOK_LOG_HOOK_NAME="$HOOK_NAME" \

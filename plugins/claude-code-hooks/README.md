@@ -35,6 +35,31 @@ All hooks use `run-with-fallback.sh` wrapper for safety:
 - Advisory messages instead of deadlocks
 - Production-hardened for reliability
 
+### Hook Event Logging
+
+Opt-in sidecar logging captures the full input and output of every hook invocation for observability and debugging.
+
+**Enable by setting `JSHOES_HOOK_LOG_DIR`** in your shell environment or `.env`:
+
+```bash
+export JSHOES_HOOK_LOG_DIR=~/.claude/hook-logs
+```
+
+When set, each Claude Code session appends JSONL entries to `$JSHOES_HOOK_LOG_DIR/{session_id}.jsonl`. Each entry contains:
+
+```json
+{
+  "ts": "2026-02-24T10:00:00Z",
+  "hook": "normalize-line-endings.py",
+  "input": { "session_id": "...", "tool_name": "Write", ... },
+  "output": {}
+}
+```
+
+Logging is **disabled by default** (env var unset = no files written). Logging errors are silently swallowed — logging never blocks hook execution.
+
+This complements project-level observer hooks, which can see event metadata but not individual plugin hook decisions.
+
 ### Cooldown Mechanisms
 
 Smart rate limiting prevents repetitive suggestions:

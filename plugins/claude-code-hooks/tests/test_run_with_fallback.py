@@ -309,13 +309,13 @@ print(json.dumps({}))
 
 
 class TestLogging:
-    """Tests for the CLAUDE_HOOK_LOG_DIR tee-logging feature"""
+    """Tests for the JSHOES_HOOK_LOG_DIR tee-logging feature"""
 
     def test_logging_disabled_by_default(self, tmp_path):
-        """No log file should be created when CLAUDE_HOOK_LOG_DIR is not set"""
+        """No log file should be created when JSHOES_HOOK_LOG_DIR is not set"""
         hook_path = str(Path(__file__).parent.parent / "hooks" / "normalize-line-endings.py")
         # Explicitly unset the env var to guarantee no logging
-        clean_env = {k: v for k, v in os.environ.items() if k != "CLAUDE_HOOK_LOG_DIR"}
+        clean_env = {k: v for k, v in os.environ.items() if k != "JSHOES_HOOK_LOG_DIR"}
         result = subprocess.run(
             [str(WRAPPER_PATH), "open", hook_path],
             input='{"session_id": "test-session", "tool": "Test"}',
@@ -328,13 +328,13 @@ class TestLogging:
         assert list(tmp_path.iterdir()) == []
 
     def test_logging_creates_jsonl_file(self, tmp_path):
-        """Log file should be created when CLAUDE_HOOK_LOG_DIR is set"""
+        """Log file should be created when JSHOES_HOOK_LOG_DIR is set"""
         hook_path = str(Path(__file__).parent.parent / "hooks" / "normalize-line-endings.py")
         log_dir = tmp_path / "hook-logs"
         run_wrapper(
             "open", hook_path,
             stdin_data='{"session_id": "abc123", "tool": "Test"}',
-            env={"CLAUDE_HOOK_LOG_DIR": str(log_dir)},
+            env={"JSHOES_HOOK_LOG_DIR": str(log_dir)},
         )
         log_file = log_dir / "abc123.jsonl"
         assert log_file.exists(), "Log file should be created for the session"
@@ -346,7 +346,7 @@ class TestLogging:
         run_wrapper(
             "open", hook_path,
             stdin_data='{"session_id": "sess1", "tool": "Test"}',
-            env={"CLAUDE_HOOK_LOG_DIR": str(log_dir)},
+            env={"JSHOES_HOOK_LOG_DIR": str(log_dir)},
         )
         lines = (log_dir / "sess1.jsonl").read_text().strip().splitlines()
         assert len(lines) == 1, "Should have exactly one log entry"
@@ -364,7 +364,7 @@ class TestLogging:
         run_wrapper(
             "open", hook_path,
             stdin_data=stdin_data,
-            env={"CLAUDE_HOOK_LOG_DIR": str(log_dir)},
+            env={"JSHOES_HOOK_LOG_DIR": str(log_dir)},
         )
         entry_line = (log_dir / "sess2.jsonl").read_text().strip()
         entry = json.loads(entry_line)
@@ -378,7 +378,7 @@ class TestLogging:
         run_wrapper(
             "open", "/nonexistent/hook.py",
             stdin_data='{"session_id": "sess3"}',
-            env={"CLAUDE_HOOK_LOG_DIR": str(log_dir)},
+            env={"JSHOES_HOOK_LOG_DIR": str(log_dir)},
         )
         log_file = log_dir / "sess3.jsonl"
         assert log_file.exists(), "Log file should be created even for missing hook"
@@ -397,7 +397,7 @@ class TestLogging:
             output = run_wrapper(
                 "open", hook_path,
                 stdin_data='{"session_id": "sess4", "tool": "Test"}',
-                env={"CLAUDE_HOOK_LOG_DIR": str(log_dir)},
+                env={"JSHOES_HOOK_LOG_DIR": str(log_dir)},
             )
             # Hook output should still be valid JSON
             assert isinstance(output, dict), "Hook output must be returned even if logging fails"
@@ -405,12 +405,12 @@ class TestLogging:
             log_dir.chmod(0o755)  # restore for cleanup
 
     def test_logging_empty_env_var_disables_logging(self, tmp_path):
-        """CLAUDE_HOOK_LOG_DIR='' should not create any log files"""
+        """JSHOES_HOOK_LOG_DIR='' should not create any log files"""
         hook_path = str(Path(__file__).parent.parent / "hooks" / "normalize-line-endings.py")
         run_wrapper(
             "open", hook_path,
             stdin_data='{"session_id": "sess5", "tool": "Test"}',
-            env={"CLAUDE_HOOK_LOG_DIR": ""},
+            env={"JSHOES_HOOK_LOG_DIR": ""},
         )
         assert list(tmp_path.iterdir()) == [], "No log files should be created with empty env var"
 
@@ -421,12 +421,12 @@ class TestLogging:
         run_wrapper(
             "open", hook_path,
             stdin_data='{"session_id": "session-A", "tool": "Test"}',
-            env={"CLAUDE_HOOK_LOG_DIR": str(log_dir)},
+            env={"JSHOES_HOOK_LOG_DIR": str(log_dir)},
         )
         run_wrapper(
             "open", hook_path,
             stdin_data='{"session_id": "session-B", "tool": "Test"}',
-            env={"CLAUDE_HOOK_LOG_DIR": str(log_dir)},
+            env={"JSHOES_HOOK_LOG_DIR": str(log_dir)},
         )
         assert (log_dir / "session-A.jsonl").exists(), "File for session-A should exist"
         assert (log_dir / "session-B.jsonl").exists(), "File for session-B should exist"
