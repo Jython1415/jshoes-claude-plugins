@@ -10,27 +10,6 @@ This repository serves as:
 - **Hook development workspace**: Source repository for the `claude-code-hooks` plugin
 - **Personal settings reference**: My custom permissions, instructions, and preferences
 
-## Repository Structure
-
-```
-jshoes-claude-plugins/
-├── README.md                          # This file
-├── CLAUDE.md                          # Self-management instructions for Claude
-├── .claude/                           # Project-scoped configuration
-│   ├── settings.json                  # Core configuration (permissions, hooks, model)
-│   ├── CLAUDE.md                      # User instructions for Claude
-│   ├── hooks/                         # Custom hooks (symlinked to plugin)
-│   │   ├── README.md                  # Hook documentation
-│   │   └── tests/                     # Comprehensive test suite
-│   └── plugins/
-│       └── installed_plugins.json     # Plugin installation list
-├── plugins/
-│   └── claude-code-hooks/             # Hook plugin (source of truth)
-│       ├── .claude-plugin/plugin.json # Plugin metadata and version
-│       └── hooks/                     # Hook implementations
-├── pyproject.toml                     # Python project metadata
-└── .gitignore                         # Protects runtime data from commits
-```
 
 ## How to Use This Repository
 
@@ -72,22 +51,27 @@ See `plugins/claude-code-hooks/README.md` for plugin-specific documentation.
 
 ## What's Included
 
-### Custom Hooks (11 total)
+### Custom Hooks (15 total)
 
-See `.claude/hooks/README.md` for detailed documentation.
+See `plugins/claude-code-hooks/README.md` for detailed documentation.
 
 | Hook | Event | Purpose |
 |------|-------|---------|
+| `ensure-tmpdir.py` | SessionStart | Creates TMPDIR directory if missing at session start |
 | `normalize-line-endings.py` | PreToolUse (Write/Edit) | Converts CRLF/CR to LF |
 | `gh-authorship-attribution.py` | PreToolUse (Bash) | Ensures proper attribution for AI-assisted commits |
 | `prefer-modern-tools.py` | PreToolUse (Bash) | Suggests fd/rg instead of find/grep |
 | `detect-cd-pattern.py` | PreToolUse (Bash) | Warns on global cd, allows subshell pattern |
 | `prefer-gh-for-own-repos.py` | PreToolUse (WebFetch/Bash) | Suggests gh CLI for my repositories |
 | `gh-web-fallback.py` | PreToolUse (Bash) | Guides to GitHub API when gh unavailable (Web) |
+| `block-heredoc-in-bash.py` | PreToolUse (Bash) | Blocks heredoc syntax that silently fails in sandbox mode |
+| `guard-external-repo-writes.py` | PreToolUse (Bash) | Blocks gh CLI write ops to external repos |
+| `markdown-commit-reminder.py` | PreToolUse (Bash) | Warns about temporary markdown files in commits |
 | `gh-fallback-helper.py` | PostToolUseFailure (Bash) | GitHub API guidance when gh CLI fails |
 | `gpg-signing-helper.py` | PostToolUse/PostToolUseFailure (Bash) | GPG signing guidance |
 | `detect-heredoc-errors.py` | PostToolUse/PostToolUseFailure (Bash) | Heredoc workarounds |
 | `suggest-uv-for-missing-deps.py` | PostToolUseFailure (Bash) | Suggests uv run with PEP 723 |
+| `monitor-ci-results.py` | PostToolUse (Bash) | Reminds to check CI after push/PR creation |
 
 ### Custom Permissions
 
@@ -100,7 +84,7 @@ Extensive pre-approved permissions in `.claude/settings.json`:
 
 ### Custom Instructions
 
-`.claude/CLAUDE.md` contains:
+`CLAUDE.md` (project root) contains self-management instructions for Claude, including:
 - Preference for `uv run` over `python`
 - Instructions for temporary Python scripts
 - Parallel tool execution patterns
@@ -123,7 +107,7 @@ The following are intentionally excluded via `.gitignore`:
 
 ## Making Configuration Changes
 
-1. Edit files in `.claude/` directory
+1. Edit plugin files in `plugins/`
 2. Test changes: `uv run pytest`
 3. Review changes: `git diff`
 4. Commit: `git commit -am "feat: description of change"`
@@ -139,12 +123,11 @@ claude plugin update claude-code-hooks@jshoes-claude-plugins
 This repository serves as the development workspace for the `claude-code-hooks` plugin:
 
 1. Edit hooks in `plugins/claude-code-hooks/hooks/`
-2. Symlinks in `.claude/hooks/` automatically reflect changes
-3. Run tests: `uv run pytest .claude/hooks/tests/`
-4. Bump version in `plugins/claude-code-hooks/.claude-plugin/plugin.json` (same commit)
-5. Publish to plugin marketplace (when ready)
+2. Run tests: `uv run pytest plugins/claude-code-hooks/tests/`
+3. Bump version in `plugins/claude-code-hooks/.claude-plugin/plugin.json` (same commit)
+4. Publish to plugin marketplace (when ready)
 
-See `.claude/hooks/README.md` for hook development guidelines.
+See `plugins/claude-code-hooks/README.md` for hook documentation and `plugins/claude-code-misc/skills/hook-development/` for the authoring guide.
 
 ## License
 

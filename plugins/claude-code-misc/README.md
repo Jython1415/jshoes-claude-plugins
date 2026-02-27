@@ -1,37 +1,60 @@
-# Claude Code Hooks
+# Claude Code Misc Plugin
 
-Custom hooks for enhancing Claude Code behavior.
+Miscellaneous skills for Claude Code development and plugin consumer support.
 
-## Hook Overview
+## Skills
 
-| Hook | Event | Purpose |
-|------|-------|---------|
-| `ensure-tmpdir.py` | SessionStart | Creates TMPDIR if set but missing (macOS /tmp is periodically cleared) |
-| `normalize-line-endings.py` | PreToolUse (Write/Edit) | Converts CRLF/CR to LF |
-| `gh-authorship-attribution.py` | PreToolUse (Bash) | Ensures proper attribution for AI-assisted GitHub contributions |
-| `prefer-modern-tools.py` | PreToolUse (Bash) | Suggests fd/rg instead of find/grep |
-| `detect-cd-pattern.py` | PreToolUse (Bash) | Warns on global cd, allows subshell pattern |
-| `prefer-gh-for-own-repos.py` | PreToolUse (WebFetch/Bash) | Suggests gh CLI for Jython1415's repositories |
-| `gh-web-fallback.py` | PreToolUse (Bash) | Proactively guides to GitHub API when gh unavailable |
-| `gh-fallback-helper.py` | PostToolUseFailure (Bash) | Guides Claude to use GitHub API when gh CLI unavailable |
-| `gpg-signing-helper.py` | PostToolUse/PostToolUseFailure (Bash) | Guides Claude on GPG signing issues |
-| `detect-heredoc-errors.py` | PostToolUse/PostToolUseFailure (Bash) | Provides heredoc workarounds |
-| `suggest-uv-for-missing-deps.py` | PostToolUseFailure (Bash) | Suggests uv run with PEP 723 for import errors |
-| `markdown-commit-reminder.py` | PreToolUse (Bash) | Reminds about markdown file inclusion criteria before commits |
-| `monitor-ci-results.py` | PostToolUse (Bash) | Reminds to monitor CI results after push or PR creation |
+### /hook-development
 
-## Development Guide
+A comprehensive guide to authoring, testing, and maintaining Claude Code hooks. Use when writing a new hook, debugging an existing hook, or learning the hook lifecycle.
 
-For hook development guidelines, invoke the skill:
+Covers:
+- Hook event types and JSON input/output formats
+- PreToolUse blocking patterns (`permissionDecision: deny`)
+- PostToolUseFailure guidance patterns (`additionalContext`)
+- Cooldown and state management using session-scoped files
+- Shell wrapper patterns with `run-with-fallback.sh`
+- Testing approach and sandbox-safe test state directory setup
 
+Invoke with:
 ```
 /hook-development
 ```
 
-Or read the skill directly: `plugins/claude-code-misc/skills/hook-development/SKILL.md`
+Or read directly: `plugins/claude-code-misc/skills/hook-development/SKILL.md`
 
-## Running Tests
+### /feedback
+
+ONLY for plugin consumers to report issues with the `jshoes-claude-plugins` plugins. Files a structured GitHub issue in the `Jython1415/jshoes-claude-plugins` repository on behalf of the user.
+
+Use when a user reports a bug, unexpected behavior, or missing feature in a hook or skill from this plugin set.
+
+Invoke with:
+```
+/feedback
+```
+
+## Installation
+
+### From GitHub Marketplace
 
 ```bash
-uv run pytest
+# Add marketplace
+claude plugin marketplace add Jython1415/jshoes-claude-plugins
+
+# Install plugin globally
+claude plugin install claude-code-misc@jshoes-claude-plugins
 ```
+
+## Requirements
+
+- Claude Code CLI
+
+## Author
+
+**Jython1415**
+https://github.com/Jython1415
+
+## Repository
+
+https://github.com/Jython1415/jshoes-claude-plugins
