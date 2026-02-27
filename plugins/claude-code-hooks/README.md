@@ -4,7 +4,7 @@ A comprehensive set of productivity hooks for Claude Code, providing intelligent
 
 ## Features
 
-### 15 Productivity Hooks
+### 13 Productivity Hooks
 
 **SessionStart Hooks (At session initialization):**
 - **ensure-tmpdir** - Ensures the TMPDIR directory exists at session start
@@ -12,10 +12,8 @@ A comprehensive set of productivity hooks for Claude Code, providing intelligent
 **PreToolUse Hooks (Before tool execution):**
 - **normalize-line-endings** - Automatically converts CRLF/CR line endings to LF
 - **gh-authorship-attribution** - Reminds about attribution for AI-assisted contributions
-- **gh-web-fallback** - Suggests GitHub API alternatives when `gh` CLI unavailable
 - **prefer-modern-tools** - Suggests `fd`/`rg` over `find`/`grep` when available
 - **detect-cd-pattern** - Warns about global `cd` patterns, suggests absolute paths
-- **prefer-gh-for-own-repos** - Suggests `gh` CLI for Jython1415 repos
 - **block-heredoc-in-bash** - Blocks heredoc syntax that silently fails in sandbox mode
 - **guard-external-repo-writes** - Blocks `gh` CLI write operations to repositories the user does not own
 - **markdown-commit-reminder** - Warns when staging markdown files that may be temporary session documents
@@ -67,8 +65,6 @@ This complements project-level observer hooks, which can see event metadata but 
 
 Smart rate limiting prevents repetitive suggestions:
 - Attribution reminders: 60 seconds
-- Prefer-gh suggestions: 60 seconds
-- Web fallback guidance: 300 seconds (5 minutes), per session
 
 ## Installation
 
@@ -128,20 +124,6 @@ claude --plugin-dir ./plugins/claude-code-hooks
 **Purpose:** Block heredoc syntax before it silently corrupts data in sandbox mode
 **Triggers:** Any `<<EOF`, `<<'EOF'`, `<<"EOF"`, `<<-EOF`, or variant (regex: `<<-?\s*['"]?\w`)
 **Output:** BLOCKS the command; provides three alternatives (multiple `-m` flags, `--body-file`, Write tool)
-
-### prefer-gh-for-own-repos
-**Event:** PreToolUse (WebFetch|Bash)
-**Purpose:** Suggest `gh` CLI for Jython1415 repositories
-**Triggers:** WebFetch/curl to github.com/Jython1415
-**Cooldown:** 60 seconds
-**Output:** `gh` CLI suggestions
-
-### gh-web-fallback
-**Event:** PreToolUse (Bash)
-**Purpose:** Guide to GitHub API when `gh` unavailable
-**Triggers:** Command contains `gh` + `gh` not available + GITHUB_TOKEN set
-**Cooldown:** 300 seconds, per session
-**Output:** GitHub API usage guidance
 
 ### gh-fallback-helper
 **Event:** PostToolUseFailure (Bash)
