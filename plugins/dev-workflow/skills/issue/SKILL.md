@@ -29,14 +29,22 @@ all phases. Research can run in parallel. File all issues at the end.
 
 ### 2. Research
 
-Delegate to a Task subagent (`subagent_type=Explore`, model=sonnet):
+**Duplicate check (always):** Run `gh issue list -S "keyword"` to check for
+existing duplicates. If a duplicate exists, stop and tell the user — don't file.
+If closely related issues exist, note them for cross-referencing in the issue body.
+
+**Explore (conditional):** Ask: do I already have enough context to write an
+accurate, well-grounded issue? Sufficient context means the issue was just
+encountered in the current session — e.g., you debugged this exact problem,
+the relevant files were already read, or the user described it with specific
+code-level detail.
+
+If context is insufficient (unfamiliar area, vague description, need to
+understand current behavior or check for related prior decisions), delegate
+to a Task subagent (`subagent_type=Explore`, model=sonnet):
 - Explore the relevant code area to understand current behavior
-- Check for duplicate or closely related open issues (`gh issue list -S "keyword"`)
 - Identify related issues that should be cross-referenced
 - Note relevant architecture, conventions, or prior decisions
-
-If a duplicate exists, stop and tell the user — don't file.
-If closely related issues exist, note them for cross-referencing in the issue body.
 
 ### 3. Scope (conditional)
 

@@ -1,5 +1,16 @@
 # Changelog
 
+## [1.2.4] - 2026-02-27
+
+### Changed
+- `reflect`: Step 4 now checks convention documents (CLAUDE.md, CONTRIBUTING.md,
+  README.md, DEVELOPMENT.md, etc.) for a branching policy before committing.
+  Creates a branch + PR when a "never commit to main" rule is found; falls back
+  to direct-to-main only when no such policy exists. Closes #131.
+- `issue`: Phase 2 research is now conditional. Duplicate check (`gh issue list -S`)
+  always runs. The full Explore subagent only fires when the current session lacks
+  sufficient context (unfamiliar area, vague description). Closes #132.
+
 ## [1.2.3] - 2026-02-26
 
 ### Changed
