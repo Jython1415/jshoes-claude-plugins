@@ -42,7 +42,16 @@ STATE_DIR = Path(_state_dir_env) if _state_dir_env else Path.home() / ".claude" 
 DELEGATION_THRESHOLD = 2
 
 # Tools that don't affect streak counting (neither increment nor reset)
-EXEMPT_TOOLS = {"Skill"}
+EXEMPT_TOOLS = {
+    "Skill",
+    "AskUserQuestion",
+    "TaskCreate",
+    "TaskUpdate",
+    "TaskGet",
+    "TaskList",
+    "EnterPlanMode",
+    "ExitPlanMode",
+}
 
 
 def get_state_file(session_id: str) -> Path:
@@ -82,7 +91,9 @@ def parse_new_transcript_lines(transcript_path: str, offset: int) -> tuple[list[
     Read transcript from offset to end, parse JSONL lines.
 
     Returns a tuple of (parsed_lines, new_offset). Lines that fail JSON parsing
-    are skipped. new_offset is the byte position after the last byte read.
+    are skipped. new_offset is the byte position after the last complete newline
+    read, so partial lines at EOF are not permanently lost — they will be re-read
+    on the next call once the line is complete.
     """
     parsed = []
     new_offset = offset
@@ -94,7 +105,16 @@ def parse_new_transcript_lines(transcript_path: str, offset: int) -> tuple[list[
         with path.open("rb") as f:
             f.seek(offset)
             raw = f.read()
-            new_offset = offset + len(raw)
+
+        # Find last complete newline to avoid losing partial lines at EOF
+        last_newline = raw.rfind(b"\n")
+        if last_newline >= 0:
+            # Only consume up to and including the last newline
+            raw = raw[: last_newline + 1]
+            new_offset = offset + last_newline + 1
+        else:
+            # No newline found — don't advance offset (incomplete line)
+            return parsed, new_offset
 
         if not raw:
             return parsed, new_offset
@@ -152,10 +172,10 @@ def compute_streak(
 def build_advisory(streak: int) -> str:
     """Build the delegation advisory message."""
     return (
-        f"Delegation check: {streak} consecutive tool calls without using Task. "
-        f"Consider whether this work should be delegated to a subagent to preserve "
-        f"main context. Use the Task tool to spawn a subagent for implementation, "
-        f"research, or multi-step analysis work."
+        f"Orchestration advisory: {streak} consecutive tool calls without delegating. "
+        f"Main session should orchestrate, not implement — use it for quick reads, "
+        f"planning, and launching agents. Delegate implementation, analysis, and "
+        f"multi-step work to a subagent via the Task tool."
     )
 
 

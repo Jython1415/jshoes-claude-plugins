@@ -334,6 +334,56 @@ class TestExemptTools:
                 "Advisory should fire at streak 2 even with Skill call in between"
             )
 
+    def test_ask_user_question_is_neutral(self):
+        """AskUserQuestion should not increment or reset the streak."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            transcript = Path(tmpdir) / "transcript.jsonl"
+            write_transcript([
+                make_tool_use_line("Bash", "toolu_01"),          # streak = 1
+                make_tool_use_line("AskUserQuestion", "toolu_02"),  # neutral
+            ], transcript)
+
+            run_hook(transcript_path=str(transcript), clear_state=True)
+
+            state = get_state()
+            assert state["streak"] == 1, "AskUserQuestion should not affect streak"
+
+    def test_task_create_is_neutral(self):
+        """TaskCreate should not increment or reset the streak."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            transcript = Path(tmpdir) / "transcript.jsonl"
+            write_transcript([
+                make_tool_use_line("Bash", "toolu_01"),      # streak = 1
+                make_tool_use_line("TaskCreate", "toolu_02"),  # neutral
+            ], transcript)
+
+            run_hook(transcript_path=str(transcript), clear_state=True)
+
+            state = get_state()
+            assert state["streak"] == 1, "TaskCreate should not affect streak"
+
+    def test_mixing_new_exempt_tools_with_non_exempt_preserves_streak_behavior(self):
+        """Mixing new exempt tools among non-exempt calls should not change streak accumulation."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            transcript = Path(tmpdir) / "transcript.jsonl"
+            write_transcript([
+                make_tool_use_line("Bash", "toolu_01"),       # streak = 1
+                make_tool_use_line("TaskList", "toolu_02"),   # neutral
+                make_tool_use_line("TaskUpdate", "toolu_03"), # neutral
+                make_tool_use_line("EnterPlanMode", "toolu_04"),  # neutral
+                make_tool_use_line("Read", "toolu_05"),       # streak = 2 → advisory fires
+            ], transcript)
+
+            output = run_hook(transcript_path=str(transcript), clear_state=True)
+
+            assert "hookSpecificOutput" in output, (
+                "Advisory should fire at streak 2 with exempt tools interspersed"
+            )
+            state = get_state()
+            assert state["streak"] == 2, (
+                "Exempt orchestration tools should not count toward or reset streak"
+            )
+
 
 class TestAdvisoryContent:
     """Test that advisory output has the correct structure when triggered."""
