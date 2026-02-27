@@ -24,10 +24,6 @@
           },
           {
             "type": "command",
-            "command": "\"${CLAUDE_PLUGIN_ROOT}\"/hooks/run-with-fallback.sh open \"${CLAUDE_PLUGIN_ROOT}\"/hooks/gh-web-fallback.py"
-          },
-          {
-            "type": "command",
             "command": "\"${CLAUDE_PLUGIN_ROOT}\"/hooks/run-with-fallback.sh open \"${CLAUDE_PLUGIN_ROOT}\"/hooks/prefer-modern-tools.py"
           },
           {
@@ -41,15 +37,6 @@
           {
             "type": "command",
             "command": "\"${CLAUDE_PLUGIN_ROOT}\"/hooks/run-with-fallback.sh open \"${CLAUDE_PLUGIN_ROOT}\"/hooks/markdown-commit-reminder.py"
-          }
-        ]
-      },
-      {
-        "matcher": "WebFetch|Bash",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "\"${CLAUDE_PLUGIN_ROOT}\"/hooks/run-with-fallback.sh open \"${CLAUDE_PLUGIN_ROOT}\"/hooks/prefer-gh-for-own-repos.py"
           }
         ]
       }
