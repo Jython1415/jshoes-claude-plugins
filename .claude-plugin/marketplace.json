@@ -1,7 +1,7 @@
 {
   "$schema": "https://code.claude.com/schema/marketplace.json",
   "name": "jshoes-claude-plugins",
-  "description": "Personal Claude Code plugins and configurations by Jython1415",
+  "description": "Claude Code plugins: productivity hooks, dev workflow skills, and execution discipline tools",
   "version": "1.0.0",
   "owner": {
     "name": "Jython1415",
