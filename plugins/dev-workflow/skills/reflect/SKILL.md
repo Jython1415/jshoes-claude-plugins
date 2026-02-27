@@ -128,9 +128,15 @@ Make the approved changes:
 1. Edit documentation files
 2. Update or create skill files
 3. Update memory files
-4. Commit directly to main and push -- docs, skills, and memory are guidance,
-   not runtime code. Keeping the commit path lightweight encourages
-   actually running /reflect rather than skipping it.
+4. **Check branching policy before committing.** Scan convention documents
+   in the repo root (CLAUDE.md, CONTRIBUTING.md, README.md, DEVELOPMENT.md,
+   and any similar docs) for a "never commit to main" or "always use a
+   feature branch" policy.
+   - **Policy found**: create a feature branch (e.g., `reflect/YYYYMMDD`),
+     commit, push, and open a PR.
+   - **No such policy**: commit directly to main and push -- docs, skills,
+     and memory are guidance, not runtime code. Keeping the commit path
+     lightweight encourages actually running /reflect rather than skipping it.
 
 ## Principles
 
