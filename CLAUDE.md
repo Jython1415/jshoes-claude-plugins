@@ -89,27 +89,6 @@ After making changes:
 2. Install plugin: `claude plugin install claude-code-hooks@jshoes-claude-plugins --scope user`
 3. Hooks are now active globally
 
-## Syncing Config to Other GitHub Repositories
-
-For Claude Code Web usage in other repositories, you can use the provided GitHub Actions workflow to automatically sync configuration.
-
-**Setup (per repository):**
-1. Copy `.github/workflow-templates/sync-claude-plugins.yml` to your target repo's `.github/workflows/`
-2. If source repo is private: add a `SOURCE_REPO_TOKEN` secret with read access
-3. The workflow runs weekly and creates PRs when updates are available
-4. Manually trigger via Actions tab for immediate sync
-
-**What gets synced:**
-- `.claude/settings.json` - Permissions and hooks configuration
-- `.claude/CLAUDE.md` - Instructions for Claude
-- `.claude/hooks/*.py` - Hook scripts (symlinks resolved to actual files)
-
-**Local customizations (preserved during sync):**
-- `.claude/settings.local.json` - Override settings without affecting synced config
-- `.claude/.local-config` - Create this file to opt out of automatic syncs
-
-**Note:** This is a pull-based approach. Each target repository controls its own sync timing and can review changes via PR before merging.
-
 ## Testing Philosophy for Hooks
 
 See the `/hook-development` skill for the full testing philosophy. The key principle: **test behavior, not content** — verify that hooks trigger correctly and produce valid JSON, not the specific wording of guidance messages.

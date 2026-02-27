@@ -1,15 +1,13 @@
 # Claude Code Configuration
 
-My personal version-controlled configuration for [Claude Code CLI and Web](https://code.claude.com/docs).
+A Claude Code plugin repository with hooks, skills, and workflow tools. See [Claude Code docs](https://code.claude.com/docs).
 
 ## Overview
 
 This repository serves as:
 
-- **Project-scoped configuration**: Configuration in `.claude/` is automatically available when using this repository (both CLI and Web)
+- **Project-scoped configuration**: Configuration in `.claude/` is automatically available when using this repository 
 - **Hook development workspace**: Source repository for the `claude-code-hooks` plugin
-- **Personal settings reference**: My custom permissions, instructions, and preferences
-
 
 ## How to Use This Repository
 
@@ -26,10 +24,9 @@ Use this repository as your working directory in Claude Code:
 2. Open in Claude Code:
    ```bash
    claude  # CLI
-   # or open via web interface
    ```
 
-3. Configuration in `.claude/` is automatically available (both CLI and Web)
+3. Configuration in `.claude/` is automatically available 
 
 ### Option 2: Global Installation via Plugin Marketplace (Recommended for Global Use)
 
@@ -51,7 +48,7 @@ See `plugins/claude-code-hooks/README.md` for plugin-specific documentation.
 
 ## What's Included
 
-### Custom Hooks (15 total)
+### Custom Hooks (13 total)
 
 See `plugins/claude-code-hooks/README.md` for detailed documentation.
 
@@ -62,8 +59,6 @@ See `plugins/claude-code-hooks/README.md` for detailed documentation.
 | `gh-authorship-attribution.py` | PreToolUse (Bash) | Ensures proper attribution for AI-assisted commits |
 | `prefer-modern-tools.py` | PreToolUse (Bash) | Suggests fd/rg instead of find/grep |
 | `detect-cd-pattern.py` | PreToolUse (Bash) | Warns on global cd, allows subshell pattern |
-| `prefer-gh-for-own-repos.py` | PreToolUse (WebFetch/Bash) | Suggests gh CLI for my repositories |
-| `gh-web-fallback.py` | PreToolUse (Bash) | Guides to GitHub API when gh unavailable (Web) |
 | `block-heredoc-in-bash.py` | PreToolUse (Bash) | Blocks heredoc syntax that silently fails in sandbox mode |
 | `guard-external-repo-writes.py` | PreToolUse (Bash) | Blocks gh CLI write ops to external repos |
 | `markdown-commit-reminder.py` | PreToolUse (Bash) | Warns about temporary markdown files in commits |
