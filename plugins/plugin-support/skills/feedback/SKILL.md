@@ -29,11 +29,11 @@ Turn a description into a well-structured GitHub issue filed against
 Determine from the user's description (ask if unclear):
 - **Type**: Bug / Feature request / Optimization
 - **Component**: Which plugin and which specific hook or skill
-  - Plugin names: `claude-code-hooks`, `dev-workflow`, `claude-code-misc`
+  - Plugin names: `core-hooks`, `dev-workflow`, `plugin-support`, `orchestration-discipline`
   - Hook filename (e.g., `detect-cd-pattern.py`) or skill name (e.g., `/solve`)
 - **Plugin version**: Auto-discover before asking the user.
   1. Read `~/.claude/plugins/installed_plugins.json`
-  2. Find the key `<plugin-name>@jshoes-claude-plugins` (e.g., `"claude-code-hooks@jshoes-claude-plugins"`)
+  2. Find the key `<plugin-name>@jshoes-claude-plugins` (e.g., `"core-hooks@jshoes-claude-plugins"`)
   3. If multiple entries exist for that key, prefer the one whose `projectPath` matches the
      current working directory; if none match, prefer `scope: "user"`
   4. Extract the `version` field from the matching entry
@@ -78,7 +78,7 @@ exists, note it for cross-referencing in the body.
 <What went wrong — 1-2 sentences>
 
 ## Environment
-- Plugin: <plugin name and version, e.g. "claude-code-hooks 1.5.4">
+- Plugin: <plugin name and version, e.g. "core-hooks 1.5.4">
 - Hook/skill: <hook filename or /skill-name>
 - Claude Code version: <output of `claude --version`>
 

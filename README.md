@@ -110,7 +110,7 @@ The following are intentionally excluded via `.gitignore`:
 
 **Note**: If you've installed the plugin globally (Option 2), you'll need to update the plugin to get the latest changes:
 ```bash
-claude plugin update claude-code-hooks@jshoes-claude-plugins
+claude plugin update core-hooks@jshoes-claude-plugins
 ```
 
 ## Hook Development
