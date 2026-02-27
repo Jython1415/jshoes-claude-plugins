@@ -1,5 +1,10 @@
 # Changelog
 
+## [1.2.0] - 2026-02-27
+
+### Added
+- **feedback skill**: auto-discover installed plugin version from `~/.claude/plugins/installed_plugins.json` before asking the user; falls back to manual input when the file is missing or the plugin key is not found
+
 ## [1.1.2] - 2026-02-26
 
 ### Changed
