@@ -37,7 +37,8 @@ Determine from the user's description (ask if unclear):
   3. If multiple entries exist for that key, prefer the one whose `projectPath` matches the
      current working directory; if none match, prefer `scope: "user"`
   4. Extract the `version` field from the matching entry
-  5. If the file is missing or the plugin key is not found, ask the user to provide the version
+  5. If the file is missing, the plugin key is not found, or no entry matches the selection
+     criteria above, ask the user to provide the version
 - **Claude Code version**: Ask the user to run `claude --version` if not provided
 
 Then gather type-specific details:
