@@ -1,5 +1,10 @@
 # Changelog
 
+## [1.1.2] - 2026-02-26
+
+### Changed
+- README rewritten to properly describe both skills (`/hook-development` and `/feedback`) with usage examples
+
 ## [1.1.1] - 2026-02-24
 
 ### Changed

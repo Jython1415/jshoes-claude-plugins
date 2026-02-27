@@ -4,7 +4,7 @@ A comprehensive set of productivity hooks for Claude Code, providing intelligent
 
 ## Features
 
-### 12 Productivity Hooks
+### 15 Productivity Hooks
 
 **SessionStart Hooks (At session initialization):**
 - **ensure-tmpdir** - Ensures the TMPDIR directory exists at session start
@@ -17,10 +17,13 @@ A comprehensive set of productivity hooks for Claude Code, providing intelligent
 - **detect-cd-pattern** - Warns about global `cd` patterns, suggests absolute paths
 - **prefer-gh-for-own-repos** - Suggests `gh` CLI for Jython1415 repos
 - **block-heredoc-in-bash** - Blocks heredoc syntax that silently fails in sandbox mode
+- **guard-external-repo-writes** - Blocks `gh` CLI write operations to repositories the user does not own
+- **markdown-commit-reminder** - Warns when staging markdown files that may be temporary session documents
 
 **PostToolUse Hooks (After successful execution):**
 - **gpg-signing-helper** - Provides guidance for GPG signing errors in sandbox
 - **detect-heredoc-errors** - Suggests alternatives for heredoc temp file errors
+- **monitor-ci-results** - Reminds to check CI status after a push or PR creation
 
 **PostToolUseFailure Hooks (After failed execution):**
 - **gh-fallback-helper** - Reactive guidance for failed `gh` commands
@@ -164,6 +167,27 @@ claude --plugin-dir ./plugins/claude-code-hooks
 **Purpose:** Suggest `uv run` for Python import errors
 **Triggers:** ModuleNotFoundError/ImportError + direct Python execution
 **Output:** Dependency installation guidance
+
+### guard-external-repo-writes
+**Event:** PreToolUse (Bash)
+**Purpose:** Block `gh` CLI write operations targeting repositories the user does not own
+**Triggers:** `gh issue create/comment/close`, `gh pr create/comment/review`, etc. with `--repo` or `-R` pointing to a non-owned repo
+**Cache:** Authenticated GitHub username cached for 24 hours via `gh api user`
+**Output:** BLOCKS the command; instructs the user to run it themselves or confirm
+
+### markdown-commit-reminder
+**Event:** PreToolUse (Bash)
+**Purpose:** Remind about markdown file inclusion criteria before commits
+**Triggers:** `git add *.md`, `git add .`, `git commit` with `.md` files mentioned
+**Cooldown:** 300 seconds (5 minutes), per session
+**Output:** Guidance on when to commit vs. skip temporary markdown documents; heightened warning for files matching suspicious patterns (`_REPORT.md`, `_FINDINGS.md`, `TEMP_*.md`, etc.)
+
+### monitor-ci-results
+**Event:** PostToolUse (Bash)
+**Purpose:** Remind to check CI after pushing or creating a PR
+**Triggers:** Successful `git push`, `gh pr create`, or GitHub API PR creation — only when `.github/workflows/` contains YAML files
+**Cooldown:** 120 seconds (2 minutes), per session
+**Output:** `gh run list`/`gh pr checks` commands; GitHub API equivalents when `gh` is unavailable
 
 ## Requirements
 

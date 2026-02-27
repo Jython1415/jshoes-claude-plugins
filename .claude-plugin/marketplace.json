@@ -11,7 +11,7 @@
     {
       "name": "claude-code-hooks",
       "description": "Productivity hooks for Claude Code: line ending normalization, gh attribution reminders, modern tool suggestions, and more",
-      "version": "1.6.0",
+      "version": "1.6.1",
       "author": {
         "name": "Jython1415",
         "url": "https://github.com/Jython1415"
@@ -30,7 +30,7 @@
     {
       "name": "claude-code-misc",
       "description": "Miscellaneous skills and documentation for Claude Code development: hook authoring guide and hook reference",
-      "version": "1.1.1",
+      "version": "1.1.2",
       "author": {
         "name": "Jython1415",
         "url": "https://github.com/Jython1415"
@@ -51,7 +51,7 @@
     {
       "name": "alfred-workflow",
       "description": "Skill for programmatically creating and managing Alfred 5 workflows from the command line",
-      "version": "1.0.0",
+      "version": "1.0.1",
       "author": {
         "name": "Jython1415",
         "url": "https://github.com/Jython1415"
@@ -72,7 +72,7 @@
     {
       "name": "ralph-loop-guide",
       "description": "Best practices reference for writing effective ralph-loop prompts. Use when helping users structure prompts for autonomous coding loops, configure completion criteria, design quality gates, or debug convergence issues.",
-      "version": "1.0.0",
+      "version": "1.0.1",
       "author": {
         "name": "Jython1415",
         "url": "https://github.com/Jython1415"
@@ -93,7 +93,7 @@
     {
       "name": "dev-workflow",
       "description": "Development workflow skills for GitHub-based repos. Includes /session (full dev lifecycle), /triage (issue prioritization), /solve (issue-to-PR), /code-review (multi-agent PR review), /consult (structured decisions), /reflect (session retrospective), and /issue (file well-researched issues).",
-      "version": "1.2.2",
+      "version": "1.2.3",
       "author": {
         "name": "Jython1415",
         "url": "https://github.com/Jython1415"
