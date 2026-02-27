@@ -173,9 +173,9 @@ def build_advisory(streak: int) -> str:
     """Build the delegation advisory message."""
     return (
         f"Orchestration advisory: {streak} consecutive tool calls without delegating. "
-        f"Main session should orchestrate, not implement — use it for quick reads, "
-        f"planning, and launching agents. Delegate implementation, analysis, and "
-        f"multi-step work to a subagent via the Task tool."
+        f"Main session context is for synthesis and coordination only — reads, research, "
+        f"planning, and implementation all belong in subagents. Use the Task tool to "
+        f"delegate, then synthesize what comes back."
     )
 
 
