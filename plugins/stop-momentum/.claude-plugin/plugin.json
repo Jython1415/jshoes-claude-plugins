@@ -1,0 +1,12 @@
+{
+  "name": "stop-momentum",
+  "description": "Opt-in Stop hook that enforces execution momentum via an ack token handshake. Blocks premature stops and requires deliberate acknowledgment before allowing Claude to stop.",
+  "version": "1.0.0",
+  "author": {
+    "name": "Jython1415",
+    "url": "https://github.com/Jython1415"
+  },
+  "homepage": "https://github.com/Jython1415/jshoes-claude-plugins",
+  "repository": "https://github.com/Jython1415/jshoes-claude-plugins",
+  "license": "MIT"
+}
