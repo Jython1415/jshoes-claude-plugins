@@ -36,6 +36,15 @@ Each plugin has a `version` field in `plugins/<name>/.claude-plugin/plugin.json`
 
 **Consumer documentation**: When shipping a configurable feature (new env var, new opt-in behavior), include README documentation for plugin consumers in the same commit. Docs are part of the feature — not a follow-up.
 
+**Renaming a plugin**: When renaming a plugin directory, all of these must be updated in the same PR:
+1. `marketplace.json` — entry `name` and `version` fields
+2. `plugins/<new-name>/.claude-plugin/plugin.json` — `name` field
+3. `plugins/<new-name>/CHANGELOG.md` — add rename entry
+4. `plugins/<new-name>/README.md` — install commands referencing the old name
+5. Other plugins' READMEs that cross-reference the renamed plugin
+6. Any SKILL.md files that list plugin names (e.g. the `/feedback` skill)
+7. `pyproject.toml` — `[project].name` if it matches the old plugin name
+
 ### Writing Skills
 - Do not use `allowed-tools` in skill frontmatter
 - Skills should be self-contained SKILL.md files under `plugins/<name>/skills/<skill-name>/`
