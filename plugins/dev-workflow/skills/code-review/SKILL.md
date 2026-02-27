@@ -5,7 +5,7 @@ description: >
   after creating or updating a pull request, when asked to check code
   quality before merging, or when doing a final review of changes.
   Checks for bugs, logic errors, and convention document compliance.
-argument-hint: "[--light] [--comment]"
+argument-hint: "[--heavy] [--comment]"
 ---
 
 # Code Review
@@ -20,16 +20,15 @@ parallel agents.
 
 ## Arguments
 
-- `--light`: Cost-optimized single-agent review. Same quality bar as the
-  full pipeline; uses Sonnet instead of Opus and one agent instead of many.
-  A good default for any PR when cost matters. Replaces Steps 1–3 with one
-  structured pass; Steps 4–5 apply normally.
+- `--heavy`: Full multi-agent Opus pipeline. Use for high-stakes PRs where
+  maximum coverage matters. Adds Steps 1–3 (6–8 parallel agents); Steps
+  4–5 apply in both modes. Default is a single Sonnet agent.
 - `--comment`: Post inline GitHub comments for each finding (applies in
   both modes).
 
-## Light Mode (when --light is passed)
+## Default Mode (no --heavy flag)
 
-Skip Steps 1–3. Launch **one Sonnet agent** with the PR number and these
+Launch **one Sonnet agent** with the PR number and these
 instructions:
 
 1. Run `gh pr view <PR_NUMBER>` to get the PR title and description.
@@ -79,7 +78,7 @@ instructions:
 
 After this agent returns, proceed to Step 4.
 
-Follow these steps precisely (full mode only — skip if --light was passed):
+Follow these steps precisely (--heavy mode only — skip if --heavy was NOT passed):
 
 ## Step 1: Gather context (2 parallel agents)
 

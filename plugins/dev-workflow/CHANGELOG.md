@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.3.0] - 2026-02-27
+
+### Changed
+- `code-review`, `solve`, `session`: inverted flag defaults — single-Sonnet-agent review is now
+  the default (no flag); `--heavy` opts into the full multi-agent Opus pipeline. `--light` slot
+  is reserved for a future Haiku-first tier (#117). Closes #140.
+
 ## [1.2.4] - 2026-02-27
 
 ### Changed

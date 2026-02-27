@@ -5,7 +5,7 @@ description: >
   priority item, then reflect on lessons learned. Chains /triage,
   /solve, and /reflect into a single workflow. Use at the start of
   a working session to run the full dev lifecycle end-to-end.
-argument-hint: "[--light]"
+argument-hint: "[--heavy]"
 ---
 
 # Session
@@ -15,10 +15,10 @@ three phases, each backed by a dedicated skill.
 
 ## Arguments
 
-- `--light`: Run the session in cost-efficient mode. Propagates to
-  `/solve`, which passes it to `/code-review`. Code review uses a single
-  Sonnet agent instead of the full multi-agent Opus pipeline. Use for
-  routine sessions where the PRs are likely to be small or low-risk.
+- `--heavy`: Run the session with the full multi-agent Opus review pipeline.
+  Propagates to `/solve`, which passes it to `/code-review`. Use for
+  high-stakes sessions where PRs need maximum coverage. Default uses a
+  single Sonnet agent.
 
 ## Phase 1: Triage
 
@@ -62,7 +62,7 @@ the next queue item after merging the current PR.
 Use the issue number from the user's triage selection. Do not reuse
 issue numbers from prior context or previous sessions.
 
-If `--light` was passed to `/session`, invoke `/solve --light <issue>`.
+If `--heavy` was passed to `/session`, invoke `/solve --heavy <issue>`.
 
 `/solve` runs the full issue-to-PR workflow:
 
