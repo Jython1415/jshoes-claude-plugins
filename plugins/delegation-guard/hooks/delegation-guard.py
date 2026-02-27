@@ -109,28 +109,6 @@ def parse_new_transcript_lines(transcript_path: str, offset: int) -> tuple[list[
     return parsed, new_offset
 
 
-def count_tool_calls(lines: list[dict]) -> tuple[int, int]:
-    """
-    Count Task and non-Task tool_use entries in transcript lines.
-
-    A line is a tool_use entry if it has type == "tool_use".
-
-    Returns (task_count, non_task_count).
-    """
-    task_count = 0
-    non_task_count = 0
-    for line in lines:
-        if not isinstance(line, dict):
-            continue
-        if line.get("type") == "tool_use":
-            name = line.get("name", "")
-            if name == "Task":
-                task_count += 1
-            else:
-                non_task_count += 1
-    return task_count, non_task_count
-
-
 def compute_streak(lines: list[dict], initial_streak: int) -> tuple[int, int]:
     """
     Compute the new streak and task_call count from new transcript lines.
