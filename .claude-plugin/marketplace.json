@@ -111,7 +111,7 @@
     {
       "name": "delegation-guard",
       "description": "PostToolUse hook that tracks consecutive non-Task tool calls and injects a delegation advisory when the streak exceeds threshold. Encourages main-agent orchestration patterns.",
-      "version": "1.0.1",
+      "version": "1.0.0",
       "author": {
         "name": "Jython1415",
         "url": "https://github.com/Jython1415"

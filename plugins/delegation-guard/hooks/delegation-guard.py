@@ -10,7 +10,7 @@ Event: PostToolUse (no matcher — fires on all tools)
 Purpose: Encourages the main session agent to delegate implementation, research,
 and multi-step analysis work to subagents via the Task tool. Fires an advisory
 reminder when Claude makes 2 or more consecutive tool calls without spawning a
-subagent, matching the '3 consecutive non-spawn tool calls = delegate' rule.
+subagent.
 
 Mechanism — offset-tracked transcript parsing:
 Each PostToolUse call reads the transcript from the last recorded byte offset,
