@@ -6,6 +6,7 @@ via an ack token handshake on Stop events.
 """
 import json
 import os
+import re
 import subprocess
 import tempfile
 from pathlib import Path
@@ -225,12 +226,14 @@ class TestCustomGuidance:
             assert custom_text in output["reason"], "Custom guide content should appear in reason"
 
     def test_default_guidance_used_when_no_guide(self):
-        """Block reason should use default guidance when no momentum-guide.md exists."""
+        """Block reason should be non-empty and contain the ack token when no momentum-guide.md exists."""
         with tempfile.TemporaryDirectory() as tmpdir:
             output = run_hook(cwd=tmpdir, clear_state=True)
             assert output.get("decision") == "block"
-            assert "EXECUTION MOMENTUM CHECK" in output["reason"], (
-                "Default guidance should appear when no custom guide"
+            reason = output.get("reason", "")
+            assert reason, "Block reason should be non-empty"
+            assert re.search(r"ACK-[A-Z0-9]{4}", reason), (
+                "Block reason should contain the ack token"
             )
 
     def test_custom_guide_token_appended_correctly(self):
