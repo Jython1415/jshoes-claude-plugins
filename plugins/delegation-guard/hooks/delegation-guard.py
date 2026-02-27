@@ -9,22 +9,25 @@ Event: PostToolUse (no matcher — fires on all tools)
 
 Purpose: Encourages the main session agent to delegate implementation, research,
 and multi-step analysis work to subagents via the Task tool. Fires an advisory
-reminder when Claude makes 3 or more consecutive tool calls without spawning a
+reminder when Claude makes 2 or more consecutive tool calls without spawning a
 subagent, matching the '3 consecutive non-spawn tool calls = delegate' rule.
 
 Mechanism — offset-tracked transcript parsing:
 Each PostToolUse call reads the transcript from the last recorded byte offset,
 parses only the new JSONL lines, and counts tool_use entries. Lines where the
 tool name is "Task" reset the streak; all other tool_use lines increment it.
+Exempt tools (listed in EXEMPT_TOOLS, e.g. Skill) are neutral — they neither
+increment nor reset the streak.
 
 Behavior:
-- If streak >= 3: inject an additionalContext advisory
+- If streak >= 2 and advisory has not yet fired this run: inject an additionalContext advisory
+- advisory_fired is reset to False when a Task call occurs (enabling re-fire after delegation)
 - Otherwise: output {}
 
 State management:
 - State files stored in: ~/.claude/hook-state/{session_id}-delegation.json
 - Override location: CLAUDE_HOOK_STATE_DIR environment variable
-- State fields: offset (int, bytes), streak (int), task_calls (int)
+- State fields: offset (int, bytes), streak (int), task_calls (int), advisory_fired (bool)
 """
 import json
 import os
@@ -36,7 +39,10 @@ _state_dir_env = os.environ.get("CLAUDE_HOOK_STATE_DIR")
 STATE_DIR = Path(_state_dir_env) if _state_dir_env else Path.home() / ".claude" / "hook-state"
 
 # Delegation threshold (number of consecutive non-Task calls before advisory fires)
-DELEGATION_THRESHOLD = 3
+DELEGATION_THRESHOLD = 2
+
+# Tools that don't affect streak counting (neither increment nor reset)
+EXEMPT_TOOLS = {"Skill"}
 
 
 def get_state_file(session_id: str) -> Path:
@@ -46,7 +52,7 @@ def get_state_file(session_id: str) -> Path:
 
 def read_state(session_id: str) -> dict:
     """Read delegation state for this session. Returns default state if not found or corrupt."""
-    default = {"offset": 0, "streak": 0, "task_calls": 0}
+    default = {"offset": 0, "streak": 0, "task_calls": 0, "advisory_fired": False}
     try:
         state_file = get_state_file(session_id)
         if not state_file.exists():
@@ -55,6 +61,8 @@ def read_state(session_id: str) -> dict:
         # Validate expected fields are present and are ints
         if not all(isinstance(data.get(k), int) for k in ("offset", "streak", "task_calls")):
             return default
+        if not isinstance(data.get("advisory_fired"), bool):
+            data["advisory_fired"] = False
         return data
     except Exception:
         return default
@@ -109,18 +117,22 @@ def parse_new_transcript_lines(transcript_path: str, offset: int) -> tuple[list[
     return parsed, new_offset
 
 
-def compute_streak(lines: list[dict], initial_streak: int) -> tuple[int, int]:
+def compute_streak(
+    lines: list[dict], initial_streak: int, initial_advisory_fired: bool
+) -> tuple[int, int, bool]:
     """
-    Compute the new streak and task_call count from new transcript lines.
+    Compute the new streak, task_call count, and advisory_fired flag from new transcript lines.
 
-    Processes tool_use entries in order. Task calls reset the streak to 0;
-    non-Task calls increment it. The initial_streak is the streak before
-    seeing any of the new lines.
+    Processes tool_use entries in order:
+    - Task calls reset streak to 0 and reset advisory_fired to False
+    - Exempt tools (e.g. Skill) are skipped — no effect on streak
+    - All other tool_use calls increment streak
 
-    Returns (new_streak, new_task_calls).
+    Returns (new_streak, new_task_calls, new_advisory_fired).
     """
     streak = initial_streak
     task_calls = 0
+    advisory_fired = initial_advisory_fired
     for line in lines:
         if not isinstance(line, dict):
             continue
@@ -129,9 +141,12 @@ def compute_streak(lines: list[dict], initial_streak: int) -> tuple[int, int]:
             if name == "Task":
                 streak = 0
                 task_calls += 1
+                advisory_fired = False  # Reset when delegation occurs
+            elif name in EXEMPT_TOOLS:
+                pass  # Neutral — does not affect streak
             else:
                 streak += 1
-    return streak, task_calls
+    return streak, task_calls, advisory_fired
 
 
 def build_advisory(streak: int) -> str:
@@ -155,23 +170,30 @@ def main():
         offset = state["offset"]
         streak = state["streak"]
         task_calls = state["task_calls"]
+        advisory_fired = state.get("advisory_fired", False)
 
         # Read and parse new transcript content
         new_lines, new_offset = parse_new_transcript_lines(transcript_path, offset)
 
         # Compute updated streak from new lines
-        new_streak, new_task_count = compute_streak(new_lines, streak)
+        new_streak, new_task_count, new_advisory_fired = compute_streak(new_lines, streak, advisory_fired)
         new_task_calls = task_calls + new_task_count
+
+        # Determine if advisory should fire (once per unbroken non-delegation run)
+        should_fire = new_streak >= DELEGATION_THRESHOLD and not new_advisory_fired
+        if should_fire:
+            new_advisory_fired = True
 
         # Persist updated state
         write_state(session_id, {
             "offset": new_offset,
             "streak": new_streak,
             "task_calls": new_task_calls,
+            "advisory_fired": new_advisory_fired,
         })
 
-        # Emit advisory if threshold reached
-        if new_streak >= DELEGATION_THRESHOLD:
+        # Emit advisory if triggered
+        if should_fire:
             output = {
                 "hookSpecificOutput": {
                     "hookEventName": "PostToolUse",
