@@ -1,4 +1,4 @@
-# Claude Code Hooks Plugin
+# core-hooks Plugin
 
 A comprehensive set of productivity hooks for Claude Code, providing intelligent suggestions, workflow improvements, and safety mechanisms.
 
@@ -75,10 +75,10 @@ Smart rate limiting prevents repetitive suggestions:
 claude plugin marketplace add Jython1415/jshoes-claude-plugins
 
 # Install plugin globally
-claude plugin install claude-code-hooks@jshoes-claude-plugins
+claude plugin install core-hooks@jshoes-claude-plugins
 
 # Or install for current project only
-claude plugin install claude-code-hooks@jshoes-claude-plugins --scope project
+claude plugin install core-hooks@jshoes-claude-plugins --scope project
 ```
 
 ### Local Development
@@ -89,7 +89,7 @@ git clone https://github.com/Jython1415/jshoes-claude-plugins.git
 cd jshoes-claude-plugins
 
 # Test plugin locally
-claude --plugin-dir ./plugins/claude-code-hooks
+claude --plugin-dir ./plugins/core-hooks
 ```
 
 ## Hook Details

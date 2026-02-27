@@ -1,5 +1,10 @@
 # Changelog
 
+## [1.3.0] - 2026-02-27
+
+### Changed
+- Renamed from `claude-code-misc` to `plugin-support` for clarity.
+
 ## [1.2.0] - 2026-02-27
 
 ### Added

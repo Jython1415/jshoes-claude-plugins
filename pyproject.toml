@@ -12,7 +12,7 @@ dev = [
 ]
 
 [tool.pytest.ini_options]
-testpaths = ["plugins/claude-code-hooks/tests", "plugins/stop-momentum/tests", "plugins/delegation-guard/tests"]
+testpaths = ["plugins/core-hooks/tests", "plugins/orchestration-discipline/tests"]
 python_files = "test_*.py"
 addopts = "-v --tb=short"
 
