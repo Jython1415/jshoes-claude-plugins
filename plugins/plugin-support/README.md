@@ -1,6 +1,6 @@
-# Claude Code Misc Plugin
+# plugin-support Plugin
 
-Miscellaneous skills for Claude Code development and plugin consumer support.
+Skills for Claude Code development and plugin consumer support.
 
 ## Skills
 
@@ -21,7 +21,7 @@ Invoke with:
 /hook-development
 ```
 
-Or read directly: `plugins/claude-code-misc/skills/hook-development/SKILL.md`
+Or read directly: `plugins/plugin-support/skills/hook-development/SKILL.md`
 
 ### /feedback
 
@@ -43,7 +43,7 @@ Invoke with:
 claude plugin marketplace add Jython1415/jshoes-claude-plugins
 
 # Install plugin globally
-claude plugin install claude-code-misc@jshoes-claude-plugins
+claude plugin install plugin-support@jshoes-claude-plugins
 ```
 
 ## Requirements

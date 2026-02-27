@@ -6,8 +6,8 @@ A Claude Code plugin repository with hooks, skills, and workflow tools. See [Cla
 
 This repository serves as:
 
-- **Project-scoped configuration**: Configuration in `.claude/` is automatically available when using this repository 
-- **Hook development workspace**: Source repository for the `claude-code-hooks` plugin
+- **Project-scoped configuration**: Configuration in `.claude/` is automatically available when using this repository
+- **Hook development workspace**: Source repository for the `core-hooks` plugin
 
 ## How to Use This Repository
 
@@ -37,20 +37,20 @@ Install hooks globally to use them in all your projects:
    claude plugin marketplace add https://github.com/Jython1415/jshoes-claude-plugins
    ```
 
-2. **Install the claude-code-hooks plugin**:
+2. **Install the core-hooks plugin**:
    ```bash
-   claude plugin install claude-code-hooks@jshoes-claude-plugins --scope user
+   claude plugin install core-hooks@jshoes-claude-plugins --scope user
    ```
 
 3. **Hooks are now active globally**. You can optionally copy custom permissions from `.claude/settings.json` to your `~/.claude/settings.json` if desired.
 
-See `plugins/claude-code-hooks/README.md` for plugin-specific documentation.
+See `plugins/core-hooks/README.md` for plugin-specific documentation.
 
 ## What's Included
 
 ### Custom Hooks (13 total)
 
-See `plugins/claude-code-hooks/README.md` for detailed documentation.
+See `plugins/core-hooks/README.md` for detailed documentation.
 
 | Hook | Event | Purpose |
 |------|-------|---------|
@@ -110,19 +110,19 @@ The following are intentionally excluded via `.gitignore`:
 
 **Note**: If you've installed the plugin globally (Option 2), you'll need to update the plugin to get the latest changes:
 ```bash
-claude plugin update claude-code-hooks@jshoes-claude-plugins
+claude plugin update core-hooks@jshoes-claude-plugins
 ```
 
 ## Hook Development
 
-This repository serves as the development workspace for the `claude-code-hooks` plugin:
+This repository serves as the development workspace for the `core-hooks` plugin:
 
-1. Edit hooks in `plugins/claude-code-hooks/hooks/`
-2. Run tests: `uv run pytest plugins/claude-code-hooks/tests/`
-3. Bump version in `plugins/claude-code-hooks/.claude-plugin/plugin.json` (same commit)
+1. Edit hooks in `plugins/core-hooks/hooks/`
+2. Run tests: `uv run pytest plugins/core-hooks/tests/`
+3. Bump version in `plugins/core-hooks/.claude-plugin/plugin.json` (same commit)
 4. Publish to plugin marketplace (when ready)
 
-See `plugins/claude-code-hooks/README.md` for hook documentation and `plugins/claude-code-misc/skills/hook-development/` for the authoring guide.
+See `plugins/core-hooks/README.md` for hook documentation and `plugins/plugin-support/skills/hook-development/` for the authoring guide.
 
 ## License
 

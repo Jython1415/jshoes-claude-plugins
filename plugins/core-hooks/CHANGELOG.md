@@ -1,5 +1,10 @@
 # Changelog
 
+## [1.0.0] - 2026-02-27
+
+### Changed
+- Renamed from `claude-code-hooks` to `core-hooks` to better reflect that all plugins in this repository target Claude Code CLI.
+
 ## [2.0.0] - 2026-02-27
 
 ### Removed

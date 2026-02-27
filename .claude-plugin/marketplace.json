@@ -9,14 +9,14 @@
   },
   "plugins": [
     {
-      "name": "claude-code-hooks",
+      "name": "core-hooks",
       "description": "Productivity hooks for Claude Code: line ending normalization, gh attribution reminders, modern tool suggestions, and more",
-      "version": "2.0.0",
+      "version": "1.0.0",
       "author": {
         "name": "Jython1415",
         "url": "https://github.com/Jython1415"
       },
-      "source": "./plugins/claude-code-hooks",
+      "source": "./plugins/core-hooks",
       "category": "development",
       "keywords": [
         "hooks",
@@ -28,14 +28,14 @@
       ]
     },
     {
-      "name": "claude-code-misc",
+      "name": "plugin-support",
       "description": "Miscellaneous skills and documentation for Claude Code development: hook authoring guide and hook reference",
-      "version": "1.2.0",
+      "version": "1.3.0",
       "author": {
         "name": "Jython1415",
         "url": "https://github.com/Jython1415"
       },
-      "source": "./plugins/claude-code-misc",
+      "source": "./plugins/plugin-support",
       "category": "development",
       "keywords": [
         "hooks",
@@ -91,35 +91,19 @@
       ]
     },
     {
-      "name": "stop-momentum",
-      "description": "Opt-in Stop hook that enforces execution momentum via an ack token handshake. Blocks premature stops and requires deliberate acknowledgment before allowing Claude to stop.",
+      "name": "orchestration-discipline",
+      "description": "Hooks that enforce execution discipline in main-session workflows: stop-momentum prevents premature session stops; delegation-guard encourages subagent delegation.",
       "version": "1.0.0",
       "author": {
         "name": "Jython1415",
         "url": "https://github.com/Jython1415"
       },
-      "source": "./plugins/stop-momentum",
+      "source": "./plugins/orchestration-discipline",
       "category": "productivity",
       "keywords": [
         "hooks",
         "stop",
         "momentum",
-        "productivity",
-        "workflow"
-      ]
-    },
-    {
-      "name": "delegation-guard",
-      "description": "PostToolUse hook that tracks consecutive non-Task tool calls and injects a delegation advisory when the streak exceeds threshold. Encourages main-agent orchestration patterns.",
-      "version": "1.0.0",
-      "author": {
-        "name": "Jython1415",
-        "url": "https://github.com/Jython1415"
-      },
-      "source": "./plugins/delegation-guard",
-      "category": "productivity",
-      "keywords": [
-        "hooks",
         "delegation",
         "orchestration",
         "productivity",

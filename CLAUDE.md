@@ -3,8 +3,9 @@
 This repository contains version-controlled configuration for **Claude Code CLI**.
 
 ## Repository Structure
-- `plugins/claude-code-hooks/` - Hook scripts and tests (published to marketplace)
-- `plugins/claude-code-misc/` - Hook development skill, hook reference docs, and `/feedback` skill (consumer issue filing)
+- `plugins/core-hooks/` - Hook scripts and tests (published to marketplace)
+- `plugins/plugin-support/` - Hook development skill, hook reference docs, and `/feedback` skill (consumer issue filing)
+- `plugins/orchestration-discipline/` - stop-momentum and delegation-guard hooks (execution discipline)
 - `plugins/dev-workflow/` - Dev workflow skills (if present)
 - Root `CLAUDE.md` - Project instructions for Claude
 
@@ -13,9 +14,9 @@ This repository contains version-controlled configuration for **Claude Code CLI*
 When working in this repository, you are managing the user's Claude Code configuration.
 
 ### Modifying Hooks
-Use the `/hook-development` skill (`plugins/claude-code-misc/skills/hook-development/SKILL.md`) for all hook authoring, testing, lifecycle, and performance guidance.
+Use the `/hook-development` skill (`plugins/plugin-support/skills/hook-development/SKILL.md`) for all hook authoring, testing, lifecycle, and performance guidance.
 
-Quick manual test: `echo '{"tool_name":"Bash","tool_input":{"command":"test"}}' | uv run --script plugins/claude-code-hooks/hooks/hookname.py`
+Quick manual test: `echo '{"tool_name":"Bash","tool_input":{"command":"test"}}' | uv run --script plugins/core-hooks/hooks/hookname.py`
 
 ### Modifying Settings
 - Edit your local `.claude/settings.json` directly (not tracked in git)
@@ -86,9 +87,9 @@ After making changes:
 
 **Global via plugin marketplace (recommended):**
 1. Add marketplace: `claude plugin marketplace add https://github.com/Jython1415/jshoes-claude-plugins`
-2. Install plugin: `claude plugin install claude-code-hooks@jshoes-claude-plugins --scope user`
+2. Install plugin: `claude plugin install core-hooks@jshoes-claude-plugins --scope user`
 3. Hooks are now active globally
 
 ## Testing Philosophy for Hooks
 
-See the `/hook-development` skill for the full testing philosophy. The key principle: **test behavior, not content** — verify that hooks trigger correctly and produce valid JSON, not the specific wording of guidance messages.
+See the `/hook-development` skill (`plugins/plugin-support/skills/hook-development/`) for the full testing philosophy. The key principle: **test behavior, not content** — verify that hooks trigger correctly and produce valid JSON, not the specific wording of guidance messages.
