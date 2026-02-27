@@ -1,5 +1,11 @@
 # Changelog
 
+## [2.0.0] - 2026-02-27
+
+### Removed
+- `prefer-gh-for-own-repos`: Hook was hardcoded to a specific GitHub owner and provided no value to other users.
+- `gh-web-fallback`: Hook was designed for claude.ai/code (web) environments where `gh` CLI is unavailable. This repository now targets Claude Code CLI only.
+
 ## [1.6.1] - 2026-02-26
 
 ### Changed

@@ -27,6 +27,9 @@ plugins/installed_plugins.json
 # OS files
 .DS_Store
 
+# Environment variables
+.env
+
 # Python cache
 __pycache__/
 *.pyc
