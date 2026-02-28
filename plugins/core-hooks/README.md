@@ -55,12 +55,12 @@ Add the `env` field at user scope (`~/.claude/settings.json`):
 ```json
 {
   "env": {
-    "JSHOES_HOOK_LOG_DIR": "~/.claude/hook-logs"
+    "JSHOES_HOOK_LOG_DIR": "/Users/yourname/.claude/hook-logs"
   }
 }
 ```
 
-This activates logging globally for this machine without touching the plugin or any project config.
+Use an **absolute path** — tilde (`~`) is not expanded by the shell when reading values from `settings.json`. This activates logging globally for this machine without touching the plugin or any project config.
 
 **Option 2: Shell profile (`~/.zshrc` / `~/.bashrc`)**
 
