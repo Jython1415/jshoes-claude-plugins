@@ -1,5 +1,15 @@
 # Changelog
 
+## [1.1.0] - 2026-02-27
+
+### Added
+- **PermissionRequest logging**: New `PermissionRequest` hook entry routes all permission prompts through `run-with-fallback.sh` → `log-event.py`. When `JSHOES_HOOK_LOG_DIR` is set, captures `tool_name`, `tool_input`, and `permission_suggestions` to `{session_id}.jsonl`. Observer-only — no decision returned.
+- **Notification logging**: New `Notification` hook entry captures all notification events (`permission_prompt`, `idle_prompt`, `auth_success`, `elicitation_dialog`). Same logging path as PermissionRequest. Observer-only.
+- **`log-event.py`**: Minimal observer hook shared by PermissionRequest and Notification. Outputs `{}` so `run-with-fallback.sh` handles all logging.
+
+### Changed
+- **Machine-local configuration docs**: README now documents enabling `JSHOES_HOOK_LOG_DIR` via `~/.claude/settings.json` `env` field (user scope) as the recommended approach for persistent per-machine logging — no plugin changes required.
+
 ## [1.0.0] - 2026-02-27
 
 ### Changed
