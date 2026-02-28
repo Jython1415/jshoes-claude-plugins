@@ -11,7 +11,7 @@ This repository contains version-controlled configuration for **Claude Code CLI*
 - `plugins/orchestration-discipline/` - stop-momentum and delegation-guard hooks (execution discipline)
 - `plugins/dev-workflow/` - Dev workflow skills (if present)
 - Root `CLAUDE.md` - Project instructions for Claude
-- **`.claude/` is gitignored** — local runtime state only; no tracked files tracked under `.claude/`
+- **`.claude/` is gitignored** — local runtime state only; no tracked files under `.claude/`
 
 ## Self-Management Instructions for Claude
 
