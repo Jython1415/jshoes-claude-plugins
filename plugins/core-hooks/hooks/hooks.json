@@ -94,6 +94,26 @@
           }
         ]
       }
+    ],
+    "PermissionRequest": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"${CLAUDE_PLUGIN_ROOT}\"/hooks/run-with-fallback.sh open \"${CLAUDE_PLUGIN_ROOT}\"/hooks/log-event.py"
+          }
+        ]
+      }
+    ],
+    "Notification": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"${CLAUDE_PLUGIN_ROOT}\"/hooks/run-with-fallback.sh open \"${CLAUDE_PLUGIN_ROOT}\"/hooks/log-event.py"
+          }
+        ]
+      }
     ]
   }
 }

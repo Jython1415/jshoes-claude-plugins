@@ -4,7 +4,7 @@ A comprehensive set of productivity hooks for Claude Code, providing intelligent
 
 ## Features
 
-### 13 Productivity Hooks
+### 15 Productivity Hooks
 
 **SessionStart Hooks (At session initialization):**
 - **ensure-tmpdir** - Ensures the TMPDIR directory exists at session start
@@ -29,6 +29,12 @@ A comprehensive set of productivity hooks for Claude Code, providing intelligent
 - **detect-heredoc-errors** - Heredoc error workarounds
 - **suggest-uv-for-missing-deps** - Suggests `uv run` for Python import errors
 
+**PermissionRequest Hooks (When a permission dialog appears):**
+- **log-event** - Observer-only; logs the event (tool name, input, permission suggestions) to JSONL
+
+**Notification Hooks (When Claude Code sends a notification):**
+- **log-event** - Observer-only; logs the event (message, title, notification type) to JSONL
+
 ### Graceful Failure Handling
 
 All hooks use `run-with-fallback.sh` wrapper for safety:
@@ -38,15 +44,31 @@ All hooks use `run-with-fallback.sh` wrapper for safety:
 
 ### Hook Event Logging
 
-Opt-in sidecar logging captures the full input and output of every hook invocation for observability and debugging.
+Opt-in sidecar logging captures the full input and output of every hook invocation — including `PermissionRequest` and `Notification` events — for observability and post-session analysis.
 
-**Enable by setting `JSHOES_HOOK_LOG_DIR`** in your shell environment or `.env`:
+**Enable by setting `JSHOES_HOOK_LOG_DIR`.** Two recommended approaches:
+
+**Option 1: `~/.claude/settings.json` (recommended — persists across all projects on this machine)**
+
+Add the `env` field at user scope (`~/.claude/settings.json`):
+
+```json
+{
+  "env": {
+    "JSHOES_HOOK_LOG_DIR": "~/.claude/hook-logs"
+  }
+}
+```
+
+This activates logging globally for this machine without touching the plugin or any project config.
+
+**Option 2: Shell profile (`~/.zshrc` / `~/.bashrc`)**
 
 ```bash
 export JSHOES_HOOK_LOG_DIR=~/.claude/hook-logs
 ```
 
-When set, each Claude Code session appends JSONL entries to `$JSHOES_HOOK_LOG_DIR/{session_id}.jsonl`. Each entry contains:
+When set, each Claude Code session appends JSONL entries to `$JSHOES_HOOK_LOG_DIR/{session_id}.jsonl`. The `session_id` matches CC's own session records in `~/.claude/projects/` so logs can be joined for post-session analysis. Each entry contains:
 
 ```json
 {
@@ -170,6 +192,15 @@ claude --plugin-dir ./plugins/core-hooks
 **Triggers:** Successful `git push`, `gh pr create`, or GitHub API PR creation — only when `.github/workflows/` contains YAML files
 **Cooldown:** 120 seconds (2 minutes), per session
 **Output:** `gh run list`/`gh pr checks` commands; GitHub API equivalents when `gh` is unavailable
+
+### log-event
+**Events:** PermissionRequest, Notification
+**Purpose:** Observer-only hook that logs permission prompts and notifications to JSONL
+**Triggers:** All permission requests (any tool) and all notification types
+**Output:** `{}` — no decision; logging is handled by `run-with-fallback.sh` when `JSHOES_HOOK_LOG_DIR` is set
+**Captured fields:**
+- PermissionRequest: `tool_name`, `tool_input`, `permission_suggestions`
+- Notification: `message`, `title`, `notification_type`
 
 ## Requirements
 
