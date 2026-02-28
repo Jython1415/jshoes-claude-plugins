@@ -149,7 +149,10 @@ def compute_streak(
     - Exempt tools (e.g. Skill) are skipped — no effect on streak
     - All other tool_use calls increment streak
 
-    Returns (new_streak, new_task_calls, new_advisory_fired).
+    Returns (new_streak, task_call_delta, new_advisory_fired).
+    task_call_delta is the count of Task calls seen in this batch only (a delta,
+    not the running total). The caller is responsible for adding it to the
+    persisted task_calls total.
     """
     streak = initial_streak
     task_calls = 0
