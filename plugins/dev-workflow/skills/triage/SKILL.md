@@ -4,6 +4,7 @@ description: >
   Analyze repo state, open issues, and recent activity to propose a
   prioritized queue of work for the session. Use at the start of a
   session to decide what to tackle.
+argument-hint: "[--light]"
 ---
 
 # Triage
@@ -11,6 +12,13 @@ description: >
 Assess the current state of the project and propose what to work on.
 This is a research and synthesis task -- you are not implementing
 anything, you are helping the user decide where to focus.
+
+## Arguments
+
+- `--light`: Two-agent pipeline. Use a Haiku subagent for Steps 1–3
+  (data gathering) and a Sonnet subagent for Steps 4–5 (synthesis and
+  presentation). Steps proceed sequentially: Haiku gathers, then Sonnet
+  synthesizes. Use for cost-sensitive triage runs.
 
 ## Step 1: Repo state
 
@@ -102,7 +110,8 @@ each item maps to one `/solve` invocation and one PR.
 
 - **Delegate the research.** Use subagents for fetching issue details
   and exploring the codebase. Keep the main context for synthesis and
-  presentation.
+  presentation. If `--light` was passed, use Haiku for Steps 1–3 and
+  Sonnet for Steps 4–5. Otherwise, a single Sonnet subagent handles all steps.
 - **Don't just list issues.** The value is in the synthesis -- grouping,
   prioritization, and reasoning about what matters now.
 - **Be opinionated.** The user wants your recommendation, not a menu.
