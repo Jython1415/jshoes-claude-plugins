@@ -6,7 +6,7 @@ description: >
   feature tracked in an issue. Explores the codebase, collaboratively
   scopes design decisions with the user, plans the implementation,
   builds it, and runs code review before presenting the PR.
-argument-hint: "<issue> [<issue> ...] [--heavy]"
+argument-hint: "<issue> [<issue> ...] [--light] [--heavy]"
 ---
 
 # Solve
@@ -20,6 +20,9 @@ these phases in order. Do not skip phases unless explicitly noted.
 spaces. Parse:
 - Issue references: numbers (`42`), prefixed (`#42`), or full URLs —
   normalize to issue numbers
+- `--light`: Use the Haiku-first checklist review in Phase 7. Use Haiku
+  model for exploration subagents in Phase 2. Pass as `--light` when
+  invoking `/code-review`.
 - `--heavy`: If present, use the full multi-agent Opus review in Phase 7.
   Pass as `--heavy` when invoking `/code-review`. Default is a single
   Sonnet agent.
@@ -154,6 +157,7 @@ correct config in the wrong format is a silent failure.
 Before presenting the PR to the user:
 
 1. Invoke `/code-review` using the Skill tool to run a review of the PR:
+   - If `--light` was passed as an argument, invoke `/code-review --light`
    - If `--heavy` was passed as an argument, invoke `/code-review --heavy`
    - Otherwise, invoke `/code-review` for the default single-Sonnet review
 2. If the review surfaces real issues, fix them and commit -- do not

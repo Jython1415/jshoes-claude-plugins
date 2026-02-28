@@ -1,5 +1,15 @@
 # Changelog
 
+## [1.4.0] - 2026-02-28
+
+### Added
+- `--light` mode for `code-review`, `solve`, `session`, and `triage`: Haiku-first,
+  single-agent, checklist-only pipeline. `code-review --light` runs a two-stage
+  mechanical scan (Haiku extracts and flags against an explicit checklist, Sonnet
+  filters false positives and synthesizes findings). `session --light` auto-selects
+  the top triage item without `AskUserQuestion`. `triage --light` uses a Haiku
+  subagent for data gathering and Sonnet for synthesis. Closes #117.
+
 ## [1.3.0] - 2026-02-27
 
 ### Changed

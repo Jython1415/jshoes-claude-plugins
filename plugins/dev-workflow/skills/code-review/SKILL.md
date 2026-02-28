@@ -5,14 +5,14 @@ description: >
   after creating or updating a pull request, when asked to check code
   quality before merging, or when doing a final review of changes.
   Checks for bugs, logic errors, and convention document compliance.
-argument-hint: "[--heavy] [--comment]"
+argument-hint: "[--light] [--heavy] [--comment]"
 ---
 
 # Code Review
 
 You have been asked to review a pull request (or have determined that a
-review is warranted). Perform a thorough, high-signal review using
-parallel agents.
+review is warranted). Perform a high-signal review at the depth appropriate
+for the flag passed.
 
 **Agent assumptions (communicate to all agents and subagents):**
 - All tools are functional. Do not test tools or make exploratory calls.
@@ -20,11 +20,132 @@ parallel agents.
 
 ## Arguments
 
+- `--light`: Two-stage Haiku+Sonnet pipeline. Mechanical checklist only —
+  no bug detection requiring reasoning. Use for cost-sensitive or
+  high-frequency reviews.
 - `--heavy`: Full multi-agent Opus pipeline. Use for high-stakes PRs where
   maximum coverage matters. Adds Steps 1–3 (6–8 parallel agents); Steps
-  4–5 apply in both modes. Default is a single Sonnet agent.
+  4–5 apply in default and heavy modes. Default is a single Sonnet agent.
 - `--comment`: Post inline GitHub comments for each finding (applies in
-  both modes).
+  all modes).
+
+## Light Mode (--light flag)
+
+Skip if `--light` was NOT passed.
+
+Two sequential agents: Haiku performs a mechanical checklist scan and returns
+structured JSON; Sonnet filters false positives, adds convention violations,
+and produces the final output. No reasoning over complex logic. No Opus.
+
+### Stage 1: Haiku checklist scan
+
+Launch **one Haiku agent** with the PR number and these exact instructions:
+
+---
+
+You are performing a mechanical code review. Follow these steps exactly.
+Do not add analysis or judgment beyond what is specified.
+
+**Step 1: Get the diff.**
+Run: `gh pr diff <PR_NUMBER>`
+
+**Step 2: Enumerate changed files.**
+List every file path that appears after `diff --git` in the diff output.
+For each file, record:
+- `language`: the file extension (e.g. `.py`, `.ts`, `.sh`, `.json`, `.md`)
+- `change_type`: exactly one of `new-file`, `modified`, `deleted`, `renamed`
+  (check the diff header line: `new file mode` → new-file; `deleted file
+  mode` → deleted; `rename from` → renamed; anything else → modified)
+
+**Step 3: Run the checklist.**
+For each added line (lines starting with `+` but NOT `+++`), check each
+item below. A line is a *comment line* if the first non-whitespace character
+after `+` is `#`, `//`, or `*`.
+
+Security checks:
+- **S1** — Does the line contain a string literal (text inside `"..."` or
+  `'...'`) that includes any of: `password`, `secret`, `token`, `api_key`,
+  `apikey`, `credential`, `private_key`? Skip comment lines.
+- **S2** — Does the line contain both a SQL keyword (`SELECT`, `INSERT`,
+  `UPDATE`, `DELETE`, `FROM`) AND a variable reference or f-string
+  concatenation? (Both must appear on the same line.)
+- **S3** — Does the line call `eval(` or `exec(` where the argument is NOT
+  a plain string literal (i.e., the argument is a variable or expression)?
+
+Quality checks:
+- **Q1** — Does the line contain `TODO`, `FIXME`, or `HACK` inside a
+  comment? (Flag only comment lines or inline comments.)
+- **Q2** — Does the line call `print(` (Python), `console.log(` (JS/TS),
+  or `println!(` (Rust)? Skip if the file path contains `test`, `spec`,
+  `__test__`, or `_test`.
+- **Q3** — Does the line contain a bare exception handler: `except:` with
+  no exception type (Python), or `catch {}` / `catch (_)` with an empty
+  body (JS/TS)?
+
+Convention checks:
+- **C1** — For new files only (`change_type` = `new-file`): Does the new
+  filename use a different naming convention than other files already listed
+  in the same directory?
+  - Rule: if the majority of existing files in that directory use
+    `snake_case`, `camelCase`, or `kebab-case`, the new file must match.
+  - If the directory has fewer than two other files, skip this check.
+
+**Step 4: Return structured JSON — output ONLY this JSON, nothing else.**
+
+```json
+{
+  "pr_number": <number>,
+  "changed_files": [
+    {"path": "<file path>", "language": "<extension>", "change_type": "<type>"}
+  ],
+  "findings": [
+    {
+      "file": "<file path>",
+      "line": <line number or null>,
+      "check": "<check ID, e.g. S1>",
+      "snippet": "<exact text of the flagged line, without the leading +>"
+    }
+  ],
+  "stats": {
+    "total_files": <number>,
+    "flagged_files": <number>,
+    "findings_count": <number>
+  }
+}
+```
+
+If there are no findings, return `"findings": []`.
+
+---
+
+### Stage 2: Sonnet synthesis
+
+After the Haiku agent returns, launch **one Sonnet agent** with the PR number,
+the Haiku JSON, and these instructions:
+
+---
+
+You are synthesizing a lightweight code review from a pre-screened set of
+mechanical findings. Work through these steps:
+
+1. Run `gh pr view <PR_NUMBER>` to get the PR title and description.
+2. Read `CLAUDE.md` in the repo root (if it exists). Skim for short,
+   directly checkable rules (e.g. "never commit X", "always use Y").
+   Ignore aspirational guidelines and prose that requires interpretation.
+3. For each finding in the JSON: read 5 lines of context around the flagged
+   line from the diff. Ask one question: **Is this a false positive?** A
+   finding is a false positive if the flagged pattern is clearly safe in
+   context (e.g., S1 flags a `password` variable in a test fixture with
+   fake data; Q2 flags a `print()` inside `if DEBUG:`). Drop false positives.
+   Keep everything else.
+4. Scan the diff for direct violations of the CLAUDE.md rules from step 2.
+   Add any violations you find with `check: "convention"`.
+5. Return findings in this format: file path, line number, check ID,
+   one-sentence description, severity (`critical` / `major` / `minor`).
+
+---
+
+After this agent returns, proceed to Step 4 (Output).
 
 ## Default Mode (no --heavy flag)
 

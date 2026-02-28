@@ -5,7 +5,7 @@ description: >
   priority item, then reflect on lessons learned. Chains /triage,
   /solve, and /reflect into a single workflow. Use at the start of
   a working session to run the full dev lifecycle end-to-end.
-argument-hint: "[--heavy]"
+argument-hint: "[--light] [--heavy]"
 ---
 
 # Session
@@ -15,6 +15,10 @@ three phases, each backed by a dedicated skill.
 
 ## Arguments
 
+- `--light`: Run the session with the Haiku-first checklist review pipeline.
+  Propagates to `/solve`, which passes it to `/code-review`. Skips the
+  triage `AskUserQuestion` — auto-selects the top-ranked item. Use for
+  cost-sensitive or automated sessions.
 - `--heavy`: Run the session with the full multi-agent Opus review pipeline.
   Propagates to `/solve`, which passes it to `/code-review`. Use for
   high-stakes sessions where PRs need maximum coverage. Default uses a
@@ -41,11 +45,14 @@ After the triage agent returns, present the results in two steps:
    notable dependencies). This is where markdown renders properly and the
    user can scroll at their leisure.
 
-2. **Call AskUserQuestion with a short, self-contained question** — one
-   option per queue item. Each option label should be the issue number +
-   one-line description; the option description should add one sentence of
-   essential context. The user can scroll up to the full summary if they
-   need more detail. Keep the question field itself brief.
+2. **If `--light` was NOT passed:** Call AskUserQuestion with a short,
+   self-contained question — one option per queue item. Each option label
+   should be the issue number + one-line description; the option description
+   should add one sentence of essential context. The user can scroll up to
+   the full summary if they need more detail. Keep the question field brief.
+
+   **If `--light` was passed:** Skip `AskUserQuestion`. Auto-select the
+   top-ranked item from the triage summary and proceed directly to Phase 2.
 
 ## Phase 2: Solve
 
@@ -62,6 +69,7 @@ the next queue item after merging the current PR.
 Use the issue number from the user's triage selection. Do not reuse
 issue numbers from prior context or previous sessions.
 
+If `--light` was passed to `/session`, invoke `/solve --light <issue>`.
 If `--heavy` was passed to `/session`, invoke `/solve --heavy <issue>`.
 
 `/solve` runs the full issue-to-PR workflow:
