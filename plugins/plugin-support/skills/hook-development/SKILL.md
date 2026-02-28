@@ -115,9 +115,9 @@ except Exception:
 | `PostToolUse` | After successful execution | `tool_name`, `tool_input`, `tool_result` |
 | `PostToolUseFailure` | After failed execution | `tool_name`, `tool_input`, `error` |
 
-### PostToolUse Matcher Requirement
+### Matcher Requirement for Tool-Use Events
 
-**PostToolUse hooks require an explicit `"matcher"` field.** Without it, the hook is registered in the registry but never triggered for any tool call — it is silently inert.
+**`PostToolUse` hooks require an explicit `"matcher"` field.** Without it, the hook is registered in the registry count but never triggered for any tool call — it is silently inert. Always specify one:
 
 - Use `"matcher": ".*"` to match all tools.
 - Use `"matcher": "Bash"` to match only Bash calls.
@@ -131,7 +131,7 @@ except Exception:
 ]
 ```
 
-Omitting `"matcher"` is a silent failure: no error is reported, the hook appears in the registry count, but it never fires.
+Omitting `"matcher"` is a silent failure: no error is reported, the hook appears in the registry count, but it never fires. This is confirmed empirically for `PostToolUse`. The behavior for `PreToolUse` and `PostToolUseFailure` is not yet confirmed — use an explicit matcher for all three to be safe.
 
 ### PostToolUseFailure Notes
 
