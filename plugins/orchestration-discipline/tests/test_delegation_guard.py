@@ -23,12 +23,23 @@ DEFAULT_SESSION_ID = "test-session-delegation-123"
 
 
 def make_tool_use_line(name: str, tool_id: str = "toolu_01") -> str:
-    """Return a JSONL line representing a tool_use transcript entry."""
+    """Return a JSONL line representing a tool_use transcript entry in Claude Code format.
+
+    Claude Code transcripts nest tool calls inside type: "assistant" entries under
+    message.content[], not as top-level type: "tool_use" entries.
+    """
     return json.dumps({
-        "type": "tool_use",
-        "id": tool_id,
-        "name": name,
-        "input": {},
+        "type": "assistant",
+        "message": {
+            "content": [
+                {
+                    "type": "tool_use",
+                    "id": tool_id,
+                    "name": name,
+                    "input": {},
+                }
+            ]
+        },
     })
 
 

@@ -143,7 +143,8 @@ def compute_streak(
     """
     Compute the new streak, task_call count, and advisory_fired flag from new transcript lines.
 
-    Processes tool_use entries in order:
+    Claude Code transcripts use type: "assistant" at the top level, with tool calls
+    nested inside message.content[]. Iterates content items to find tool_use entries:
     - Task calls reset streak to 0 and reset advisory_fired to False
     - Exempt tools (e.g. Skill) are skipped — no effect on streak
     - All other tool_use calls increment streak
@@ -156,16 +157,19 @@ def compute_streak(
     for line in lines:
         if not isinstance(line, dict):
             continue
-        if line.get("type") == "tool_use":
-            name = line.get("name", "")
-            if name == "Task":
-                streak = 0
-                task_calls += 1
-                advisory_fired = False  # Reset when delegation occurs
-            elif name in EXEMPT_TOOLS:
-                pass  # Neutral — does not affect streak
-            else:
-                streak += 1
+        if line.get("type") == "assistant":
+            for item in line.get("message", {}).get("content", []):
+                if not isinstance(item, dict) or item.get("type") != "tool_use":
+                    continue
+                name = item.get("name", "")
+                if name == "Task":
+                    streak = 0
+                    task_calls += 1
+                    advisory_fired = False  # Reset when delegation occurs
+                elif name in EXEMPT_TOOLS:
+                    pass  # Neutral — does not affect streak
+                else:
+                    streak += 1
     return streak, task_calls, advisory_fired
 
 

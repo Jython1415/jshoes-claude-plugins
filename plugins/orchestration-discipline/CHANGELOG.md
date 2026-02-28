@@ -1,5 +1,10 @@
 # Changelog
 
+## [1.0.2] - 2026-02-28
+
+### Fixed
+- `delegation-guard` `compute_streak`: transcript parsing now correctly unwraps `type: "assistant"` entries and iterates `message.content[]` to find tool calls. Previously checked for top-level `type: "tool_use"` which never exists in Claude Code transcripts — the streak was always 0 and the advisory never fired.
+
 ## [1.0.1] - 2026-02-27
 
 ### Fixed
