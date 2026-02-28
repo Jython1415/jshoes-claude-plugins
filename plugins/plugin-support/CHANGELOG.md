@@ -1,5 +1,10 @@
 # Changelog
 
+## [1.3.1] - 2026-02-27
+
+### Changed
+- `hook-development` skill: documented `PostToolUse` matcher requirement — omitting `"matcher"` silently disables the hook.
+
 ## [1.3.0] - 2026-02-27
 
 ### Changed

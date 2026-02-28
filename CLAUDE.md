@@ -19,6 +19,7 @@ When working in this repository, you are managing the user's Claude Code configu
 
 ### Modifying Hooks
 Use the `/hook-development` skill (`plugins/plugin-support/skills/hook-development/SKILL.md`) for all hook authoring, testing, lifecycle, and performance guidance.
+**Always read this skill at session start when hook changes are anticipated.** Read: `plugins/plugin-support/skills/hook-development/SKILL.md`
 
 Quick manual test: `echo '{"tool_name":"Bash","tool_input":{"command":"test"}}' | uv run --script plugins/core-hooks/hooks/hookname.py`
 
