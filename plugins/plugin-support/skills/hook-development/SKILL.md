@@ -139,6 +139,61 @@ Omitting `"matcher"` is a silent failure: no error is reported, the hook appears
 - `decision: "block"` is parsed but NOT acted upon by the system
 - Use `additionalContext` for guidance instead of `decision`
 
+## Transcript Parsing
+
+Some hooks receive a `transcript_path` field in their input — the path to the session's JSONL transcript file. When parsing it, **tool calls are nested inside `type: "assistant"` entries**, not at the top level:
+
+```json
+{
+  "type": "assistant",
+  "message": {
+    "content": [
+      {
+        "type": "tool_use",
+        "id": "toolu_01",
+        "name": "Bash",
+        "input": { "command": "..." }
+      }
+    ]
+  }
+}
+```
+
+**Never check for top-level `type: "tool_use"`.** That structure does not exist in real transcripts. This is the most common transcript-parsing bug — it silently returns zero results with no error:
+
+```python
+# WRONG — this condition never matches; hook silently does nothing
+if line.get("type") == "tool_use":
+    name = line.get("name", "")
+```
+
+The correct pattern unwraps the assistant envelope first:
+
+```python
+# RIGHT
+if line.get("type") == "assistant":
+    for item in line.get("message", {}).get("content", []):
+        if isinstance(item, dict) and item.get("type") == "tool_use":
+            name = item.get("name", "")
+```
+
+A single `type: "assistant"` entry may contain multiple tool calls in `content[]` — iterate all of them.
+
+**Test helper trap**: If your test helper generates synthetic transcript entries using the wrong format (`type: "tool_use"` at the top level), all tests will pass even when the hook is completely broken — the hook and the test helper fail in the same direction. Always use the real `type: "assistant"` wrapper in test helpers:
+
+```python
+def make_tool_use_line(name: str, tool_id: str = "toolu_01") -> str:
+    """Return a JSONL line matching real Claude Code transcript format."""
+    return json.dumps({
+        "type": "assistant",
+        "message": {
+            "content": [
+                {"type": "tool_use", "id": tool_id, "name": name, "input": {}}
+            ]
+        },
+    })
+```
+
 ## Hook Lifecycle Placement
 
 Choose the right event type for your hook's concern:

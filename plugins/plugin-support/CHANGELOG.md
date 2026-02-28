@@ -1,5 +1,10 @@
 # Changelog
 
+## [1.3.2] - 2026-02-28
+
+### Changed
+- `hook-development` skill: added "Transcript Parsing" section documenting the real Claude Code JSONL transcript format — tool calls are nested inside `type: "assistant"` entries under `message.content[]`, not at the top level. Includes the common wrong pattern, the correct unwrapping pattern, and a warning about the test-helper trap (using wrong format in tests causes false-green results).
+
 ## [1.3.1] - 2026-02-27
 
 ### Changed
