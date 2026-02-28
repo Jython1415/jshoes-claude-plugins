@@ -10,7 +10,7 @@ Runs a complete dev session end-to-end by chaining `/triage`, `/solve`, and `/re
 
 **Arguments:** `[--light] [--heavy]`
 
-- `--light` - Haiku-first checklist pipeline; propagates to `/solve` and `/code-review`. Auto-selects the top triage item without prompting.
+- `--light` - Haiku-first checklist pipeline; propagates to `/solve` and `/code-review`.
 - `--heavy` - Full multi-agent Opus pipeline; propagates to `/solve` and `/code-review`. Default uses a single Sonnet agent.
 
 **Phases:**
