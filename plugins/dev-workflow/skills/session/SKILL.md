@@ -29,7 +29,8 @@ three phases, each backed by a dedicated skill.
 Delegate triage to a single subagent (Task tool). Triage is pure
 research — it doesn't need the main context. Send one agent to do all
 the repo state, issue, and context gathering, then present the
-synthesized results to the user.
+synthesized results to the user. If `--light` was passed, use a Haiku
+model subagent for the research steps; otherwise use a Sonnet subagent.
 
 The triage agent should assess:
 

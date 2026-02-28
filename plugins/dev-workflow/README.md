@@ -8,8 +8,9 @@ A set of development workflow skills for GitHub-based repositories. Covers the f
 
 Runs a complete dev session end-to-end by chaining `/triage`, `/solve`, and `/reflect`. Use at the start of a working session to go from a blank slate to a merged PR with lessons captured.
 
-**Arguments:** `[--heavy]`
+**Arguments:** `[--light] [--heavy]`
 
+- `--light` - Haiku-first checklist pipeline; propagates to `/solve` and `/code-review`. Auto-selects the top triage item without prompting.
 - `--heavy` - Full multi-agent Opus pipeline; propagates to `/solve` and `/code-review`. Default uses a single Sonnet agent.
 
 **Phases:**
@@ -32,9 +33,10 @@ Analyzes repo state, open issues, and recent activity to propose a prioritized s
 
 Turns one or more GitHub issues into a reviewed pull request. Use when asked to implement an issue, fix a bug, or build a feature tracked in an issue.
 
-**Arguments:** `<issue> [<issue> ...] [--heavy]`
+**Arguments:** `<issue> [<issue> ...] [--light] [--heavy]`
 
 - Issue references: numbers (`42`), prefixed (`#42`), or full URLs
+- `--light` - Use the Haiku-first checklist review instead of the default single-Sonnet agent
 - `--heavy` - Use the full multi-agent Opus review instead of the default single-Sonnet agent
 
 **Phases:** Intake → Explore → Scope (with `/consult` if needed) → Plan → Implement → Verify → Review → Confirm CI → Pre-merge check-in → Present
@@ -43,10 +45,13 @@ Turns one or more GitHub issues into a reviewed pull request. Use when asked to 
 
 Multi-agent code review for pull requests. Use after creating or updating a PR, or when asked to check code quality before merging.
 
-**Arguments:** `[--heavy] [--comment]`
+**Arguments:** `[--light] [--heavy] [--comment]`
 
+- `--light` - Two-stage Haiku+Sonnet pipeline; mechanical checklist only (no reasoning-based bug detection)
 - `--heavy` - Full multi-agent Opus pipeline; use for high-stakes PRs where maximum coverage matters
-- `--comment` - Post inline GitHub comments for each finding (works in both modes)
+- `--comment` - Post inline GitHub comments for each finding (works in all modes)
+
+**Light mode (`--light`):** Haiku runs an explicit mechanical checklist (hardcoded credentials, SQL injection patterns, bare exception handlers, debug prints, TODO comments, naming conventions) and returns structured JSON. Sonnet filters false positives and synthesizes the final output.
 
 **Default mode:** 1 Sonnet agent performs a structured three-pass review (category sweep, validate candidates, coverage check).
 
