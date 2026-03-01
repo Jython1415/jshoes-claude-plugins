@@ -72,7 +72,9 @@ The block fires once per unbroken solo run. After it fires, subsequent tool call
 
 **Subagent detection via SubagentStart/Stop counter**: The hook registers for `SubagentStart` and `SubagentStop` events. When a subagent starts, `subagent_count` increments; when it stops, it decrements (floor 0). While `subagent_count > 0`, all `PreToolUse` calls pass through silently — subagents receive no blocks or advisory messages. The hard block re-arms when the count returns to 0 (the Agent/Task call that spawned the subagent already reset `streak=0, block_fired=False`).
 
-**Known trade-off**: While any subagent is active, the main session's guard is also suppressed. Semantically, this is acceptable — the session IS delegating during that window.
+**SubagentStart race fix (`subagent_grace`)**: `SubagentStart` can fire *after* the subagent's first `PreToolUse`, meaning `subagent_count` is still 0 when the guard evaluates that first call. To prevent a false-positive hard-block, Agent/Task calls set `subagent_grace=True`. The first non-exempt `PreToolUse` after an Agent/Task call consumes the grace silently (one free pass). `SubagentStart` also clears grace when it increments the counter — whichever fires first claims it.
+
+**Known trade-off**: While any subagent is active (or during the `subagent_grace` window), the main session's guard is also suppressed. Semantically, this is acceptable — the session IS delegating during that window.
 
 **Known limitations**:
 - SubagentStop is not guaranteed to fire if a subagent process crashes (e.g. OOM, signal). If that happens, `subagent_count` remains elevated for the rest of the session and the guard is permanently suppressed. No recovery mechanism is implemented. The Claude Code docs state hooks are "deterministic" but do not explicitly cover process-level crashes.
@@ -83,7 +85,7 @@ The block fires once per unbroken solo run. After it fires, subsequent tool call
 Per-session state is stored in `~/.claude/hook-state/{session_id}-delegation.json`:
 
 ```json
-{"streak": 2, "block_fired": true, "subagent_count": 0}
+{"streak": 2, "block_fired": true, "subagent_count": 0, "subagent_grace": false}
 ```
 
 To redirect state storage (e.g., for testing), set the `CLAUDE_HOOK_STATE_DIR` environment variable:

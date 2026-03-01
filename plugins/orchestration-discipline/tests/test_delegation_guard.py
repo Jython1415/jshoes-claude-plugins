@@ -440,8 +440,8 @@ class TestSubagentCounter:
     def test_block_resumes_after_subagent_stops(self):
         """After SubagentStop returns count to 0, PreToolUse block must resume."""
         run_hook("Bash", clear_state=True)   # block fires, re-arms
-        run_hook("Agent", clear_state=False) # reset: streak=0, block_fired=False
-        run_event("SubagentStart")           # subagent_count -> 1
+        run_hook("Agent", clear_state=False) # reset: streak=0, block_fired=False, subagent_grace=True
+        run_event("SubagentStart")           # subagent_count -> 1, subagent_grace=False
         run_hook("Bash", clear_state=False)  # silent (subagent active)
         run_event("SubagentStop")            # subagent_count -> 0
         output = run_hook("Bash", clear_state=False)  # should block again
