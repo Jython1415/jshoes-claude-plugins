@@ -1,5 +1,10 @@
 # Changelog
 
+## [1.4.2] - 2026-03-01
+
+### Changed
+- `/session` Phase 1: document AskUserQuestion 4-option limit and handling rule for triage queues with >4 items
+
 ## [1.4.1] - 2026-03-01
 
 ### Changed
