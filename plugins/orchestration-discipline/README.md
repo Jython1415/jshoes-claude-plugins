@@ -74,6 +74,10 @@ The block fires once per unbroken solo run. After it fires, subsequent tool call
 
 **Known trade-off**: While any subagent is active, the main session's guard is also suppressed. Semantically, this is acceptable — the session IS delegating during that window.
 
+**Known limitations**:
+- SubagentStop is not guaranteed to fire if a subagent process crashes (e.g. OOM, signal). If that happens, `subagent_count` remains elevated for the rest of the session and the guard is permanently suppressed. No recovery mechanism is implemented. The Claude Code docs state hooks are "deterministic" but do not explicitly cover process-level crashes.
+- `/clear` generates a new `session_id` — state resets automatically (the old file is orphaned but harmless). `/compact` preserves `session_id` — state persists correctly through compaction.
+
 #### State management
 
 Per-session state is stored in `~/.claude/hook-state/{session_id}-delegation.json`:

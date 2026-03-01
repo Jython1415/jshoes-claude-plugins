@@ -38,11 +38,18 @@ Known trade-off:
   If the main session launches a background subagent and continues solo work during that
   window, the guard will not fire. This is considered semantically acceptable — the
   session IS delegating during that window.
+- SubagentStop is not guaranteed to fire if a subagent process crashes (e.g. OOM, signal).
+  If that happens, subagent_count remains elevated for the rest of the session and the
+  guard is permanently suppressed. This is an accepted known limitation — no recovery
+  mechanism is implemented. The Claude Code docs state hooks are "deterministic" but do
+  not explicitly cover process-level crashes.
 
 State management:
 - State files stored in: ~/.claude/hook-state/{session_id}-delegation.json
 - Override location: CLAUDE_HOOK_STATE_DIR environment variable
 - State fields: streak (int), block_fired (bool), subagent_count (int)
+- /clear generates a new session_id → state resets automatically (old file orphaned but harmless)
+- /compact preserves session_id → state persists correctly through compaction
 """
 import json
 import os
