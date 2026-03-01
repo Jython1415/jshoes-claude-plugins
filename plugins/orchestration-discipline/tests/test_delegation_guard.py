@@ -2,11 +2,15 @@
 Unit tests for delegation-guard.py hook (PreToolUse)
 
 Behavioral model:
+- Subagent contexts (transcript_path contains "/subagents/"): hook passes through silently,
+  no state changes. Subagents share the parent's session_id/state file; the guard does not
+  apply to them.
 - First solo call (streak==0, block_fired==False): BLOCK via permissionDecision: "deny".
   Blocked call does NOT increment streak.
-- After block fires (block_fired=True): subsequent non-Task calls increment streak.
+- After block fires (block_fired=True): subsequent non-Task/Agent calls increment streak.
   Escalating advisory fires at streak 2, 4, 8, 16, ... (powers of 2 >= 2).
-- Task call: resets streak to 0 and re-arms block (block_fired=False).
+- Task or Agent call: resets streak to 0 and re-arms block (block_fired=False).
+  ("Agent" is the name used by Claude Code v2.1.63+; "Task" is the legacy name.)
 - Exempt tools (Skill, AskUserQuestion, TaskCreate, etc.): neutral, no state change.
 """
 import json
@@ -28,6 +32,7 @@ def run_hook(
     tool_name: str,
     session_id: str = DEFAULT_SESSION_ID,
     clear_state: bool = True,
+    transcript_path: str = "",
 ) -> dict:
     """Run the delegation-guard hook and return parsed JSON output."""
     if clear_state:
@@ -40,6 +45,7 @@ def run_hook(
         "tool_name": tool_name,
         "tool_input": {},
         "session_id": session_id,
+        "transcript_path": transcript_path,
     }
 
     env = os.environ.copy()
@@ -274,11 +280,11 @@ class TestExemptTools:
 
 
 # ---------------------------------------------------------------------------
-# Task call behavior
+# Task / Agent call behavior
 # ---------------------------------------------------------------------------
 
 class TestTaskCall:
-    """Task calls reset the delegation state and re-arm the block."""
+    """Task and Agent calls reset the delegation state and re-arm the block."""
 
     def test_task_call_is_silent(self):
         """Task call must return empty output (no advisory or block)."""
@@ -286,9 +292,20 @@ class TestTaskCall:
         output = run_hook("Task", clear_state=False)
         assert output == {}, f"Task call should be silent, got: {output}"
 
+    def test_agent_call_is_silent(self):
+        """Agent call must return empty output (no advisory or block)."""
+        run_hook("Bash", clear_state=True)  # set up some state
+        output = run_hook("Agent", clear_state=False)
+        assert output == {}, f"Agent call should be silent, got: {output}"
+
     def test_task_call_with_fresh_state_is_silent(self):
         """Task call on fresh session must be silent."""
         output = run_hook("Task", clear_state=True)
+        assert output == {}
+
+    def test_agent_call_with_fresh_state_is_silent(self):
+        """Agent call on fresh session must be silent."""
+        output = run_hook("Agent", clear_state=True)
         assert output == {}
 
     def test_multiple_task_calls_keep_streak_at_zero(self):
@@ -299,6 +316,81 @@ class TestTaskCall:
         state = get_state()
         assert state["streak"] == 0
         assert state["block_fired"] is False
+
+    def test_multiple_agent_calls_keep_streak_at_zero(self):
+        """Multiple consecutive Agent calls must keep streak at 0."""
+        run_hook("Agent", clear_state=True)
+        run_hook("Agent", clear_state=False)
+        run_hook("Agent", clear_state=False)
+        state = get_state()
+        assert state["streak"] == 0
+        assert state["block_fired"] is False
+
+
+class TestStreakCountingWithAgent:
+    """Agent tool resets streak and re-arms block, same as Task."""
+
+    def test_agent_call_resets_streak_to_zero(self):
+        """Agent call must reset streak to 0."""
+        run_hook("Bash", clear_state=True)   # block fires
+        run_hook("Bash", clear_state=False)  # streak → 1
+        run_hook("Agent", clear_state=False)  # reset
+        state = get_state()
+        assert state["streak"] == 0
+
+    def test_agent_call_resets_block_fired(self):
+        """Agent call must re-arm the block (block_fired=False)."""
+        run_hook("Bash", clear_state=True)    # block fires
+        run_hook("Agent", clear_state=False)  # reset
+        state = get_state()
+        assert state["block_fired"] is False
+
+    def test_block_re_arms_after_agent_reset(self):
+        """After an Agent reset, the next solo call must block again."""
+        run_hook("Bash", clear_state=True)    # first block
+        run_hook("Agent", clear_state=False)  # reset
+        output = run_hook("Bash", clear_state=False)  # should block again
+        assert output.get("hookSpecificOutput", {}).get("permissionDecision") == "deny"
+
+
+# ---------------------------------------------------------------------------
+# Subagent detection
+# ---------------------------------------------------------------------------
+
+class TestSubagentDetection:
+    """When transcript_path contains /subagents/, the hook passes through silently."""
+
+    def test_subagent_context_passes_through(self):
+        """Hook must return {} when transcript_path indicates subagent context."""
+        output = run_hook(
+            "Bash",
+            clear_state=True,
+            transcript_path="/home/user/.claude/projects/abc/subagents/agent-def.jsonl",
+        )
+        assert output == {}, "Hook should pass through silently in subagent context"
+
+    def test_subagent_context_does_not_update_state(self):
+        """Hook must not modify state when in subagent context."""
+        run_hook("Bash", clear_state=True)  # block fires, block_fired=True
+        state_before = get_state()
+        run_hook(
+            "Bash",
+            clear_state=False,
+            transcript_path="/home/user/.claude/projects/abc/subagents/agent-def.jsonl",
+        )
+        state_after = get_state()
+        assert state_before == state_after, "State must not change in subagent context"
+
+    def test_main_session_without_subagents_in_path_is_unaffected(self):
+        """Hook must still block in main session (no /subagents/ in path)."""
+        output = run_hook(
+            "Bash",
+            clear_state=True,
+            transcript_path="/home/user/.claude/projects/abc/session.jsonl",
+        )
+        assert output.get("hookSpecificOutput", {}).get("permissionDecision") == "deny", (
+            "Main session must still be blocked"
+        )
 
 
 # ---------------------------------------------------------------------------
