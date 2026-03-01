@@ -74,7 +74,6 @@ def get_state(session_id: str = DEFAULT_SESSION_ID) -> dict | None:
     return None
 
 
-# 
 def run_event(
     event_name: str,
     session_id: str = DEFAULT_SESSION_ID,

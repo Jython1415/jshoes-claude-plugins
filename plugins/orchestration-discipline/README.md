@@ -35,7 +35,7 @@ export CLAUDE_HOOK_STATE_DIR=/path/to/custom/state/dir
 
 ### delegation-guard
 
-**Event:** PreToolUse (all tools)
+**Event:** PreToolUse (all tools), SubagentStart, SubagentStop
 
 Intercepts every tool call before it runs. Blocks the first solo tool call after delegation, then fires escalating advisory messages as the streak grows.
 
