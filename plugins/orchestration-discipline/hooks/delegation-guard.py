@@ -5,13 +5,13 @@
 """
 delegation-guard: Block the first solo tool call after delegation, then escalate advisories.
 
-Event: PreToolUse (all tools)
+Event: PreToolUse (all tools), SubagentStart, SubagentStop
 
 Purpose: Encourages the main session agent to delegate implementation, research,
 and multi-step analysis work to subagents via the Task/Agent tool.
 
-Behavior:
-- Subagent contexts (transcript_path contains "/subagents/") are skipped entirely.
+Behavior (PreToolUse):
+- When subagent_count > 0 (a subagent is active): pass through silently.
   Subagents share the parent's session_id and state file; without this guard they
   would receive confusing "delegate to a subagent" messages during their own work.
 - When streak == 0 and block_fired is False (i.e., at the start of a potential solo run):
@@ -24,10 +24,25 @@ Behavior:
 - Exempt tools (e.g. Skill, AskUserQuestion, TaskCreate, ...) are neutral — they neither
   increment streak nor reset it.
 
+Behavior (SubagentStart):
+- Increments subagent_count. While count > 0, PreToolUse passes through silently.
+
+Behavior (SubagentStop):
+- Decrements subagent_count (minimum 0).
+- When count returns to 0, the main session's delegation guard resumes.
+  The hard block re-arms naturally: the Agent call that spawned the subagent already
+  reset streak=0 and block_fired=False, so the next main-session solo call will be blocked.
+
+Known trade-off:
+- While ANY subagent is active (count > 0), the main session's guard is ALSO suppressed.
+  If the main session launches a background subagent and continues solo work during that
+  window, the guard will not fire. This is considered semantically acceptable — the
+  session IS delegating during that window.
+
 State management:
 - State files stored in: ~/.claude/hook-state/{session_id}-delegation.json
 - Override location: CLAUDE_HOOK_STATE_DIR environment variable
-- State fields: streak (int), block_fired (bool)
+- State fields: streak (int), block_fired (bool), subagent_count (int)
 """
 import json
 import os
@@ -58,7 +73,7 @@ def get_state_file(session_id: str) -> Path:
 
 def read_state(session_id: str) -> dict:
     """Read delegation state for this session. Returns default state if not found or corrupt."""
-    default = {"streak": 0, "block_fired": False}
+    default = {"streak": 0, "block_fired": False, "subagent_count": 0}
     try:
         state_file = get_state_file(session_id)
         if not state_file.exists():
@@ -68,7 +83,13 @@ def read_state(session_id: str) -> dict:
             return default
         if not isinstance(data.get("block_fired"), bool):
             data["block_fired"] = False
-        return {"streak": data["streak"], "block_fired": data["block_fired"]}
+        if not isinstance(data.get("subagent_count"), int):
+            data["subagent_count"] = 0
+        return {
+            "streak": data["streak"],
+            "block_fired": data["block_fired"],
+            "subagent_count": max(0, data["subagent_count"]),
+        }
     except Exception:
         return default
 
@@ -129,14 +150,26 @@ def main():
     try:
         input_data = json.load(sys.stdin)
         session_id = input_data.get("session_id", "")
-        tool_name = input_data.get("tool_name", "")
-        transcript_path = input_data.get("transcript_path", "")
+        hook_event_name = input_data.get("hook_event_name", "")
 
-        # Subagent transcripts are stored at .../subagents/agent-{id}.jsonl
-        # Skip the delegation guard entirely in subagent contexts
-        if "/subagents/" in transcript_path:
+        # SubagentStart: increment the reference counter
+        if hook_event_name == "SubagentStart":
+            state = read_state(session_id)
+            state["subagent_count"] = state["subagent_count"] + 1
+            write_state(session_id, state)
             print("{}")
             sys.exit(0)
+
+        # SubagentStop: decrement the reference counter (floor at 0)
+        if hook_event_name == "SubagentStop":
+            state = read_state(session_id)
+            state["subagent_count"] = max(0, state["subagent_count"] - 1)
+            write_state(session_id, state)
+            print("{}")
+            sys.exit(0)
+
+        # PreToolUse handling below
+        tool_name = input_data.get("tool_name", "")
 
         # Unknown/missing tool name — pass through silently
         if not tool_name:
@@ -146,10 +179,12 @@ def main():
         state = read_state(session_id)
         streak = state["streak"]
         block_fired = state["block_fired"]
+        subagent_count = state["subagent_count"]
 
         if tool_name in ("Task", "Agent"):
             # Delegation occurred — reset streak and re-arm the block
-            write_state(session_id, {"streak": 0, "block_fired": False})
+            # subagent_count is managed by SubagentStart/Stop, not by Tool calls
+            write_state(session_id, {"streak": 0, "block_fired": False, "subagent_count": subagent_count})
             print("{}")
             sys.exit(0)
 
@@ -158,11 +193,16 @@ def main():
             print("{}")
             sys.exit(0)
 
+        # A subagent is active — pass through silently; do not modify state
+        if subagent_count > 0:
+            print("{}")
+            sys.exit(0)
+
         # Non-Task/Agent, non-exempt tool call
         if streak == 0 and not block_fired:
             # First solo call after a Task or session start: hard stop
             # Blocked call does NOT increment streak — only executed calls count
-            write_state(session_id, {"streak": 0, "block_fired": True})
+            write_state(session_id, {"streak": 0, "block_fired": True, "subagent_count": subagent_count})
             output = {
                 "hookSpecificOutput": {
                     "hookEventName": "PreToolUse",
@@ -175,7 +215,7 @@ def main():
 
         # Block already fired — this call executes; increment streak
         new_streak = streak + 1
-        write_state(session_id, {"streak": new_streak, "block_fired": block_fired})
+        write_state(session_id, {"streak": new_streak, "block_fired": block_fired, "subagent_count": subagent_count})
 
         if is_backoff_point(new_streak):
             output = {
