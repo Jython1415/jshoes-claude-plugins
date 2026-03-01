@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.1.1] - 2026-02-28
+
+### Fixed
+- `delegation-guard`: Add `"Agent"` alongside `"Task"` as a delegation-reset trigger. The Agent tool was renamed from Task in Claude Code v2.1.63; the hook was checking only for `"Task"`, so Agent calls incremented the streak instead of resetting it.
+- `delegation-guard`: Skip hook entirely when `transcript_path` contains `"/subagents/"`. Subagents share the parent's `session_id` and state file; without this guard, subagents received confusing "delegate to a subagent" messages. The heuristic uses the fact that subagent transcripts live at `.../subagents/agent-{id}.jsonl`.
+
 ## [1.1.0] - 2026-02-28
 
 ### Changed
