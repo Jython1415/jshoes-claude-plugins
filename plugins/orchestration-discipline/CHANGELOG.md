@@ -1,5 +1,21 @@
 # Changelog
 
+## [1.1.0] - 2026-02-28
+
+### Changed
+- `delegation-guard` rewritten as a **PreToolUse** hook (was PostToolUse). This enables
+  blocking tool calls, not just advising after the fact.
+- New behavior: first solo tool call (streak=0, block not yet fired) is **blocked** via
+  `permissionDecision: "deny"`. The blocked call does not increment the streak — only
+  executed calls count.
+- After the block fires, escalating advisory messages fire at streak 2, 4, 8, 16 (powers
+  of 2 ≥ 2) with increasingly urgent language. Intermediate streaks (1, 3, 5, 6, 7, ...)
+  pass through silently.
+- A Task call resets streak to 0 and re-arms the block, so the cycle restarts on the next
+  solo call.
+- State schema simplified: `{streak, block_fired}` — removed `offset`, `task_calls`, and
+  `advisory_fired` (no longer needed without transcript parsing).
+
 ## [1.0.2] - 2026-02-28
 
 ### Fixed

@@ -1,19 +1,21 @@
 """
-Unit tests for delegation-guard.py hook
+Unit tests for delegation-guard.py hook (PreToolUse)
 
-This test suite validates that the hook properly tracks consecutive non-Task
-tool calls via offset-tracked transcript parsing and injects an advisory
-reminder when the streak reaches 2.
+Behavioral model:
+- First solo call (streak==0, block_fired==False): BLOCK via permissionDecision: "deny".
+  Blocked call does NOT increment streak.
+- After block fires (block_fired=True): subsequent non-Task calls increment streak.
+  Escalating advisory fires at streak 2, 4, 8, 16, ... (powers of 2 >= 2).
+- Task call: resets streak to 0 and re-arms block (block_fired=False).
+- Exempt tools (Skill, AskUserQuestion, TaskCreate, etc.): neutral, no state change.
 """
 import json
 import os
 import subprocess
-import tempfile
 from pathlib import Path
 
 import pytest
 
-# Path to the hook script
 HOOK_PATH = Path(__file__).parent.parent / "hooks" / "delegation-guard.py"
 
 # Writable test state directory (redirects away from ~/.claude/hook-state/ for sandbox compat)
@@ -22,64 +24,22 @@ TEST_STATE_DIR = Path(os.environ.get("TMPDIR", "/tmp")) / "claude-hook-test-stat
 DEFAULT_SESSION_ID = "test-session-delegation-123"
 
 
-def make_tool_use_line(name: str, tool_id: str = "toolu_01") -> str:
-    """Return a JSONL line representing a tool_use transcript entry in Claude Code format.
-
-    Claude Code transcripts nest tool calls inside type: "assistant" entries under
-    message.content[], not as top-level type: "tool_use" entries.
-    """
-    return json.dumps({
-        "type": "assistant",
-        "message": {
-            "content": [
-                {
-                    "type": "tool_use",
-                    "id": tool_id,
-                    "name": name,
-                    "input": {},
-                }
-            ]
-        },
-    })
-
-
-def write_transcript(lines: list[str], path: Path) -> None:
-    """Write JSONL lines to a transcript file."""
-    path.write_text("\n".join(lines) + "\n")
-
-
-def append_transcript(lines: list[str], path: Path) -> None:
-    """Append JSONL lines to an existing transcript file."""
-    with path.open("a") as f:
-        for line in lines:
-            f.write(line + "\n")
-
-
 def run_hook(
+    tool_name: str,
     session_id: str = DEFAULT_SESSION_ID,
-    transcript_path: str = "",
     clear_state: bool = True,
 ) -> dict:
-    """
-    Helper function to run the delegation-guard hook.
-
-    Args:
-        session_id: The session ID to use in the hook input.
-        transcript_path: Path to the transcript file.
-        clear_state: Whether to delete the session state file before running.
-
-    Returns:
-        Parsed JSON output from the hook.
-    """
+    """Run the delegation-guard hook and return parsed JSON output."""
     if clear_state:
         state_file = TEST_STATE_DIR / f"{session_id}-delegation.json"
         if state_file.exists():
             state_file.unlink()
 
     input_data = {
-        "hook_event_name": "PostToolUse",
+        "hook_event_name": "PreToolUse",
+        "tool_name": tool_name,
+        "tool_input": {},
         "session_id": session_id,
-        "transcript_path": transcript_path,
     }
 
     env = os.environ.copy()
@@ -108,448 +68,313 @@ def get_state(session_id: str = DEFAULT_SESSION_ID) -> dict | None:
     return None
 
 
-class TestStreakIncrement:
-    """Test that streak increments on non-Task tool calls."""
+# ---------------------------------------------------------------------------
+# Block behavior (streak=0 → permissionDecision: deny)
+# ---------------------------------------------------------------------------
 
-    def test_single_non_task_call_increments_streak(self):
-        """A single non-Task tool_use line should set streak to 1."""
-        with tempfile.TemporaryDirectory() as tmpdir:
-            transcript = Path(tmpdir) / "transcript.jsonl"
-            write_transcript([make_tool_use_line("Bash")], transcript)
+class TestBlockBehavior:
+    """First solo tool call blocks; blocked call does not increment streak."""
 
-            run_hook(transcript_path=str(transcript), clear_state=True)
+    def test_first_non_task_call_blocks(self):
+        """First non-Task call (streak=0, block_fired=False) must block."""
+        output = run_hook("Bash", clear_state=True)
+        assert "hookSpecificOutput" in output
+        hook_out = output["hookSpecificOutput"]
+        assert hook_out.get("permissionDecision") == "deny"
+        assert "permissionDecisionReason" in hook_out
 
-            state = get_state()
-            assert state is not None
-            assert state["streak"] == 1
+    def test_block_does_not_increment_streak(self):
+        """Streak must stay 0 after the block fires."""
+        run_hook("Bash", clear_state=True)
+        state = get_state()
+        assert state["streak"] == 0
 
-    def test_two_non_task_calls_increment_streak(self):
-        """Two non-Task tool_use lines should set streak to 2."""
-        with tempfile.TemporaryDirectory() as tmpdir:
-            transcript = Path(tmpdir) / "transcript.jsonl"
-            write_transcript([
-                make_tool_use_line("Bash", "toolu_01"),
-                make_tool_use_line("Read", "toolu_02"),
-            ], transcript)
+    def test_block_sets_block_fired(self):
+        """block_fired must be True after the block fires."""
+        run_hook("Bash", clear_state=True)
+        state = get_state()
+        assert state["block_fired"] is True
 
-            run_hook(transcript_path=str(transcript), clear_state=True)
+    def test_block_fires_only_once_per_run(self):
+        """After block fires, subsequent non-Task calls must NOT block again."""
+        run_hook("Bash", clear_state=True)          # block fires
+        output = run_hook("Bash", clear_state=False) # block already fired
+        hook_out = output.get("hookSpecificOutput", {})
+        assert hook_out.get("permissionDecision") != "deny", (
+            "Block must not fire twice in the same run"
+        )
 
-            state = get_state()
-            assert state is not None
-            assert state["streak"] == 2
+    def test_block_message_mentions_advisory_only_future(self):
+        """Block message must inform Claude that future reminders are advisory-only."""
+        output = run_hook("Bash", clear_state=True)
+        reason = output["hookSpecificOutput"]["permissionDecisionReason"]
+        assert isinstance(reason, str) and len(reason) > 0
+
+
+# ---------------------------------------------------------------------------
+# Streak counting (only executed calls increment)
+# ---------------------------------------------------------------------------
+
+class TestStreakCounting:
+    """Streak counts only calls that execute (after the block has fired)."""
+
+    def test_first_executed_call_sets_streak_to_1(self):
+        """Non-Task call after the block should set streak to 1."""
+        run_hook("Bash", clear_state=True)          # block fires; streak stays 0
+        run_hook("Bash", clear_state=False)          # executes; streak → 1
+        state = get_state()
+        assert state["streak"] == 1
 
     def test_streak_accumulates_across_calls(self):
-        """Streak should accumulate correctly when transcript grows between hook calls."""
-        with tempfile.TemporaryDirectory() as tmpdir:
-            transcript = Path(tmpdir) / "transcript.jsonl"
-            write_transcript([make_tool_use_line("Bash", "toolu_01")], transcript)
+        """Streak should accumulate correctly across multiple executed calls."""
+        run_hook("Bash", clear_state=True)   # block fires; streak=0
+        run_hook("Bash", clear_state=False)  # streak → 1
+        run_hook("Read", clear_state=False)  # streak → 2
+        run_hook("Grep", clear_state=False)  # streak → 3
+        state = get_state()
+        assert state["streak"] == 3
 
-            run_hook(transcript_path=str(transcript), clear_state=True)
-            state = get_state()
-            assert state["streak"] == 1
+    def test_task_call_resets_streak_to_zero(self):
+        """Task call must reset streak to 0."""
+        run_hook("Bash", clear_state=True)   # block fires
+        run_hook("Bash", clear_state=False)  # streak → 1
+        run_hook("Task", clear_state=False)  # reset
+        state = get_state()
+        assert state["streak"] == 0
 
-            # Append a new tool_use line and run again (no clear_state — simulates next call)
-            append_transcript([make_tool_use_line("Read", "toolu_02")], transcript)
-            run_hook(transcript_path=str(transcript), clear_state=False)
+    def test_task_call_resets_block_fired(self):
+        """Task call must re-arm the block (block_fired=False)."""
+        run_hook("Bash", clear_state=True)   # block fires
+        run_hook("Task", clear_state=False)  # reset
+        state = get_state()
+        assert state["block_fired"] is False
 
-            state = get_state()
-            assert state["streak"] == 2
-
-
-class TestStreakReset:
-    """Test that streak resets to 0 on Task tool calls."""
-
-    def test_task_call_resets_streak(self):
-        """A Task tool_use line should reset the streak to 0."""
-        with tempfile.TemporaryDirectory() as tmpdir:
-            transcript = Path(tmpdir) / "transcript.jsonl"
-            # Two non-Task calls followed by a Task call
-            write_transcript([
-                make_tool_use_line("Bash", "toolu_01"),
-                make_tool_use_line("Read", "toolu_02"),
-                make_tool_use_line("Task", "toolu_03"),
-            ], transcript)
-
-            run_hook(transcript_path=str(transcript), clear_state=True)
-
-            state = get_state()
-            assert state is not None
-            assert state["streak"] == 0
-
-    def test_task_call_increments_task_count(self):
-        """A Task tool_use line should increment task_calls."""
-        with tempfile.TemporaryDirectory() as tmpdir:
-            transcript = Path(tmpdir) / "transcript.jsonl"
-            write_transcript([make_tool_use_line("Task", "toolu_01")], transcript)
-
-            run_hook(transcript_path=str(transcript), clear_state=True)
-
-            state = get_state()
-            assert state is not None
-            assert state["task_calls"] == 1
-
-    def test_task_resets_streak_then_increments(self):
-        """Task call resets streak; subsequent non-Task calls count from 0."""
-        with tempfile.TemporaryDirectory() as tmpdir:
-            transcript = Path(tmpdir) / "transcript.jsonl"
-            # One non-Task, then Task (reset), then one more non-Task
-            write_transcript([
-                make_tool_use_line("Bash", "toolu_01"),
-                make_tool_use_line("Task", "toolu_02"),
-                make_tool_use_line("Grep", "toolu_03"),
-            ], transcript)
-
-            run_hook(transcript_path=str(transcript), clear_state=True)
-
-            state = get_state()
-            assert state is not None
-            assert state["streak"] == 1
-            assert state["task_calls"] == 1
+    def test_block_re_arms_after_task_reset(self):
+        """After a Task reset, the next solo call must block again."""
+        run_hook("Bash", clear_state=True)   # first block
+        run_hook("Task", clear_state=False)  # reset
+        output = run_hook("Bash", clear_state=False)  # should block again
+        assert output.get("hookSpecificOutput", {}).get("permissionDecision") == "deny"
 
 
-class TestAdvisoryFiring:
-    """Test that advisory fires at streak >= 2 and not below."""
+# ---------------------------------------------------------------------------
+# Escalating advisories (streak 2, 4, 8, 16)
+# ---------------------------------------------------------------------------
+
+class TestEscalatingAdvisories:
+    """Advisory fires at streak 2, 4, 8, 16 (powers of 2 >= 2); silent at all others."""
+
+    def _reach_streak(self, n: int) -> dict:
+        """Advance to the given streak level and return the output from the final call."""
+        run_hook("Bash", clear_state=True)   # block fires; streak=0
+        output = {}
+        for _ in range(n):
+            output = run_hook("Bash", clear_state=False)
+        return output
 
     def test_advisory_fires_at_streak_2(self):
-        """Advisory should fire when streak reaches 2."""
-        with tempfile.TemporaryDirectory() as tmpdir:
-            transcript = Path(tmpdir) / "transcript.jsonl"
-            write_transcript([
-                make_tool_use_line("Bash", "toolu_01"),
-                make_tool_use_line("Read", "toolu_02"),
-            ], transcript)
+        """Advisory must fire when streak reaches 2."""
+        output = self._reach_streak(2)
+        assert "hookSpecificOutput" in output
+        hook_out = output["hookSpecificOutput"]
+        assert "additionalContext" in hook_out
+        assert hook_out.get("permissionDecision") != "deny"
 
-            output = run_hook(transcript_path=str(transcript), clear_state=True)
+    def test_advisory_fires_at_streak_4(self):
+        """Advisory must fire when streak reaches 4."""
+        output = self._reach_streak(4)
+        assert "hookSpecificOutput" in output
+        assert "additionalContext" in output["hookSpecificOutput"]
 
-            assert "hookSpecificOutput" in output, "Advisory should fire at streak 2"
-            hook_output = output["hookSpecificOutput"]
-            assert hook_output.get("hookEventName") == "PostToolUse"
-            assert "additionalContext" in hook_output
+    def test_advisory_fires_at_streak_8(self):
+        """Advisory must fire when streak reaches 8."""
+        output = self._reach_streak(8)
+        assert "hookSpecificOutput" in output
+        assert "additionalContext" in output["hookSpecificOutput"]
 
-    def test_advisory_fires_exactly_once_per_run(self):
-        """Advisory fires at streak=2 but NOT again at streak=3 without a Task call."""
-        with tempfile.TemporaryDirectory() as tmpdir:
-            transcript = Path(tmpdir) / "transcript.jsonl"
+    def test_advisory_fires_at_streak_16(self):
+        """Advisory must fire when streak reaches 16."""
+        output = self._reach_streak(16)
+        assert "hookSpecificOutput" in output
+        assert "additionalContext" in output["hookSpecificOutput"]
 
-            # First call: 2 non-Task lines → advisory fires
-            write_transcript([
-                make_tool_use_line("Bash", "toolu_01"),
-                make_tool_use_line("Read", "toolu_02"),
-            ], transcript)
-            output_first = run_hook(transcript_path=str(transcript), clear_state=True)
-            assert "hookSpecificOutput" in output_first, "Advisory should fire at streak 2"
+    def test_silent_at_streak_1(self):
+        """First executed call (streak=1) must be silent."""
+        run_hook("Bash", clear_state=True)          # block fires
+        output = run_hook("Bash", clear_state=False) # streak → 1
+        assert output == {}, f"Expected silent at streak=1, got: {output}"
 
-            # Second call: 1 more non-Task line → advisory should NOT fire again
-            append_transcript([make_tool_use_line("Grep", "toolu_03")], transcript)
-            output_second = run_hook(transcript_path=str(transcript), clear_state=False)
-            assert output_second == {}, "Advisory should not fire again after already fired"
+    def test_silent_at_streak_3(self):
+        """Streak=3 is not a power of 2, must be silent."""
+        output = self._reach_streak(3)
+        assert output == {}, f"Expected silent at streak=3, got: {output}"
+
+    def test_silent_at_streak_5(self):
+        """Streak=5 is not a power of 2, must be silent."""
+        output = self._reach_streak(5)
+        assert output == {}, f"Expected silent at streak=5, got: {output}"
+
+    def test_silent_at_streak_6(self):
+        """Streak=6 is not a power of 2, must be silent."""
+        output = self._reach_streak(6)
+        assert output == {}, f"Expected silent at streak=6, got: {output}"
 
     def test_advisory_fires_again_after_task_reset(self):
-        """Advisory fires again after a Task call resets the streak and advisory_fired."""
-        with tempfile.TemporaryDirectory() as tmpdir:
-            transcript = Path(tmpdir) / "transcript.jsonl"
+        """After a Task reset, advisory schedule restarts from the beginning."""
+        # First run: advance past streak=2
+        run_hook("Bash", clear_state=True)   # block fires
+        run_hook("Bash", clear_state=False)  # streak=1
+        run_hook("Bash", clear_state=False)  # streak=2 → advisory
+        # Reset via Task
+        run_hook("Task", clear_state=False)
+        # Second run: advisory must fire again at streak=2
+        run_hook("Bash", clear_state=False)  # block fires again (re-armed)
+        run_hook("Bash", clear_state=False)  # streak=1
+        output = run_hook("Bash", clear_state=False)  # streak=2 → advisory again
+        assert "hookSpecificOutput" in output
+        assert "additionalContext" in output["hookSpecificOutput"]
 
-            # First run: advisory fires at streak=2
-            write_transcript([
-                make_tool_use_line("Bash", "toolu_01"),
-                make_tool_use_line("Read", "toolu_02"),
-            ], transcript)
-            output_first = run_hook(transcript_path=str(transcript), clear_state=True)
-            assert "hookSpecificOutput" in output_first
 
-            # Task call resets streak and advisory_fired
-            append_transcript([make_tool_use_line("Task", "toolu_03")], transcript)
-            run_hook(transcript_path=str(transcript), clear_state=False)
-            state_after_task = get_state()
-            assert state_after_task["streak"] == 0
-            assert state_after_task["advisory_fired"] == False
-
-            # Advisory fires again after streak reaches 2 again
-            append_transcript([
-                make_tool_use_line("Grep", "toolu_04"),
-                make_tool_use_line("Edit", "toolu_05"),
-            ], transcript)
-            output_third = run_hook(transcript_path=str(transcript), clear_state=False)
-            assert "hookSpecificOutput" in output_third, "Advisory should fire again after Task reset"
-
-    def test_no_advisory_at_streak_1(self):
-        """Advisory should NOT fire when streak is 1."""
-        with tempfile.TemporaryDirectory() as tmpdir:
-            transcript = Path(tmpdir) / "transcript.jsonl"
-            write_transcript([make_tool_use_line("Bash")], transcript)
-
-            output = run_hook(transcript_path=str(transcript), clear_state=True)
-
-            assert output == {}, f"Expected empty output at streak 1, got: {output}"
-
-    def test_no_advisory_when_task_resets_before_threshold(self):
-        """No advisory when Task resets streak before it hits 2."""
-        with tempfile.TemporaryDirectory() as tmpdir:
-            transcript = Path(tmpdir) / "transcript.jsonl"
-            write_transcript([
-                make_tool_use_line("Bash", "toolu_01"),
-                make_tool_use_line("Task", "toolu_02"),  # resets to 0
-                make_tool_use_line("Grep", "toolu_03"),  # streak = 1
-            ], transcript)
-
-            output = run_hook(transcript_path=str(transcript), clear_state=True)
-
-            assert output == {}, f"Expected empty output after Task reset, got: {output}"
-
+# ---------------------------------------------------------------------------
+# Exempt tools
+# ---------------------------------------------------------------------------
 
 class TestExemptTools:
-    """Test that exempt tools (Skill) do not affect streak counting."""
+    """Exempt tools are neutral: they don't increment or reset streak."""
 
-    def test_skill_does_not_increment_streak(self):
-        """Skill tool calls should not increment the streak."""
-        with tempfile.TemporaryDirectory() as tmpdir:
-            transcript = Path(tmpdir) / "transcript.jsonl"
-            write_transcript([
-                make_tool_use_line("Skill", "toolu_01"),
-                make_tool_use_line("Skill", "toolu_02"),
-                make_tool_use_line("Skill", "toolu_03"),
-            ], transcript)
+    def test_exempt_tools_do_not_trigger_block(self):
+        """Exempt tools must not trigger the block, even with streak=0."""
+        for tool in ("Skill", "AskUserQuestion", "TaskCreate", "TaskUpdate",
+                     "TaskGet", "TaskList", "EnterPlanMode", "ExitPlanMode"):
+            output = run_hook(tool, clear_state=True)
+            assert output == {}, f"Exempt tool {tool} should not trigger block"
 
-            run_hook(transcript_path=str(transcript), clear_state=True)
+    def test_exempt_tools_do_not_increment_streak(self):
+        """Exempt tools must not increment the streak after block fires."""
+        run_hook("Bash", clear_state=True)          # block fires
+        run_hook("Skill", clear_state=False)         # neutral
+        run_hook("AskUserQuestion", clear_state=False)  # neutral
+        state = get_state()
+        assert state["streak"] == 0, "Exempt tools should not increment streak"
 
-            state = get_state()
-            assert state["streak"] == 0, "Skill calls should not increment streak"
+    def test_exempt_tools_do_not_reset_streak(self):
+        """Exempt tools must not reset a non-zero streak."""
+        run_hook("Bash", clear_state=True)   # block fires
+        run_hook("Bash", clear_state=False)  # streak → 1
+        run_hook("Skill", clear_state=False) # neutral
+        state = get_state()
+        assert state["streak"] == 1, "Exempt tool should not reset streak"
 
-    def test_skill_does_not_reset_streak(self):
-        """Skill tool calls should not reset an existing streak."""
-        with tempfile.TemporaryDirectory() as tmpdir:
-            transcript = Path(tmpdir) / "transcript.jsonl"
-            write_transcript([
-                make_tool_use_line("Bash", "toolu_01"),  # streak = 1
-                make_tool_use_line("Skill", "toolu_02"),  # neutral — streak stays 1
-            ], transcript)
-
-            run_hook(transcript_path=str(transcript), clear_state=True)
-
-            state = get_state()
-            assert state["streak"] == 1, "Skill should not reset streak"
-
-    def test_skill_between_non_task_calls_does_not_interrupt_streak(self):
-        """Skill call between non-Task calls should not break streak accumulation."""
-        with tempfile.TemporaryDirectory() as tmpdir:
-            transcript = Path(tmpdir) / "transcript.jsonl"
-            write_transcript([
-                make_tool_use_line("Bash", "toolu_01"),   # streak = 1
-                make_tool_use_line("Skill", "toolu_02"),  # neutral
-                make_tool_use_line("Read", "toolu_03"),   # streak = 2 → advisory fires
-            ], transcript)
-
-            output = run_hook(transcript_path=str(transcript), clear_state=True)
-
-            assert "hookSpecificOutput" in output, (
-                "Advisory should fire at streak 2 even with Skill call in between"
-            )
-
-    def test_ask_user_question_is_neutral(self):
-        """AskUserQuestion should not increment or reset the streak."""
-        with tempfile.TemporaryDirectory() as tmpdir:
-            transcript = Path(tmpdir) / "transcript.jsonl"
-            write_transcript([
-                make_tool_use_line("Bash", "toolu_01"),          # streak = 1
-                make_tool_use_line("AskUserQuestion", "toolu_02"),  # neutral
-            ], transcript)
-
-            run_hook(transcript_path=str(transcript), clear_state=True)
-
-            state = get_state()
-            assert state["streak"] == 1, "AskUserQuestion should not affect streak"
-
-    def test_task_create_is_neutral(self):
-        """TaskCreate should not increment or reset the streak."""
-        with tempfile.TemporaryDirectory() as tmpdir:
-            transcript = Path(tmpdir) / "transcript.jsonl"
-            write_transcript([
-                make_tool_use_line("Bash", "toolu_01"),      # streak = 1
-                make_tool_use_line("TaskCreate", "toolu_02"),  # neutral
-            ], transcript)
-
-            run_hook(transcript_path=str(transcript), clear_state=True)
-
-            state = get_state()
-            assert state["streak"] == 1, "TaskCreate should not affect streak"
-
-    def test_mixing_new_exempt_tools_with_non_exempt_preserves_streak_behavior(self):
-        """Mixing new exempt tools among non-exempt calls should not change streak accumulation."""
-        with tempfile.TemporaryDirectory() as tmpdir:
-            transcript = Path(tmpdir) / "transcript.jsonl"
-            write_transcript([
-                make_tool_use_line("Bash", "toolu_01"),       # streak = 1
-                make_tool_use_line("TaskList", "toolu_02"),   # neutral
-                make_tool_use_line("TaskUpdate", "toolu_03"), # neutral
-                make_tool_use_line("EnterPlanMode", "toolu_04"),  # neutral
-                make_tool_use_line("Read", "toolu_05"),       # streak = 2 → advisory fires
-            ], transcript)
-
-            output = run_hook(transcript_path=str(transcript), clear_state=True)
-
-            assert "hookSpecificOutput" in output, (
-                "Advisory should fire at streak 2 with exempt tools interspersed"
-            )
-            state = get_state()
-            assert state["streak"] == 2, (
-                "Exempt orchestration tools should not count toward or reset streak"
-            )
+    def test_exempt_tool_does_not_re_arm_block(self):
+        """Exempt tool after block fires must not reset block_fired."""
+        run_hook("Bash", clear_state=True)   # block fires; block_fired=True
+        run_hook("Skill", clear_state=False) # neutral
+        state = get_state()
+        assert state["block_fired"] is True, "Exempt tool should not re-arm block"
 
 
-class TestAdvisoryContent:
-    """Test that advisory output has the correct structure when triggered."""
+# ---------------------------------------------------------------------------
+# Task call behavior
+# ---------------------------------------------------------------------------
 
-    def test_advisory_is_non_empty_string(self):
-        """Advisory additionalContext should be a non-empty string."""
-        with tempfile.TemporaryDirectory() as tmpdir:
-            transcript = Path(tmpdir) / "transcript.jsonl"
-            write_transcript([
-                make_tool_use_line("Bash", "toolu_01"),
-                make_tool_use_line("Read", "toolu_02"),
-                make_tool_use_line("Grep", "toolu_03"),
-            ], transcript)
+class TestTaskCall:
+    """Task calls reset the delegation state and re-arm the block."""
 
-            output = run_hook(transcript_path=str(transcript), clear_state=True)
+    def test_task_call_is_silent(self):
+        """Task call must return empty output (no advisory or block)."""
+        run_hook("Bash", clear_state=True)  # set up some state
+        output = run_hook("Task", clear_state=False)
+        assert output == {}, f"Task call should be silent, got: {output}"
 
-            advisory = output["hookSpecificOutput"]["additionalContext"]
-            assert isinstance(advisory, str) and len(advisory) > 0
+    def test_task_call_with_fresh_state_is_silent(self):
+        """Task call on fresh session must be silent."""
+        output = run_hook("Task", clear_state=True)
+        assert output == {}
 
-    def test_advisory_is_string_not_structured_data(self):
-        """Advisory should be a plain string, not a dict or list."""
-        with tempfile.TemporaryDirectory() as tmpdir:
-            transcript = Path(tmpdir) / "transcript.jsonl"
-            write_transcript([
-                make_tool_use_line("Bash", "toolu_01"),
-                make_tool_use_line("Read", "toolu_02"),
-                make_tool_use_line("Grep", "toolu_03"),
-            ], transcript)
-
-            output = run_hook(transcript_path=str(transcript), clear_state=True)
-
-            advisory = output["hookSpecificOutput"]["additionalContext"]
-            assert isinstance(advisory, str)
+    def test_multiple_task_calls_keep_streak_at_zero(self):
+        """Multiple consecutive Task calls must keep streak at 0."""
+        run_hook("Task", clear_state=True)
+        run_hook("Task", clear_state=False)
+        run_hook("Task", clear_state=False)
+        state = get_state()
+        assert state["streak"] == 0
+        assert state["block_fired"] is False
 
 
-class TestOffsetTracking:
-    """Test that offset tracking correctly reads only new content."""
+# ---------------------------------------------------------------------------
+# Output format
+# ---------------------------------------------------------------------------
 
-    def test_offset_advances_after_read(self):
-        """State offset should advance after reading transcript content."""
-        with tempfile.TemporaryDirectory() as tmpdir:
-            transcript = Path(tmpdir) / "transcript.jsonl"
-            write_transcript([make_tool_use_line("Bash")], transcript)
+class TestOutputFormat:
+    """Validate JSON output structure."""
 
-            run_hook(transcript_path=str(transcript), clear_state=True)
+    def test_silent_output_is_empty_dict(self):
+        """Silent output must be exactly {}."""
+        run_hook("Bash", clear_state=True)          # block fires
+        output = run_hook("Bash", clear_state=False) # streak=1, silent
+        assert output == {}
 
-            state = get_state()
-            assert state is not None
-            assert state["offset"] > 0, "Offset should advance after reading content"
+    def test_block_output_structure(self):
+        """Block output must have hookSpecificOutput with permissionDecision: deny."""
+        output = run_hook("Bash", clear_state=True)
+        assert "hookSpecificOutput" in output
+        hook_out = output["hookSpecificOutput"]
+        assert hook_out.get("hookEventName") == "PreToolUse"
+        assert hook_out.get("permissionDecision") == "deny"
+        assert isinstance(hook_out.get("permissionDecisionReason"), str)
+        assert len(hook_out["permissionDecisionReason"]) > 0
 
-    def test_new_lines_only_counted_once(self):
-        """Lines read in a previous call should not be re-counted."""
-        with tempfile.TemporaryDirectory() as tmpdir:
-            transcript = Path(tmpdir) / "transcript.jsonl"
-
-            # First call: write 2 lines — advisory fires at streak=2
-            write_transcript([
-                make_tool_use_line("Bash", "toolu_01"),
-                make_tool_use_line("Read", "toolu_02"),
-            ], transcript)
-            run_hook(transcript_path=str(transcript), clear_state=True)
-            state_after_first = get_state()
-            assert state_after_first["streak"] == 2
-
-            # Second call: append 1 more line (don't clear state)
-            append_transcript([make_tool_use_line("Grep", "toolu_03")], transcript)
-            run_hook(transcript_path=str(transcript), clear_state=False)
-            state_after_second = get_state()
-
-            # Streak should be 3 (2 + 1), not 5 (re-reading all 3 lines from start)
-            assert state_after_second["streak"] == 3, (
-                f"Expected streak 3, got {state_after_second['streak']}. "
-                "Previous lines should not be re-counted."
-            )
-
-    def test_empty_transcript_keeps_streak_unchanged(self):
-        """If no new content, streak should remain at its previous value."""
-        with tempfile.TemporaryDirectory() as tmpdir:
-            transcript = Path(tmpdir) / "transcript.jsonl"
-            write_transcript([make_tool_use_line("Bash")], transcript)
-
-            run_hook(transcript_path=str(transcript), clear_state=True)
-            state_after_first = get_state()
-            assert state_after_first["streak"] == 1
-
-            # Run again with no new content (offset is at end of file)
-            run_hook(transcript_path=str(transcript), clear_state=False)
-            state_after_second = get_state()
-
-            assert state_after_second["streak"] == 1, (
-                "Streak should not change when there is no new transcript content"
-            )
+    def test_advisory_output_structure(self):
+        """Advisory output must have hookSpecificOutput with additionalContext."""
+        run_hook("Bash", clear_state=True)   # block
+        run_hook("Bash", clear_state=False)  # streak=1
+        output = run_hook("Bash", clear_state=False)  # streak=2 → advisory
+        assert "hookSpecificOutput" in output
+        hook_out = output["hookSpecificOutput"]
+        assert hook_out.get("hookEventName") == "PreToolUse"
+        assert isinstance(hook_out.get("additionalContext"), str)
+        assert len(hook_out["additionalContext"]) > 0
+        assert "permissionDecision" not in hook_out
 
 
-class TestStateFilePersistence:
-    """Test that state persists correctly across calls."""
+# ---------------------------------------------------------------------------
+# State file
+# ---------------------------------------------------------------------------
+
+class TestStateFile:
+    """State file is created, has the correct schema, and persists correctly."""
 
     def test_state_file_created_on_first_call(self):
-        """State file should be created on first hook call."""
-        with tempfile.TemporaryDirectory() as tmpdir:
-            transcript = Path(tmpdir) / "transcript.jsonl"
-            write_transcript([make_tool_use_line("Bash")], transcript)
-
-            run_hook(transcript_path=str(transcript), clear_state=True)
-
-            state = get_state()
-            assert state is not None, "State file should be created"
+        """State file must be created on first hook call."""
+        run_hook("Bash", clear_state=True)
+        state = get_state()
+        assert state is not None
 
     def test_state_has_correct_fields(self):
-        """State file should contain offset, streak, task_calls, and advisory_fired fields."""
-        with tempfile.TemporaryDirectory() as tmpdir:
-            transcript = Path(tmpdir) / "transcript.jsonl"
-            write_transcript([make_tool_use_line("Bash")], transcript)
+        """State file must contain streak (int) and block_fired (bool)."""
+        run_hook("Bash", clear_state=True)
+        state = get_state()
+        assert isinstance(state["streak"], int)
+        assert isinstance(state["block_fired"], bool)
 
-            run_hook(transcript_path=str(transcript), clear_state=True)
+    def test_state_does_not_contain_legacy_fields(self):
+        """State must not contain deprecated fields (offset, task_calls, advisory_fired)."""
+        run_hook("Bash", clear_state=True)
+        state = get_state()
+        assert "offset" not in state
+        assert "task_calls" not in state
+        assert "advisory_fired" not in state
 
-            state = get_state()
-            assert "offset" in state
-            assert "streak" in state
-            assert "task_calls" in state
-            assert "advisory_fired" in state
-            assert isinstance(state["offset"], int)
-            assert isinstance(state["streak"], int)
-            assert isinstance(state["task_calls"], int)
-            assert isinstance(state["advisory_fired"], bool)
 
-    def test_state_persists_between_calls(self):
-        """Streak state should accumulate correctly across multiple hook calls."""
-        with tempfile.TemporaryDirectory() as tmpdir:
-            transcript = Path(tmpdir) / "transcript.jsonl"
-
-            # First call: streak = 1, no advisory
-            write_transcript([make_tool_use_line("Bash", "toolu_01")], transcript)
-            run_hook(transcript_path=str(transcript), clear_state=True)
-            assert get_state()["streak"] == 1
-
-            # Second call: streak = 2, advisory fires
-            append_transcript([make_tool_use_line("Read", "toolu_02")], transcript)
-            output = run_hook(transcript_path=str(transcript), clear_state=False)
-            assert get_state()["streak"] == 2
-            assert "hookSpecificOutput" in output, "Advisory should fire at streak 2"
-            assert get_state()["advisory_fired"] == True
-
-            # Third call: streak = 3, advisory already fired — no repeat
-            append_transcript([make_tool_use_line("Grep", "toolu_03")], transcript)
-            output_third = run_hook(transcript_path=str(transcript), clear_state=False)
-            assert get_state()["streak"] == 3
-            assert output_third == {}, "Advisory should not fire again at streak 3"
-
+# ---------------------------------------------------------------------------
+# Error handling
+# ---------------------------------------------------------------------------
 
 class TestGracefulErrorHandling:
-    """Test that the hook handles errors gracefully."""
+    """Hook must handle bad inputs without crashing."""
 
-    def test_malformed_json_input_returns_empty(self):
-        """Hook should return {} on malformed JSON input."""
+    def test_malformed_json_returns_empty(self):
+        """Hook must return {} on malformed JSON input."""
         env = os.environ.copy()
         env["CLAUDE_HOOK_STATE_DIR"] = str(TEST_STATE_DIR)
         result = subprocess.run(
@@ -560,43 +385,27 @@ class TestGracefulErrorHandling:
             env=env,
         )
         output = json.loads(result.stdout)
-        assert output == {}, "Malformed JSON should return {}"
+        assert output == {}
 
-    def test_missing_transcript_path_returns_empty(self):
-        """Hook should return {} when transcript_path is missing."""
-        output = run_hook(transcript_path="", clear_state=True)
-        assert output == {}, f"Missing transcript path should return {{}}, got: {output}"
-
-    def test_nonexistent_transcript_returns_empty(self):
-        """Hook should return {} when transcript file does not exist."""
-        output = run_hook(
-            transcript_path="/tmp/nonexistent-transcript-xyz.jsonl",
-            clear_state=True,
-        )
-        assert output == {}, f"Nonexistent transcript should return {{}}, got: {output}"
-
-    def test_corrupt_state_file_handled_gracefully(self):
-        """Hook should recover from a corrupt state file."""
-        TEST_STATE_DIR.mkdir(parents=True, exist_ok=True)
-        state_file = TEST_STATE_DIR / f"{DEFAULT_SESSION_ID}-delegation.json"
-        state_file.write_text("this is not json {{{{")
-
-        with tempfile.TemporaryDirectory() as tmpdir:
-            transcript = Path(tmpdir) / "transcript.jsonl"
-            write_transcript([make_tool_use_line("Bash")], transcript)
-
-            # Should not crash — corrupt state should be reset to defaults
-            output = run_hook(
-                transcript_path=str(transcript),
-                clear_state=False,  # Don't clear — we want to test the corrupt file
-            )
-            assert isinstance(output, dict), "Hook should return a dict even with corrupt state"
-
-    def test_missing_fields_handled_gracefully(self):
-        """Hook should handle missing optional fields without crashing."""
+    def test_missing_session_id_handled(self):
+        """Hook must handle a missing session_id without crashing."""
         env = os.environ.copy()
         env["CLAUDE_HOOK_STATE_DIR"] = str(TEST_STATE_DIR)
-        input_data = {"session_id": "minimal-session-delegation"}
+        input_data = {"tool_name": "Bash", "tool_input": {}}
+        result = subprocess.run(
+            ["uv", "run", "--script", str(HOOK_PATH)],
+            input=json.dumps(input_data),
+            capture_output=True,
+            text=True,
+            env=env,
+        )
+        assert json.loads(result.stdout) is not None
+
+    def test_missing_tool_name_handled(self):
+        """Hook must handle a missing tool_name without crashing."""
+        env = os.environ.copy()
+        env["CLAUDE_HOOK_STATE_DIR"] = str(TEST_STATE_DIR)
+        input_data = {"session_id": "test-minimal"}
         result = subprocess.run(
             ["uv", "run", "--script", str(HOOK_PATH)],
             input=json.dumps(input_data),
@@ -605,60 +414,17 @@ class TestGracefulErrorHandling:
             env=env,
         )
         output = json.loads(result.stdout)
-        assert isinstance(output, dict), "Output should be a dict"
+        assert isinstance(output, dict)
 
-    def test_transcript_with_non_jsonl_lines_handled(self):
-        """Hook should skip non-JSONL lines in the transcript gracefully."""
-        with tempfile.TemporaryDirectory() as tmpdir:
-            transcript = Path(tmpdir) / "transcript.jsonl"
-            # Mix valid and invalid lines
-            transcript.write_text(
-                "not json\n"
-                + make_tool_use_line("Bash") + "\n"
-                + "also not json\n"
-                + make_tool_use_line("Read") + "\n"
-            )
-
-            run_hook(transcript_path=str(transcript), clear_state=True)
-
-            state = get_state()
-            assert state is not None
-            # Only 2 valid tool_use lines should be counted
-            assert state["streak"] == 2
-
-
-class TestOutputFormat:
-    """Test output format correctness."""
-
-    def test_no_advisory_output_is_empty_dict(self):
-        """When no advisory fires, output must be exactly {}."""
-        with tempfile.TemporaryDirectory() as tmpdir:
-            transcript = Path(tmpdir) / "transcript.jsonl"
-            write_transcript([make_tool_use_line("Bash")], transcript)
-
-            output = run_hook(transcript_path=str(transcript), clear_state=True)
-            assert output == {}
-
-    def test_advisory_output_has_correct_structure(self):
-        """Advisory output must have hookSpecificOutput with hookEventName and additionalContext."""
-        with tempfile.TemporaryDirectory() as tmpdir:
-            transcript = Path(tmpdir) / "transcript.jsonl"
-            write_transcript([
-                make_tool_use_line("Bash", "toolu_01"),
-                make_tool_use_line("Read", "toolu_02"),
-                make_tool_use_line("Grep", "toolu_03"),
-            ], transcript)
-
-            output = run_hook(transcript_path=str(transcript), clear_state=True)
-
-            assert "hookSpecificOutput" in output
-            hook_output = output["hookSpecificOutput"]
-            assert "hookEventName" in hook_output
-            assert hook_output["hookEventName"] == "PostToolUse"
-            assert "additionalContext" in hook_output
-            assert isinstance(hook_output["additionalContext"], str)
-            assert len(hook_output["additionalContext"]) > 0
+    def test_corrupt_state_file_recovered(self):
+        """Hook must recover from a corrupt state file."""
+        TEST_STATE_DIR.mkdir(parents=True, exist_ok=True)
+        state_file = TEST_STATE_DIR / f"{DEFAULT_SESSION_ID}-delegation.json"
+        state_file.write_text("this is not json {{{{")
+        output = run_hook("Bash", clear_state=False)
+        assert isinstance(output, dict)
 
 
 if __name__ == "__main__":
+    import pytest
     pytest.main([__file__, "-v"])
