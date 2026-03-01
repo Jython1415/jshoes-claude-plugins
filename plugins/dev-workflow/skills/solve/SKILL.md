@@ -79,9 +79,12 @@ change, single-line fix). Skip directly to Phase 4 without user
 interaction.
 
 **Well-scoped** -- The issue clearly describes what to build and the
-implementation path is clear from your exploration. Briefly present your
-understanding and planned approach. Ask the user to confirm, then proceed
-to Phase 4.
+implementation path is clear from your exploration. If the approach is
+fully determined (no sub-choices, no trade-offs worth surfacing), proceed
+directly to Phase 4 and note your approach in passing. If the approach
+contains any implementation sub-choices (even with clear recommendations
+for each), invoke `/consult` via the Skill tool -- never collapse
+sub-choices into a binary confirm/reject.
 
 **Needs design decisions** -- There are open questions about approach,
 trade-offs, or how the solution fits into the existing architecture.

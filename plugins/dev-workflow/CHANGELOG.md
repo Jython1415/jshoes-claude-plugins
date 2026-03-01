@@ -1,5 +1,10 @@
 # Changelog
 
+## [1.4.1] - 2026-03-01
+
+### Changed
+- `/solve` Phase 3: replace binary approve/reject on the Well-scoped path with explicit routing — proceed silently when the approach is fully determined; invoke `/consult` when any implementation sub-choices exist (#147)
+
 ## [1.4.0] - 2026-02-28
 
 ### Added
