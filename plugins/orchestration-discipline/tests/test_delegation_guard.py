@@ -2,7 +2,7 @@
 Unit tests for delegation-guard.py hook (PreToolUse)
 
 Behavioral model:
-- Subagent contexts (transcript_path contains "/subagents/"): hook passes through silently,
+- Subagent contexts (subagent_count > 0 in state, set by SubagentStart/Stop events): hook passes through silently,
   no state changes. Subagents share the parent's session_id/state file; the guard does not
   apply to them.
 - First solo call (streak==0, block_fired==False): BLOCK via permissionDecision: "deny".
@@ -72,6 +72,41 @@ def get_state(session_id: str = DEFAULT_SESSION_ID) -> dict | None:
     if state_file.exists():
         return json.loads(state_file.read_text())
     return None
+
+
+# 
+def run_event(
+    event_name: str,
+    session_id: str = DEFAULT_SESSION_ID,
+    clear_state: bool = False,
+) -> dict:
+    """Run the delegation-guard hook with a lifecycle event (SubagentStart/SubagentStop)."""
+    if clear_state:
+        state_file = TEST_STATE_DIR / f"{session_id}-delegation.json"
+        if state_file.exists():
+            state_file.unlink()
+
+    input_data = {
+        "hook_event_name": event_name,
+        "session_id": session_id,
+    }
+
+    env = os.environ.copy()
+    env["CLAUDE_HOOK_STATE_DIR"] = str(TEST_STATE_DIR)
+    TEST_STATE_DIR.mkdir(parents=True, exist_ok=True)
+
+    result = subprocess.run(
+        ["uv", "run", "--script", str(HOOK_PATH)],
+        input=json.dumps(input_data),
+        capture_output=True,
+        text=True,
+        env=env,
+    )
+
+    if result.returncode not in [0, 1]:
+        raise RuntimeError(f"Hook failed unexpectedly: {result.stderr}")
+
+    return json.loads(result.stdout)
 
 
 # ---------------------------------------------------------------------------
@@ -354,43 +389,93 @@ class TestStreakCountingWithAgent:
 
 
 # ---------------------------------------------------------------------------
-# Subagent detection
+# Subagent counter (SubagentStart/Stop reference counter)
 # ---------------------------------------------------------------------------
 
-class TestSubagentDetection:
-    """When transcript_path contains /subagents/, the hook passes through silently."""
+class TestSubagentCounter:
+    """SubagentStart/Stop events manage the reference counter; PreToolUse is silent when count > 0."""
 
-    def test_subagent_context_passes_through(self):
-        """Hook must return {} when transcript_path indicates subagent context."""
-        output = run_hook(
-            "Bash",
-            clear_state=True,
-            transcript_path="/home/user/.claude/projects/abc/subagents/agent-def.jsonl",
-        )
-        assert output == {}, "Hook should pass through silently in subagent context"
+    def test_subagent_start_increments_count(self):
+        """SubagentStart must increment subagent_count in state."""
+        run_hook("Bash", clear_state=True)  # set up some state (block fires)
+        run_event("SubagentStart")
+        state = get_state()
+        assert state["subagent_count"] == 1
 
-    def test_subagent_context_does_not_update_state(self):
-        """Hook must not modify state when in subagent context."""
-        run_hook("Bash", clear_state=True)  # block fires, block_fired=True
+    def test_subagent_stop_decrements_count(self):
+        """SubagentStop must decrement subagent_count in state."""
+        run_hook("Bash", clear_state=True)  # fresh state
+        run_event("SubagentStart")
+        run_event("SubagentStop")
+        state = get_state()
+        assert state["subagent_count"] == 0
+
+    def test_subagent_stop_floor_at_zero(self):
+        """SubagentStop on a zero count must not go negative."""
+        run_hook("Bash", clear_state=True)
+        run_event("SubagentStop")  # count was already 0
+        state = get_state()
+        assert state["subagent_count"] == 0
+
+    def test_pretooluse_silent_when_subagent_active(self):
+        """PreToolUse must pass through silently when subagent_count > 0."""
+        run_hook("Bash", clear_state=True)   # block fires, block_fired=True
+        run_event("SubagentStart")           # subagent_count -> 1
+        # Next Bash call should be silent (not block again)
+        output = run_hook("Bash", clear_state=False)
+        assert output == {}, f"Expected silent while subagent active, got: {output}"
+
+    def test_pretooluse_does_not_modify_state_when_subagent_active(self):
+        """PreToolUse must not modify streak or block_fired when subagent is active."""
+        run_hook("Bash", clear_state=True)   # block fires, block_fired=True, streak=0
+        run_event("SubagentStart")           # subagent_count -> 1
         state_before = get_state()
-        run_hook(
-            "Bash",
-            clear_state=False,
-            transcript_path="/home/user/.claude/projects/abc/subagents/agent-def.jsonl",
-        )
+        run_hook("Bash", clear_state=False)  # should be a no-op
         state_after = get_state()
-        assert state_before == state_after, "State must not change in subagent context"
+        assert state_before["streak"] == state_after["streak"]
+        assert state_before["block_fired"] == state_after["block_fired"]
 
-    def test_main_session_without_subagents_in_path_is_unaffected(self):
-        """Hook must still block in main session (no /subagents/ in path)."""
-        output = run_hook(
-            "Bash",
-            clear_state=True,
-            transcript_path="/home/user/.claude/projects/abc/session.jsonl",
-        )
+    def test_block_resumes_after_subagent_stops(self):
+        """After SubagentStop returns count to 0, PreToolUse block must resume."""
+        run_hook("Bash", clear_state=True)   # block fires, re-arms
+        run_hook("Agent", clear_state=False) # reset: streak=0, block_fired=False
+        run_event("SubagentStart")           # subagent_count -> 1
+        run_hook("Bash", clear_state=False)  # silent (subagent active)
+        run_event("SubagentStop")            # subagent_count -> 0
+        output = run_hook("Bash", clear_state=False)  # should block again
         assert output.get("hookSpecificOutput", {}).get("permissionDecision") == "deny", (
-            "Main session must still be blocked"
+            "Block must re-arm after subagent_count returns to 0"
         )
+
+    def test_multiple_subagents_handled_correctly(self):
+        """Multiple concurrent SubagentStart calls require matching SubagentStops to resume."""
+        run_hook("Bash", clear_state=True)   # block fires
+        run_hook("Agent", clear_state=False) # reset
+        run_event("SubagentStart")           # count -> 1
+        run_event("SubagentStart")           # count -> 2
+        run_hook("Bash", clear_state=False)  # silent
+        run_event("SubagentStop")            # count -> 1 (still active)
+        output = run_hook("Bash", clear_state=False)  # still silent
+        assert output == {}, "Guard must remain suppressed until all subagents complete"
+        run_event("SubagentStop")            # count -> 0
+        output = run_hook("Bash", clear_state=False)  # should block now
+        assert output.get("hookSpecificOutput", {}).get("permissionDecision") == "deny"
+
+    def test_subagent_events_are_silent(self):
+        """SubagentStart and SubagentStop must return {} (no blocks or advisories)."""
+        run_hook("Bash", clear_state=True)
+        output_start = run_event("SubagentStart")
+        output_stop = run_event("SubagentStop")
+        assert output_start == {}, f"SubagentStart must be silent, got: {output_start}"
+        assert output_stop == {}, f"SubagentStop must be silent, got: {output_stop}"
+
+    def test_task_reset_preserves_subagent_count(self):
+        """Task/Agent reset must not zero out subagent_count."""
+        run_hook("Bash", clear_state=True)
+        run_event("SubagentStart")           # count -> 1
+        run_hook("Agent", clear_state=False) # reset streak/block_fired
+        state = get_state()
+        assert state["subagent_count"] == 1, "Task/Agent reset must preserve subagent_count"
 
 
 # ---------------------------------------------------------------------------
@@ -443,11 +528,12 @@ class TestStateFile:
         assert state is not None
 
     def test_state_has_correct_fields(self):
-        """State file must contain streak (int) and block_fired (bool)."""
+        """State file must contain streak (int), block_fired (bool), and subagent_count (int)."""
         run_hook("Bash", clear_state=True)
         state = get_state()
         assert isinstance(state["streak"], int)
         assert isinstance(state["block_fired"], bool)
+        assert isinstance(state["subagent_count"], int)
 
     def test_state_does_not_contain_legacy_fields(self):
         """State must not contain deprecated fields (offset, task_calls, advisory_fired)."""

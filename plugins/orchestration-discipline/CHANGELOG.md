@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.2.0] - 2026-03-01
+
+### Added
+- `delegation-guard`: SubagentStart/Stop reference counter for subagent detection. Adds `subagent_count` to the state schema. SubagentStart increments the counter; SubagentStop decrements it (floor 0). When `subagent_count > 0`, PreToolUse passes through silently — subagents receive no blocks or advisory messages.
+- `hooks.json`: `SubagentStart` and `SubagentStop` events registered for `delegation-guard.py`.
+
+### Fixed
+- `delegation-guard`: Removed dead code: `"/subagents/" in transcript_path` check. Subagent PreToolUse hooks always receive the parent's transcript path, so this heuristic never fired. Replaced by the SubagentStart/Stop reference counter.
+
+### Known Trade-off
+- While any subagent is active (count > 0), the main session's guard is also suppressed. This is argued to be semantically acceptable — the session is actively delegating during that window.
+
 ## [1.1.1] - 2026-02-28
 
 ### Fixed

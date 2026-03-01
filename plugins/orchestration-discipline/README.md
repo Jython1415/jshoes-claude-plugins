@@ -68,12 +68,18 @@ The block fires once per unbroken solo run. After it fires, subsequent tool call
 | `EnterPlanMode` | Planning mode transition — orchestration |
 | `ExitPlanMode` | Planning mode transition — orchestration |
 
+#### Subagent detection
+
+**Subagent detection via SubagentStart/Stop counter**: The hook registers for `SubagentStart` and `SubagentStop` events. When a subagent starts, `subagent_count` increments; when it stops, it decrements (floor 0). While `subagent_count > 0`, all `PreToolUse` calls pass through silently — subagents receive no blocks or advisory messages. The hard block re-arms when the count returns to 0 (the Agent/Task call that spawned the subagent already reset `streak=0, block_fired=False`).
+
+**Known trade-off**: While any subagent is active, the main session's guard is also suppressed. Semantically, this is acceptable — the session IS delegating during that window.
+
 #### State management
 
 Per-session state is stored in `~/.claude/hook-state/{session_id}-delegation.json`:
 
 ```json
-{"streak": 2, "block_fired": true}
+{"streak": 2, "block_fired": true, "subagent_count": 0}
 ```
 
 To redirect state storage (e.g., for testing), set the `CLAUDE_HOOK_STATE_DIR` environment variable:
