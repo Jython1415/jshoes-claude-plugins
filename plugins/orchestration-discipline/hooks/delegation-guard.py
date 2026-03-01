@@ -8,15 +8,19 @@ delegation-guard: Block the first solo tool call after delegation, then escalate
 Event: PreToolUse (all tools)
 
 Purpose: Encourages the main session agent to delegate implementation, research,
-and multi-step analysis work to subagents via the Task tool.
+and multi-step analysis work to subagents via the Task/Agent tool.
 
 Behavior:
+- Subagent contexts (transcript_path contains "/subagents/") are skipped entirely.
+  Subagents share the parent's session_id and state file; without this guard they
+  would receive confusing "delegate to a subagent" messages during their own work.
 - When streak == 0 and block_fired is False (i.e., at the start of a potential solo run):
-  Block the incoming non-Task tool call with permissionDecision: "deny". The blocked call
-  does NOT increment the streak — only executed calls count.
-- After the block fires (block_fired=True), subsequent non-Task tool calls increment streak.
+  Block the incoming non-Task/Agent tool call with permissionDecision: "deny". The blocked
+  call does NOT increment the streak — only executed calls count.
+- After the block fires (block_fired=True), subsequent non-Task/Agent calls increment streak.
   Escalating advisory messages fire at streak 2, 4, 8, 16, ... (powers of 2 >= 2).
-- A Task call resets streak to 0 and re-arms the block (block_fired=False).
+- A Task or Agent call resets streak to 0 and re-arms the block (block_fired=False).
+  ("Agent" is the name used by Claude Code v2.1.63+; "Task" is the legacy name.)
 - Exempt tools (e.g. Skill, AskUserQuestion, TaskCreate, ...) are neutral — they neither
   increment streak nor reset it.
 
@@ -126,6 +130,13 @@ def main():
         input_data = json.load(sys.stdin)
         session_id = input_data.get("session_id", "")
         tool_name = input_data.get("tool_name", "")
+        transcript_path = input_data.get("transcript_path", "")
+
+        # Subagent transcripts are stored at .../subagents/agent-{id}.jsonl
+        # Skip the delegation guard entirely in subagent contexts
+        if "/subagents/" in transcript_path:
+            print("{}")
+            sys.exit(0)
 
         # Unknown/missing tool name — pass through silently
         if not tool_name:
@@ -136,7 +147,7 @@ def main():
         streak = state["streak"]
         block_fired = state["block_fired"]
 
-        if tool_name == "Task":
+        if tool_name in ("Task", "Agent"):
             # Delegation occurred — reset streak and re-arm the block
             write_state(session_id, {"streak": 0, "block_fired": False})
             print("{}")
@@ -147,7 +158,7 @@ def main():
             print("{}")
             sys.exit(0)
 
-        # Non-Task, non-exempt tool call
+        # Non-Task/Agent, non-exempt tool call
         if streak == 0 and not block_fired:
             # First solo call after a Task or session start: hard stop
             # Blocked call does NOT increment streak — only executed calls count
