@@ -401,8 +401,8 @@ class TestGracefulErrorHandling:
         )
         assert json.loads(result.stdout) is not None
 
-    def test_missing_tool_name_handled(self):
-        """Hook must handle a missing tool_name without crashing."""
+    def test_missing_tool_name_returns_empty(self):
+        """Hook must pass through silently when tool_name is missing or empty."""
         env = os.environ.copy()
         env["CLAUDE_HOOK_STATE_DIR"] = str(TEST_STATE_DIR)
         input_data = {"session_id": "test-minimal"}
@@ -414,7 +414,7 @@ class TestGracefulErrorHandling:
             env=env,
         )
         output = json.loads(result.stdout)
-        assert isinstance(output, dict)
+        assert output == {}, "Missing tool_name should return {} (not a block)"
 
     def test_corrupt_state_file_recovered(self):
         """Hook must recover from a corrupt state file."""

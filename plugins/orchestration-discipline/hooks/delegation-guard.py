@@ -127,6 +127,11 @@ def main():
         session_id = input_data.get("session_id", "")
         tool_name = input_data.get("tool_name", "")
 
+        # Unknown/missing tool name — pass through silently
+        if not tool_name:
+            print("{}")
+            sys.exit(0)
+
         state = read_state(session_id)
         streak = state["streak"]
         block_fired = state["block_fired"]
