@@ -49,7 +49,10 @@ After the triage agent returns, present the results in two steps:
    option per queue item. Each option label should be the issue number +
    one-line description; the option description should add one sentence of
    essential context. The user can scroll up to the full summary if they
-   need more detail. Keep the question field brief.
+   need more detail. Keep the question field brief. AskUserQuestion allows
+   at most 4 options. If the queue has more than 4 items, present only the
+   top 4 in the interactive question; the full ranked list in the printed
+   summary above it gives the user complete context.
 
 ## Phase 2: Solve
 
