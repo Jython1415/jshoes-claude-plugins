@@ -35,24 +35,25 @@ export CLAUDE_HOOK_STATE_DIR=/path/to/custom/state/dir
 
 ### delegation-guard
 
-**Event:** PostToolUse (all tools)
+**Event:** PreToolUse (all tools)
 
-Tracks consecutive non-Task tool calls in the main session and injects an advisory reminder when the streak reaches 2, encouraging delegation to subagents via the `Task` tool.
+Intercepts every tool call before it runs. Blocks the first solo tool call after delegation, then fires escalating advisory messages as the streak grows.
 
 #### How it works
 
-On each PostToolUse call, the hook uses offset-tracked transcript parsing to read only new content since the last call. It counts `tool_use` entries: Task calls reset the streak to 0; exempt tools are neutral; all other tool calls increment the streak. When the streak hits 2, a one-time advisory fires.
+| Streak | Action |
+|--------|--------|
+| 0 (block not yet fired) | **Block** — hard stop via `permissionDecision: "deny"`. The blocked call does not count toward the streak. |
+| 1 | Silent — first executed call after the block |
+| 2 | Advisory — mild reminder |
+| 4 | Advisory — stronger |
+| 8 | Advisory — urgent |
+| 16 | Advisory — critical |
+| Task call | Reset — streak returns to 0 and the block re-arms |
 
-The advisory message:
+Streaks at non-power-of-2 values (3, 5, 6, 7, 9, …) pass through silently.
 
-```
-Orchestration advisory: 2 consecutive tool calls without delegating.
-Main session context is for synthesis and coordination only — reads, research,
-planning, and implementation all belong in subagents. Use the Task tool to
-delegate, then synthesize what comes back.
-```
-
-The advisory fires once per unbroken non-delegation run; it resets when a Task call occurs.
+The block fires once per unbroken solo run. After it fires, subsequent tool calls increment the streak and receive advisory messages — but are not blocked. A Task call resets the streak to 0 and re-arms the block so the cycle can start again.
 
 #### Exempt tools (neutral — neither increment nor reset)
 
@@ -72,7 +73,7 @@ The advisory fires once per unbroken non-delegation run; it resets when a Task c
 Per-session state is stored in `~/.claude/hook-state/{session_id}-delegation.json`:
 
 ```json
-{"offset": 12345, "streak": 2, "task_calls": 0, "advisory_fired": false}
+{"streak": 2, "block_fired": true}
 ```
 
 To redirect state storage (e.g., for testing), set the `CLAUDE_HOOK_STATE_DIR` environment variable:

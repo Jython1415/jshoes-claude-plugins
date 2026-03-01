@@ -3,31 +3,27 @@
 # requires-python = ">=3.9"
 # ///
 """
-delegation-guard: Track consecutive non-Task tool calls and inject a delegation advisory.
+delegation-guard: Block the first solo tool call after delegation, then escalate advisories.
 
-Event: PostToolUse (no matcher — fires on all tools)
+Event: PreToolUse (all tools)
 
 Purpose: Encourages the main session agent to delegate implementation, research,
-and multi-step analysis work to subagents via the Task tool. Fires an advisory
-reminder when Claude makes 2 or more consecutive tool calls without spawning a
-subagent.
-
-Mechanism — offset-tracked transcript parsing:
-Each PostToolUse call reads the transcript from the last recorded byte offset,
-parses only the new JSONL lines, and counts tool_use entries. Lines where the
-tool name is "Task" reset the streak; all other tool_use lines increment it.
-Exempt tools (listed in EXEMPT_TOOLS, e.g. Skill) are neutral — they neither
-increment nor reset the streak.
+and multi-step analysis work to subagents via the Task tool.
 
 Behavior:
-- If streak >= 2 and advisory has not yet fired this run: inject an additionalContext advisory
-- advisory_fired is reset to False when a Task call occurs (enabling re-fire after delegation)
-- Otherwise: output {}
+- When streak == 0 and block_fired is False (i.e., at the start of a potential solo run):
+  Block the incoming non-Task tool call with permissionDecision: "deny". The blocked call
+  does NOT increment the streak — only executed calls count.
+- After the block fires (block_fired=True), subsequent non-Task tool calls increment streak.
+  Escalating advisory messages fire at streak 2, 4, 8, 16, ... (powers of 2 >= 2).
+- A Task call resets streak to 0 and re-arms the block (block_fired=False).
+- Exempt tools (e.g. Skill, AskUserQuestion, TaskCreate, ...) are neutral — they neither
+  increment streak nor reset it.
 
 State management:
 - State files stored in: ~/.claude/hook-state/{session_id}-delegation.json
 - Override location: CLAUDE_HOOK_STATE_DIR environment variable
-- State fields: offset (int, bytes), streak (int), task_calls (int), advisory_fired (bool)
+- State fields: streak (int), block_fired (bool)
 """
 import json
 import os
@@ -37,9 +33,6 @@ from pathlib import Path
 # State directory location
 _state_dir_env = os.environ.get("CLAUDE_HOOK_STATE_DIR")
 STATE_DIR = Path(_state_dir_env) if _state_dir_env else Path.home() / ".claude" / "hook-state"
-
-# Delegation threshold (number of consecutive non-Task calls before advisory fires)
-DELEGATION_THRESHOLD = 2
 
 # Tools that don't affect streak counting (neither increment nor reset)
 EXEMPT_TOOLS = {
@@ -61,18 +54,17 @@ def get_state_file(session_id: str) -> Path:
 
 def read_state(session_id: str) -> dict:
     """Read delegation state for this session. Returns default state if not found or corrupt."""
-    default = {"offset": 0, "streak": 0, "task_calls": 0, "advisory_fired": False}
+    default = {"streak": 0, "block_fired": False}
     try:
         state_file = get_state_file(session_id)
         if not state_file.exists():
             return default
         data = json.loads(state_file.read_text())
-        # Validate expected fields are present and are ints
-        if not all(isinstance(data.get(k), int) for k in ("offset", "streak", "task_calls")):
+        if not isinstance(data.get("streak"), int):
             return default
-        if not isinstance(data.get("advisory_fired"), bool):
-            data["advisory_fired"] = False
-        return data
+        if not isinstance(data.get("block_fired"), bool):
+            data["block_fired"] = False
+        return {"streak": data["streak"], "block_fired": data["block_fired"]}
     except Exception:
         return default
 
@@ -86,145 +78,99 @@ def write_state(session_id: str, state: dict) -> None:
         print(f"Warning: Could not write delegation state: {e}", file=sys.stderr)
 
 
-def parse_new_transcript_lines(transcript_path: str, offset: int) -> tuple[list[dict], int]:
-    """
-    Read transcript from offset to end, parse JSONL lines.
-
-    Returns a tuple of (parsed_lines, new_offset). Lines that fail JSON parsing
-    are skipped. new_offset is the byte position after the last complete newline
-    read, so partial lines at EOF are not permanently lost — they will be re-read
-    on the next call once the line is complete.
-    """
-    parsed = []
-    new_offset = offset
-    try:
-        path = Path(transcript_path)
-        if not path.exists():
-            return parsed, new_offset
-
-        with path.open("rb") as f:
-            f.seek(offset)
-            raw = f.read()
-
-        # Find last complete newline to avoid losing partial lines at EOF
-        last_newline = raw.rfind(b"\n")
-        if last_newline >= 0:
-            # Only consume up to and including the last newline
-            raw = raw[: last_newline + 1]
-            new_offset = offset + last_newline + 1
-        else:
-            # No newline found — don't advance offset (incomplete line)
-            return parsed, new_offset
-
-        if not raw:
-            return parsed, new_offset
-
-        # Decode and split into lines
-        text = raw.decode("utf-8", errors="replace")
-        for line in text.splitlines():
-            line = line.strip()
-            if not line:
-                continue
-            try:
-                obj = json.loads(line)
-                parsed.append(obj)
-            except json.JSONDecodeError:
-                # Skip unparseable lines (partial writes, etc.)
-                continue
-    except Exception as e:
-        print(f"Warning: Could not read transcript: {e}", file=sys.stderr)
-
-    return parsed, new_offset
+def is_backoff_point(streak: int) -> bool:
+    """Return True if streak is a power of 2 >= 2 (i.e., 2, 4, 8, 16, ...)."""
+    return streak >= 2 and (streak & (streak - 1)) == 0
 
 
-def compute_streak(
-    lines: list[dict], initial_streak: int, initial_advisory_fired: bool
-) -> tuple[int, int, bool]:
-    """
-    Compute the new streak, task_call count, and advisory_fired flag from new transcript lines.
-
-    Claude Code transcripts use type: "assistant" at the top level, with tool calls
-    nested inside message.content[]. Iterates content items to find tool_use entries:
-    - Task calls reset streak to 0 and reset advisory_fired to False
-    - Exempt tools (e.g. Skill) are skipped — no effect on streak
-    - All other tool_use calls increment streak
-
-    Returns (new_streak, task_call_delta, new_advisory_fired).
-    task_call_delta is the count of Task calls seen in this batch only (a delta,
-    not the running total). The caller is responsible for adding it to the
-    persisted task_calls total.
-    """
-    streak = initial_streak
-    task_calls = 0
-    advisory_fired = initial_advisory_fired
-    for line in lines:
-        if not isinstance(line, dict):
-            continue
-        if line.get("type") == "assistant":
-            for item in line.get("message", {}).get("content", []):
-                if not isinstance(item, dict) or item.get("type") != "tool_use":
-                    continue
-                name = item.get("name", "")
-                if name == "Task":
-                    streak = 0
-                    task_calls += 1
-                    advisory_fired = False  # Reset when delegation occurs
-                elif name in EXEMPT_TOOLS:
-                    pass  # Neutral — does not affect streak
-                else:
-                    streak += 1
-    return streak, task_calls, advisory_fired
-
-
-def build_advisory(streak: int) -> str:
-    """Build the delegation advisory message."""
+def build_block_message() -> str:
+    """Build the one-time hard-stop block message for streak=0."""
     return (
-        f"Orchestration advisory: {streak} consecutive tool calls without delegating. "
-        f"Main session context is for synthesis and coordination only — reads, research, "
-        f"planning, and implementation all belong in subagents. Use the Task tool to "
-        f"delegate, then synthesize what comes back."
+        "Delegation check: you are about to make a solo tool call. "
+        "This is a one-time hard stop — delegate to a Task subagent instead. "
+        "After this, reminders will be advisory-only (non-blocking). "
+        "Use the Task tool to spawn a subagent, then synthesize what it returns."
     )
+
+
+def build_advisory_message(streak: int) -> str:
+    """Build an escalating advisory message for the given streak level."""
+    if streak <= 2:
+        tone = (
+            f"Delegation reminder [streak={streak}]: you have made {streak} consecutive "
+            f"solo tool calls. Consider delegating this work to a Task subagent."
+        )
+    elif streak <= 4:
+        tone = (
+            f"Delegation advisory [streak={streak}]: {streak} consecutive solo tool calls. "
+            f"Main session context is non-renewable — push reads, research, and implementation "
+            f"to subagents. Use the Task tool."
+        )
+    elif streak <= 8:
+        tone = (
+            f"Delegation warning [streak={streak}]: {streak} consecutive solo tool calls. "
+            f"Main session capacity is depleting. This work belongs in a subagent. "
+            f"Spawn a Task now and synthesize the result."
+        )
+    else:
+        tone = (
+            f"DELEGATION CRITICAL [streak={streak}]: {streak} consecutive solo tool calls. "
+            f"You are consuming irreplaceable main session context. Stop and delegate immediately. "
+            f"Use the Task tool to spawn a subagent for any further work."
+        )
+    return tone
 
 
 def main():
     try:
         input_data = json.load(sys.stdin)
         session_id = input_data.get("session_id", "")
-        transcript_path = input_data.get("transcript_path", "")
+        tool_name = input_data.get("tool_name", "")
 
-        # Load current state
+        # Unknown/missing tool name — pass through silently
+        if not tool_name:
+            print("{}")
+            sys.exit(0)
+
         state = read_state(session_id)
-        offset = state["offset"]
         streak = state["streak"]
-        task_calls = state["task_calls"]
-        advisory_fired = state.get("advisory_fired", False)
+        block_fired = state["block_fired"]
 
-        # Read and parse new transcript content
-        new_lines, new_offset = parse_new_transcript_lines(transcript_path, offset)
+        if tool_name == "Task":
+            # Delegation occurred — reset streak and re-arm the block
+            write_state(session_id, {"streak": 0, "block_fired": False})
+            print("{}")
+            sys.exit(0)
 
-        # Compute updated streak from new lines
-        new_streak, new_task_count, new_advisory_fired = compute_streak(new_lines, streak, advisory_fired)
-        new_task_calls = task_calls + new_task_count
+        if tool_name in EXEMPT_TOOLS:
+            # Neutral — no state change
+            print("{}")
+            sys.exit(0)
 
-        # Determine if advisory should fire (once per unbroken non-delegation run)
-        should_fire = new_streak >= DELEGATION_THRESHOLD and not new_advisory_fired
-        if should_fire:
-            new_advisory_fired = True
-
-        # Persist updated state
-        write_state(session_id, {
-            "offset": new_offset,
-            "streak": new_streak,
-            "task_calls": new_task_calls,
-            "advisory_fired": new_advisory_fired,
-        })
-
-        # Emit advisory if triggered
-        if should_fire:
+        # Non-Task, non-exempt tool call
+        if streak == 0 and not block_fired:
+            # First solo call after a Task or session start: hard stop
+            # Blocked call does NOT increment streak — only executed calls count
+            write_state(session_id, {"streak": 0, "block_fired": True})
             output = {
                 "hookSpecificOutput": {
-                    "hookEventName": "PostToolUse",
-                    "additionalContext": build_advisory(new_streak),
+                    "hookEventName": "PreToolUse",
+                    "permissionDecision": "deny",
+                    "permissionDecisionReason": build_block_message(),
+                }
+            }
+            print(json.dumps(output))
+            sys.exit(0)
+
+        # Block already fired — this call executes; increment streak
+        new_streak = streak + 1
+        write_state(session_id, {"streak": new_streak, "block_fired": block_fired})
+
+        if is_backoff_point(new_streak):
+            output = {
+                "hookSpecificOutput": {
+                    "hookEventName": "PreToolUse",
+                    "additionalContext": build_advisory_message(new_streak),
                 }
             }
             print(json.dumps(output))
