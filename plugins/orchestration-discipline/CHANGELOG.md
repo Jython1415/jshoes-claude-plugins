@@ -1,5 +1,10 @@
 # Changelog
 
+## [1.2.2] - 2026-03-01
+
+### Fixed
+- `delegation-guard`: SubagentStart fires after the subagent's first PreToolUse, so `subagent_count` is still 0 when the guard evaluates the subagent's first tool call — causing a false-positive hard-block. Fix: add `subagent_grace` (bool) to state. Agent/Task calls set `subagent_grace=True`; the first non-exempt, non-Agent/Task PreToolUse that follows consumes it silently (one free pass). SubagentStart also clears grace when it increments the counter, so whichever fires first claims it. The block is deferred to the second call after Agent/Task, not the first.
+
 ## [1.2.1] - 2026-03-01
 
 ### Fixed

@@ -190,10 +190,11 @@ class TestStreakCounting:
         assert state["block_fired"] is False
 
     def test_block_re_arms_after_task_reset(self):
-        """After a Task reset, the next solo call must block again."""
+        """After a Task reset, the second solo call must block (first gets subagent_grace pass)."""
         run_hook("Bash", clear_state=True)   # first block
-        run_hook("Task", clear_state=False)  # reset
-        output = run_hook("Bash", clear_state=False)  # should block again
+        run_hook("Task", clear_state=False)  # reset; sets subagent_grace=True
+        run_hook("Bash", clear_state=False)  # grace pass (subagent's first call scenario)
+        output = run_hook("Bash", clear_state=False)  # should block now
         assert output.get("hookSpecificOutput", {}).get("permissionDecision") == "deny"
 
 
@@ -265,9 +266,10 @@ class TestEscalatingAdvisories:
         run_hook("Bash", clear_state=True)   # block fires
         run_hook("Bash", clear_state=False)  # streak=1
         run_hook("Bash", clear_state=False)  # streak=2 → advisory
-        # Reset via Task
+        # Reset via Task (sets subagent_grace=True)
         run_hook("Task", clear_state=False)
-        # Second run: advisory must fire again at streak=2
+        # Second run: first call gets grace pass, then block re-arms, then advisory at streak=2
+        run_hook("Bash", clear_state=False)  # grace pass (subagent_grace consumed)
         run_hook("Bash", clear_state=False)  # block fires again (re-armed)
         run_hook("Bash", clear_state=False)  # streak=1
         output = run_hook("Bash", clear_state=False)  # streak=2 → advisory again
@@ -380,10 +382,11 @@ class TestStreakCountingWithAgent:
         assert state["block_fired"] is False
 
     def test_block_re_arms_after_agent_reset(self):
-        """After an Agent reset, the next solo call must block again."""
+        """After an Agent reset, the second solo call must block (first gets subagent_grace pass)."""
         run_hook("Bash", clear_state=True)    # first block
-        run_hook("Agent", clear_state=False)  # reset
-        output = run_hook("Bash", clear_state=False)  # should block again
+        run_hook("Agent", clear_state=False)  # reset; sets subagent_grace=True
+        run_hook("Bash", clear_state=False)   # grace pass (subagent's first call scenario)
+        output = run_hook("Bash", clear_state=False)  # should block now
         assert output.get("hookSpecificOutput", {}).get("permissionDecision") == "deny"
 
 
@@ -478,6 +481,71 @@ class TestSubagentCounter:
 
 
 # ---------------------------------------------------------------------------
+# Subagent grace window (SubagentStart race condition fix)
+# ---------------------------------------------------------------------------
+
+class TestSubagentGrace:
+    """subagent_grace gives one free PreToolUse pass between Agent/Task call and SubagentStart."""
+
+    def test_agent_call_sets_subagent_grace(self):
+        """Agent call must set subagent_grace=True in state."""
+        run_hook("Agent", clear_state=True)
+        state = get_state()
+        assert state["subagent_grace"] is True
+
+    def test_task_call_sets_subagent_grace(self):
+        """Task call must set subagent_grace=True in state."""
+        run_hook("Task", clear_state=True)
+        state = get_state()
+        assert state["subagent_grace"] is True
+
+    def test_first_call_after_agent_passes_silently(self):
+        """First non-exempt PreToolUse after Agent must pass silently (grace window)."""
+        run_hook("Agent", clear_state=True)   # sets grace
+        output = run_hook("Bash", clear_state=False)  # should pass, not block
+        assert output == {}, f"Expected silent during grace window, got: {output}"
+
+    def test_grace_consumed_on_first_pretooluse(self):
+        """Grace is consumed (cleared) by the first non-exempt PreToolUse after Agent/Task."""
+        run_hook("Agent", clear_state=True)   # sets grace
+        output1 = run_hook("Bash", clear_state=False)  # consumes grace, passes silently
+        state = get_state()
+        assert output1 == {}, "Grace should pass first call silently"
+        assert state["subagent_grace"] is False, "Grace must be consumed after first PreToolUse"
+
+    def test_exempt_tools_do_not_consume_grace(self):
+        """Exempt tools must not clear subagent_grace."""
+        run_hook("Agent", clear_state=True)
+        run_hook("Skill", clear_state=False)
+        run_hook("TaskCreate", clear_state=False)
+        state = get_state()
+        assert state["subagent_grace"] is True
+
+    def test_subagent_start_clears_grace(self):
+        """SubagentStart must clear subagent_grace (handoff to reference counter)."""
+        run_hook("Agent", clear_state=True)   # sets grace
+        run_event("SubagentStart")            # should clear grace, increment count
+        state = get_state()
+        assert state["subagent_grace"] is False
+        assert state["subagent_count"] == 1
+
+    def test_default_state_has_grace_false(self):
+        """Fresh session state must have subagent_grace=False."""
+        run_hook("Bash", clear_state=True)    # block fires on fresh state
+        # Verify grace is False by default (block fires, not grace pass)
+        state = get_state()
+        assert state["subagent_grace"] is False
+
+    def test_block_fires_after_subagent_start_clears_grace(self):
+        """After SubagentStart clears grace and SubagentStop returns count to 0, block re-arms."""
+        run_hook("Agent", clear_state=True)   # sets grace, streak=0, block_fired=False
+        run_event("SubagentStart")            # clears grace, count=1
+        run_event("SubagentStop")             # count=0
+        output = run_hook("Bash", clear_state=False)  # should block (grace gone, count=0)
+        assert output.get("hookSpecificOutput", {}).get("permissionDecision") == "deny"
+
+
+# ---------------------------------------------------------------------------
 # Output format
 # ---------------------------------------------------------------------------
 
@@ -527,12 +595,13 @@ class TestStateFile:
         assert state is not None
 
     def test_state_has_correct_fields(self):
-        """State file must contain streak (int), block_fired (bool), and subagent_count (int)."""
+        """State file must contain streak (int), block_fired (bool), subagent_count (int), subagent_grace (bool)."""
         run_hook("Bash", clear_state=True)
         state = get_state()
         assert isinstance(state["streak"], int)
         assert isinstance(state["block_fired"], bool)
         assert isinstance(state["subagent_count"], int)
+        assert isinstance(state["subagent_grace"], bool)
 
     def test_state_does_not_contain_legacy_fields(self):
         """State must not contain deprecated fields (offset, task_calls, advisory_fired)."""
