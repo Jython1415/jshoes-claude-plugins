@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.2.1] - 2026-03-01
+
+### Fixed
+- Document SubagentStop crash limitation: if a subagent process crashes before SubagentStop fires, `subagent_count` remains elevated and the guard is permanently suppressed for the session. No recovery mechanism; accepted as known limitation.
+- Document session lifecycle behavior: `/clear` generates a new `session_id` (state resets automatically); `/compact` preserves `session_id` (state persists correctly through compaction).
+
 ## [1.2.0] - 2026-03-01
 
 ### Added
