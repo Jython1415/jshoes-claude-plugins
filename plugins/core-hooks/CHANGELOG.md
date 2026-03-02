@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.1.1] - 2026-03-01
+
+### Fixed
+- Add `CLAUDE_HOOK_STATE_DIR` env var support to markdown-commit-reminder and monitor-ci-results hooks for sandbox compatibility
+- Update test files to use TMPDIR-based state directory instead of hardcoded `~/.claude/hook-state/`
+
 ## [1.1.0] - 2026-02-27
 
 ### Added

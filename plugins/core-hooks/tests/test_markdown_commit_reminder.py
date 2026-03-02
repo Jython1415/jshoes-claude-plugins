@@ -5,6 +5,7 @@ This test suite validates that the hook properly detects git commands
 involving markdown files and provides appropriate guidance.
 """
 import json
+import os
 import subprocess
 from pathlib import Path
 
@@ -12,6 +13,9 @@ import pytest
 
 # Path to the hook script
 HOOK_PATH = Path(__file__).parent.parent / "hooks" / "markdown-commit-reminder.py"
+
+# Test state directory (redirects away from ~/.claude/hook-state/ for sandbox compat)
+TEST_STATE_DIR = Path(os.environ.get("TMPDIR", "/tmp")) / "claude-hook-test-state"
 
 
 def run_hook(tool_name: str, command: str, clear_cooldown: bool = True) -> dict:
@@ -34,16 +38,20 @@ def run_hook(tool_name: str, command: str, clear_cooldown: bool = True) -> dict:
 
     # Clear cooldown state if requested
     if clear_cooldown:
-        state_dir = Path.home() / ".claude" / "hook-state"
-        state_file = state_dir / "markdown-commit-cooldown-test-session-abc123"
+        state_file = TEST_STATE_DIR / "markdown-commit-cooldown-test-session-abc123"
         if state_file.exists():
             state_file.unlink()
+
+    env = os.environ.copy()
+    env["CLAUDE_HOOK_STATE_DIR"] = str(TEST_STATE_DIR)
+    TEST_STATE_DIR.mkdir(parents=True, exist_ok=True)
 
     result = subprocess.run(
         ["uv", "run", "--script", str(HOOK_PATH)],
         input=json.dumps(input_data),
         capture_output=True,
-        text=True
+        text=True,
+        env=env
     )
 
     if result.returncode not in [0, 1]:  # 0 = success, 1 = expected error with {}
@@ -176,8 +184,7 @@ class TestCooldownMechanism:
 
     def test_cooldown_state_file_created(self):
         """Cooldown state file should be created"""
-        state_dir = Path.home() / ".claude" / "hook-state"
-        state_file = state_dir / "markdown-commit-cooldown-test-session-abc123"
+        state_file = TEST_STATE_DIR / "markdown-commit-cooldown-test-session-abc123"
 
         # Clear state first
         if state_file.exists():
