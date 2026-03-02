@@ -33,6 +33,26 @@ These tools neither increment nor reset the streak:
 - `TaskCreate`, `TaskUpdate`, `TaskGet`, `TaskList` — task list management
 - `EnterPlanMode`, `ExitPlanMode` — planning mode transitions
 
+### Per-project configuration
+
+You can extend the exempt tools list on a per-project basis by creating a `.claude/delegation-guard.json` config file:
+
+```json
+{
+  "exempt_tools": ["ToolName1", "ToolName2"]
+}
+```
+
+Project-specific exemptions are **merged** with the defaults (not a replacement). Example:
+
+```json
+{
+  "exempt_tools": ["mcp__assistant__send_message", "mcp__custom__tool"]
+}
+```
+
+This allows you to exempt project-specific tools (e.g., MCP integrations) without overriding the built-in exempt tools.
+
 ## Subagent detection
 
 The hook registers for `SubagentStart` and `SubagentStop` events. When a subagent starts, a reference counter (`subagent_count`) increments; when it stops, it decrements (floor 0). While `subagent_count > 0`, all `PreToolUse` calls pass through silently — subagents receive no blocks or advisory messages. The hard block re-arms when the count returns to 0 (the Agent call that spawned the subagent already reset `streak=0`).

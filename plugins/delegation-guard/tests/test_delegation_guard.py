@@ -33,8 +33,17 @@ def run_hook(
     session_id: str = DEFAULT_SESSION_ID,
     clear_state: bool = True,
     transcript_path: str = "",
+    cwd: str = "",
 ) -> dict:
-    """Run the delegation-guard hook and return parsed JSON output."""
+    """Run the delegation-guard hook and return parsed JSON output.
+
+    Args:
+        tool_name: Name of the tool being called
+        session_id: Session ID for state tracking
+        clear_state: Whether to clear state before running
+        transcript_path: Path to transcript (optional)
+        cwd: Working directory for the hook (optional)
+    """
     if clear_state:
         state_file = TEST_STATE_DIR / f"{session_id}-delegation.json"
         if state_file.exists():
@@ -58,6 +67,7 @@ def run_hook(
         capture_output=True,
         text=True,
         env=env,
+        cwd=cwd if cwd else None,
     )
 
     if result.returncode not in [0, 1]:
@@ -541,6 +551,71 @@ class TestStateFile:
         assert "offset" not in state
         assert "task_calls" not in state
         assert "advisory_fired" not in state
+
+
+# ---------------------------------------------------------------------------
+# Per-project config
+# ---------------------------------------------------------------------------
+
+class TestProjectConfig:
+    """Per-project config file (.claude/delegation-guard.json) support."""
+
+    def test_extra_exempt_tool_from_config(self, tmp_path):
+        """Project config exempt_tools are recognized and treated as exempt."""
+        # Create config in temp directory
+        config_dir = tmp_path / ".claude"
+        config_dir.mkdir()
+        config_file = config_dir / "delegation-guard.json"
+        config_file.write_text(json.dumps({"exempt_tools": ["mcp__assistant__send_message"]}))
+
+        # Run hook with custom tool from config, from that CWD
+        output = run_hook("mcp__assistant__send_message", clear_state=True, cwd=str(tmp_path))
+        assert output == {}, "Config exempt tool should not trigger block"
+
+    def test_missing_config_uses_defaults(self, tmp_path):
+        """Without config file, default exempt tools still work."""
+        # Create empty temp directory (no config file)
+        output = run_hook("Skill", clear_state=True, cwd=str(tmp_path))
+        assert output == {}, "Default exempt tools should work without config file"
+
+    def test_corrupt_json_uses_defaults(self, tmp_path):
+        """Corrupt config JSON falls back to defaults."""
+        # Create config with invalid JSON
+        config_dir = tmp_path / ".claude"
+        config_dir.mkdir()
+        config_file = config_dir / "delegation-guard.json"
+        config_file.write_text("not valid json {{{{")
+
+        # Run hook with default exempt tool
+        output = run_hook("Skill", clear_state=True, cwd=str(tmp_path))
+        assert output == {}, "Corrupt config should fall back to defaults"
+
+    def test_empty_exempt_tools_uses_defaults(self, tmp_path):
+        """Config with empty exempt_tools list still uses defaults."""
+        # Create config with empty list
+        config_dir = tmp_path / ".claude"
+        config_dir.mkdir()
+        config_file = config_dir / "delegation-guard.json"
+        config_file.write_text(json.dumps({"exempt_tools": []}))
+
+        # Run hook with default exempt tool
+        output = run_hook("Skill", clear_state=True, cwd=str(tmp_path))
+        assert output == {}, "Empty config should still use default exemptions"
+
+    def test_config_merges_with_defaults(self, tmp_path):
+        """Config exempt_tools are additive to defaults (not replacement)."""
+        # Create config with extra tool
+        config_dir = tmp_path / ".claude"
+        config_dir.mkdir()
+        config_file = config_dir / "delegation-guard.json"
+        config_file.write_text(json.dumps({"exempt_tools": ["CustomTool"]}))
+
+        # Verify both defaults and config tools are exempt
+        output_default = run_hook("Skill", clear_state=True, cwd=str(tmp_path))
+        assert output_default == {}, "Default tool should still be exempt"
+
+        output_custom = run_hook("CustomTool", clear_state=False, cwd=str(tmp_path))
+        assert output_custom == {}, "Config tool should be exempt"
 
 
 # ---------------------------------------------------------------------------
