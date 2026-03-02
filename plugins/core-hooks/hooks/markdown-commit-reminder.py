@@ -68,6 +68,7 @@ Limitations:
 - Only monitors Bash tool (not direct git operations from other tools)
 """
 import json
+import os
 import sys
 import re
 import time
@@ -76,8 +77,9 @@ from pathlib import Path
 # Cooldown period in seconds (5 minutes)
 COOLDOWN_PERIOD = 300
 
-# State file location
-STATE_DIR = Path.home() / ".claude" / "hook-state"
+# State directory location
+_state_dir_env = os.environ.get("CLAUDE_HOOK_STATE_DIR")
+STATE_DIR = Path(_state_dir_env) if _state_dir_env else Path.home() / ".claude" / "hook-state"
 
 # Patterns to detect markdown file involvement in git commands
 MD_FILE_PATTERN = r'\.md(?:\s|$|"|\')'
