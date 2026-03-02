@@ -1,6 +1,6 @@
 {
   "name": "core-hooks",
-  "description": "Productivity hooks for Claude Code: line ending normalization, gh attribution reminders, modern tool suggestions, and more",
+  "description": "Essential hooks for Claude Code: safety guards, attribution reminders, GPG assistance, heredoc prevention, and event logging",
   "version": "2.0.0",
   "author": {
     "name": "Jython1415",
