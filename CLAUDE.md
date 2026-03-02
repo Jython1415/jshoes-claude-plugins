@@ -6,7 +6,7 @@ This repository contains version-controlled configuration for **Claude Code CLI*
 - `plugins/core-hooks/` - Hook scripts and tests (published to marketplace)
   - `hooks/` — hook source files
   - `tests/` — hook tests
-- `plugins/plugin-support/` - Hook development skill, hook reference docs, and `/feedback` skill (consumer issue filing)
+- `plugins/plugin-support/` - Hook development skill and hook reference docs
   - `skills/hook-development/SKILL.md` — hook authoring guide
 - `plugins/delegation-guard/` - delegation-guard hook (execution discipline)
 - `plugins/stop-momentum/` - stop-momentum hook (execution discipline)
@@ -48,7 +48,7 @@ Each plugin has a `version` field in `plugins/<name>/.claude-plugin/plugin.json`
 3. `plugins/<new-name>/CHANGELOG.md` — add rename entry
 4. `plugins/<new-name>/README.md` — install commands referencing the old name
 5. Other plugins' READMEs that cross-reference the renamed plugin
-6. Any SKILL.md files that list plugin names (e.g. the `/feedback` skill)
+6. Any SKILL.md files that list plugin names
 7. `pyproject.toml` — `[project].name` if it matches the old plugin name
 
 ### Writing Skills

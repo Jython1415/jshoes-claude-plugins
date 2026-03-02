@@ -10,8 +10,8 @@
   "plugins": [
     {
       "name": "core-hooks",
-      "description": "Productivity hooks for Claude Code: line ending normalization, gh attribution reminders, modern tool suggestions, and more",
-      "version": "1.1.1",
+      "description": "Essential hooks for Claude Code: safety guards, attribution reminders, GPG assistance, heredoc prevention, and event logging",
+      "version": "2.0.0",
       "author": {
         "name": "Jython1415",
         "url": "https://github.com/Jython1415"
@@ -30,7 +30,7 @@
     {
       "name": "plugin-support",
       "description": "Miscellaneous skills and documentation for Claude Code development: hook authoring guide and hook reference",
-      "version": "1.3.3",
+      "version": "2.0.0",
       "author": {
         "name": "Jython1415",
         "url": "https://github.com/Jython1415"
@@ -44,8 +44,7 @@
         "documentation"
       ],
       "skills": [
-        "./skills/hook-development",
-        "./skills/feedback"
+        "./skills/hook-development"
       ]
     },
     {
@@ -67,27 +66,6 @@
       ],
       "skills": [
         "./skills/alfred-workflow"
-      ]
-    },
-    {
-      "name": "ralph-loop-guide",
-      "description": "Best practices reference for writing effective ralph-loop prompts. Use when helping users structure prompts for autonomous coding loops, configure completion criteria, design quality gates, or debug convergence issues.",
-      "version": "1.0.1",
-      "author": {
-        "name": "Jython1415",
-        "url": "https://github.com/Jython1415"
-      },
-      "source": "./plugins/ralph-loop-guide",
-      "category": "development",
-      "keywords": [
-        "ralph-loop",
-        "autonomous",
-        "coding-loop",
-        "prompts",
-        "best-practices"
-      ],
-      "skills": [
-        "./skills/ralph-loop-guide"
       ]
     },
     {
