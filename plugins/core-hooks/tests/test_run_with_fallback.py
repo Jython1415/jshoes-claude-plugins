@@ -44,14 +44,14 @@ class TestRunWithFallback:
     # Valid hook execution tests
     def test_valid_hook_execution_open_mode(self):
         """Valid hook should execute successfully in open mode"""
-        hook_path = str(Path(__file__).parent.parent / "hooks" / "normalize-line-endings.py")
+        hook_path = str(Path(__file__).parent.parent / "hooks" / "ensure-tmpdir.py")
         output = run_wrapper("open", hook_path)
         # Empty output means hook executed and returned {}
         assert output == {}, "Valid hook should execute and return its output"
 
     def test_valid_hook_execution_closed_mode(self):
         """Valid hook should execute successfully in closed mode"""
-        hook_path = str(Path(__file__).parent.parent / "hooks" / "normalize-line-endings.py")
+        hook_path = str(Path(__file__).parent.parent / "hooks" / "ensure-tmpdir.py")
         output = run_wrapper("closed", hook_path)
         # Empty output means hook executed and returned {}
         assert output == {}, "Valid hook should execute and return its output"
@@ -226,7 +226,7 @@ print(json.dumps({}))
     def test_deadlock_prevention_scenario(self, tmp_path):
         """Simulate issue #26 deadlock scenario - should not block"""
         # Simulate broken hook path (like the ~/.claude/hooks/ vs .claude/hooks/ issue)
-        broken_path = "/root/.claude/hooks/normalize-line-endings.py"
+        broken_path = "/root/.claude/hooks/ensure-tmpdir.py"
 
         # In open mode, this should warn but not block
         output = run_wrapper("open", broken_path)
@@ -242,7 +242,7 @@ print(json.dumps({}))
         """All existing hooks should work when called through wrapper"""
         hooks_dir = Path(__file__).parent.parent / "hooks"
         hook_files = [
-            "normalize-line-endings.py",
+            "ensure-tmpdir.py",
             "gh-authorship-attribution.py",
             "gh-web-fallback.py",
             "prefer-modern-tools.py",
@@ -313,7 +313,7 @@ class TestLogging:
 
     def test_logging_disabled_by_default(self, tmp_path):
         """No log file should be created when JSHOES_HOOK_LOG_DIR is not set"""
-        hook_path = str(Path(__file__).parent.parent / "hooks" / "normalize-line-endings.py")
+        hook_path = str(Path(__file__).parent.parent / "hooks" / "ensure-tmpdir.py")
         # Explicitly unset the env var to guarantee no logging
         clean_env = {k: v for k, v in os.environ.items() if k != "JSHOES_HOOK_LOG_DIR"}
         result = subprocess.run(
@@ -329,7 +329,7 @@ class TestLogging:
 
     def test_logging_creates_jsonl_file(self, tmp_path):
         """Log file should be created when JSHOES_HOOK_LOG_DIR is set"""
-        hook_path = str(Path(__file__).parent.parent / "hooks" / "normalize-line-endings.py")
+        hook_path = str(Path(__file__).parent.parent / "hooks" / "ensure-tmpdir.py")
         log_dir = tmp_path / "hook-logs"
         run_wrapper(
             "open", hook_path,
@@ -341,7 +341,7 @@ class TestLogging:
 
     def test_logging_entry_format(self, tmp_path):
         """Each JSONL entry should have ts, hook, input, and output fields"""
-        hook_path = str(Path(__file__).parent.parent / "hooks" / "normalize-line-endings.py")
+        hook_path = str(Path(__file__).parent.parent / "hooks" / "ensure-tmpdir.py")
         log_dir = tmp_path / "hook-logs"
         run_wrapper(
             "open", hook_path,
@@ -358,7 +358,7 @@ class TestLogging:
 
     def test_logging_captures_input_and_output(self, tmp_path):
         """Log entry should contain the actual input and hook output"""
-        hook_path = str(Path(__file__).parent.parent / "hooks" / "normalize-line-endings.py")
+        hook_path = str(Path(__file__).parent.parent / "hooks" / "ensure-tmpdir.py")
         log_dir = tmp_path / "hook-logs"
         stdin_data = '{"session_id": "sess2", "tool": "Write", "content": "hello"}'
         run_wrapper(
@@ -370,7 +370,7 @@ class TestLogging:
         entry = json.loads(entry_line)
         assert isinstance(entry["input"], dict), "Input should be parsed JSON"
         assert entry["input"]["tool"] == "Write", "Input should contain original data"
-        assert "hook" in entry and "normalize-line-endings.py" in entry["hook"]
+        assert "hook" in entry and "ensure-tmpdir.py" in entry["hook"]
 
     def test_logging_error_hook(self, tmp_path):
         """Logging should capture fallback output when hook is missing"""
@@ -388,7 +388,7 @@ class TestLogging:
 
     def test_logging_failure_doesnt_affect_hook_output(self, tmp_path):
         """Hook output should be unaffected if logging fails (e.g. unwritable dir)"""
-        hook_path = str(Path(__file__).parent.parent / "hooks" / "normalize-line-endings.py")
+        hook_path = str(Path(__file__).parent.parent / "hooks" / "ensure-tmpdir.py")
         # Point to an unwritable directory
         log_dir = tmp_path / "readonly-logs"
         log_dir.mkdir()
@@ -406,7 +406,7 @@ class TestLogging:
 
     def test_logging_empty_env_var_disables_logging(self, tmp_path):
         """JSHOES_HOOK_LOG_DIR='' should not create any log files"""
-        hook_path = str(Path(__file__).parent.parent / "hooks" / "normalize-line-endings.py")
+        hook_path = str(Path(__file__).parent.parent / "hooks" / "ensure-tmpdir.py")
         run_wrapper(
             "open", hook_path,
             stdin_data='{"session_id": "sess5", "tool": "Test"}',
@@ -416,7 +416,7 @@ class TestLogging:
 
     def test_logging_separate_files_per_session(self, tmp_path):
         """Two invocations with different session_ids should produce separate log files"""
-        hook_path = str(Path(__file__).parent.parent / "hooks" / "normalize-line-endings.py")
+        hook_path = str(Path(__file__).parent.parent / "hooks" / "ensure-tmpdir.py")
         log_dir = tmp_path / "hook-logs"
         run_wrapper(
             "open", hook_path,

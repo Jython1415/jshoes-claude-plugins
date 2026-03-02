@@ -1,5 +1,10 @@
 # Changelog
 
+## [2.0.0] - 2026-03-01
+
+### Removed
+- **feedback skill**: removed as it is not needed for general plugin consumers. Feedback can be filed directly on the GitHub repository.
+
 ## [1.3.3] - 2026-03-01
 
 ### Fixed

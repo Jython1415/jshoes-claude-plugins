@@ -1,5 +1,17 @@
 # Changelog
 
+## [2.0.0] - 2026-03-01
+
+### Removed
+- **prefer-modern-tools** - Hook suggested modern tools (`fd`/`rg`) as alternatives; deprecated in favor of direct tool recommendations in hook guidance
+- **detect-cd-pattern** - Hook warned about global `cd` patterns; less relevant with modern absolute path tooling
+- **detect-heredoc-errors** - Hook provided workarounds for heredoc temp file errors; now handled by improved sandbox documentation
+- **normalize-line-endings** - Hook normalized line endings; task better suited for pre-commit hooks or editor configuration
+- **gh-fallback-helper** - Hook provided fallback guidance for failed `gh` commands; consolidated into other error handlers
+- **markdown-commit-reminder** - Hook warned about markdown file inclusion; now covered by improved session documentation
+- **suggest-uv-for-missing-deps** - Hook suggested `uv run` for Python import errors; guidance now part of error messages
+- **monitor-ci-results** - Hook reminded to check CI after push/PR; less critical with GitHub notifications
+
 ## [1.1.1] - 2026-03-01
 
 ### Fixed

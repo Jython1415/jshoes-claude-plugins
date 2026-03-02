@@ -1,6 +1,6 @@
 # plugin-support Plugin
 
-Skills for Claude Code development and plugin consumer support.
+Comprehensive guide to authoring, testing, and maintaining Claude Code hooks.
 
 ## Skills
 
@@ -22,17 +22,6 @@ Invoke with:
 ```
 
 Or read directly: `plugins/plugin-support/skills/hook-development/SKILL.md`
-
-### /feedback
-
-ONLY for plugin consumers to report issues with the `jshoes-claude-plugins` plugins. Files a structured GitHub issue in the `Jython1415/jshoes-claude-plugins` repository on behalf of the user.
-
-Use when a user reports a bug, unexpected behavior, or missing feature in a hook or skill from this plugin set.
-
-Invoke with:
-```
-/feedback
-```
 
 ## Installation
 
