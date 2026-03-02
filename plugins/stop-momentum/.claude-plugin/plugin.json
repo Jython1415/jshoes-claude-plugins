@@ -1,7 +1,7 @@
 {
-  "name": "plugin-support",
-  "description": "Miscellaneous skills and documentation for Claude Code development: hook authoring guide and hook reference",
-  "version": "1.3.3",
+  "name": "stop-momentum",
+  "description": "Stop hook that prevents premature session stops via an ack-token handshake.",
+  "version": "1.0.0",
   "author": {
     "name": "Jython1415",
     "url": "https://github.com/Jython1415"

@@ -1,5 +1,10 @@
 # Changelog
 
+## [1.3.3] - 2026-03-01
+
+### Fixed
+- Updated plugin name references from `orchestration-discipline` to `delegation-guard` and `stop-momentum`
+
 ## [1.3.2] - 2026-02-28
 
 ### Changed
