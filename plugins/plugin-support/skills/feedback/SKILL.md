@@ -29,7 +29,7 @@ Turn a description into a well-structured GitHub issue filed against
 Determine from the user's description (ask if unclear):
 - **Type**: Bug / Feature request / Optimization
 - **Component**: Which plugin and which specific hook or skill
-  - Plugin names: `core-hooks`, `dev-workflow`, `plugin-support`, `orchestration-discipline`
+  - Plugin names: `core-hooks`, `dev-workflow`, `plugin-support`, `delegation-guard`, `stop-momentum`
   - Hook filename (e.g., `detect-cd-pattern.py`) or skill name (e.g., `/solve`)
 - **Plugin version**: Auto-discover before asking the user.
   1. Read `~/.claude/plugins/installed_plugins.json`

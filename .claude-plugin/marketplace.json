@@ -91,24 +91,28 @@
       ]
     },
     {
-      "name": "orchestration-discipline",
-      "description": "Hooks that enforce execution discipline in main-session workflows: stop-momentum prevents premature session stops; delegation-guard encourages subagent delegation.",
-      "version": "1.2.1",
+      "name": "delegation-guard",
+      "description": "PreToolUse hook that encourages main-session delegation to subagents via escalating reminders.",
+      "version": "1.0.0",
       "author": {
         "name": "Jython1415",
         "url": "https://github.com/Jython1415"
       },
-      "source": "./plugins/orchestration-discipline",
+      "source": "./plugins/delegation-guard",
       "category": "productivity",
-      "keywords": [
-        "hooks",
-        "stop",
-        "momentum",
-        "delegation",
-        "orchestration",
-        "productivity",
-        "workflow"
-      ]
+      "keywords": ["hooks", "delegation", "subagent", "orchestration", "discipline"]
+    },
+    {
+      "name": "stop-momentum",
+      "description": "Stop hook that prevents premature session stops via an ack-token handshake.",
+      "version": "1.0.0",
+      "author": {
+        "name": "Jython1415",
+        "url": "https://github.com/Jython1415"
+      },
+      "source": "./plugins/stop-momentum",
+      "category": "productivity",
+      "keywords": ["hooks", "stop", "momentum", "session", "discipline"]
     },
     {
       "name": "dev-workflow",
