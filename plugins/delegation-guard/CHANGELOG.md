@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.1.0] - 2026-03-01
+
+### Added
+- Per-project configuration via `.claude/delegation-guard.json`
+- `exempt_tools` config field to add project-specific tool exemptions (merged with defaults)
+
 ## [1.0.0] - 2026-03-01
 
 ### Added

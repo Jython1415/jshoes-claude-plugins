@@ -73,6 +73,20 @@ EXEMPT_TOOLS = {
 }
 
 
+def load_project_config() -> dict:
+    """Load per-project delegation-guard config from .claude/delegation-guard.json.
+
+    Returns a dict with optional 'exempt_tools' key (list of strings).
+    Returns empty dict on file not found, invalid JSON, or missing keys.
+    """
+    config_path = Path.cwd() / ".claude" / "delegation-guard.json"
+    try:
+        with open(config_path) as f:
+            return json.load(f)
+    except (FileNotFoundError, json.JSONDecodeError, OSError):
+        return {}
+
+
 def get_state_file(session_id: str) -> Path:
     """Return the path to the state file for this session."""
     return STATE_DIR / f"{session_id}-delegation.json"
@@ -195,7 +209,11 @@ def main():
             print("{}")
             sys.exit(0)
 
-        if tool_name in EXEMPT_TOOLS:
+        # Merge project config exempt_tools with defaults
+        config = load_project_config()
+        extra_exempt = set(config.get("exempt_tools", []))
+        exempt = EXEMPT_TOOLS | extra_exempt
+        if tool_name in exempt:
             # Neutral — no state change
             print("{}")
             sys.exit(0)
