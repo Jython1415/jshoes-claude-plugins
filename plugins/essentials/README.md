@@ -1,4 +1,4 @@
-# core-hooks Plugin
+# essentials Plugin
 
 A focused set of essential hooks for Claude Code, providing critical safety mechanisms and observability.
 
@@ -85,10 +85,10 @@ Smart rate limiting prevents repetitive suggestions:
 claude plugin marketplace add Jython1415/jshoes-claude-plugins
 
 # Install plugin globally
-claude plugin install core-hooks@jshoes-claude-plugins
+claude plugin install essentials@jshoes-claude-plugins
 
 # Or install for current project only
-claude plugin install core-hooks@jshoes-claude-plugins --scope project
+claude plugin install essentials@jshoes-claude-plugins --scope project
 ```
 
 ### Local Development
@@ -99,7 +99,7 @@ git clone https://github.com/Jython1415/jshoes-claude-plugins.git
 cd jshoes-claude-plugins
 
 # Test plugin locally
-claude --plugin-dir ./plugins/core-hooks
+claude --plugin-dir ./plugins/essentials
 ```
 
 ## Hook Details

@@ -3,7 +3,7 @@
 This repository contains version-controlled configuration for **Claude Code CLI**.
 
 ## Repository Structure
-- `plugins/core-hooks/` - Hook scripts and tests (published to marketplace)
+- `plugins/essentials/` - Hook scripts and tests (published to marketplace)
   - `hooks/` — hook source files
   - `tests/` — hook tests
 - `plugins/plugin-support/` - Hook development skill and hook reference docs
@@ -22,7 +22,7 @@ When working in this repository, you are managing the user's Claude Code configu
 Use the `/hook-development` skill (`plugins/plugin-support/skills/hook-development/SKILL.md`) for all hook authoring, testing, lifecycle, and performance guidance.
 **Always read this skill at session start when hook changes are anticipated.** Read: `plugins/plugin-support/skills/hook-development/SKILL.md`
 
-Quick manual test: `echo '{"tool_name":"Bash","tool_input":{"command":"test"}}' | uv run --script plugins/core-hooks/hooks/hookname.py`
+Quick manual test: `echo '{"tool_name":"Bash","tool_input":{"command":"test"}}' | uv run --script plugins/essentials/hooks/hookname.py`
 
 ### Modifying Settings
 - Edit your local `.claude/settings.json` directly (not tracked in git)
@@ -102,7 +102,7 @@ After making changes:
 
 **Global via plugin marketplace (recommended):**
 1. Add marketplace: `claude plugin marketplace add https://github.com/Jython1415/jshoes-claude-plugins`
-2. Install plugin: `claude plugin install core-hooks@jshoes-claude-plugins --scope user`
+2. Install plugin: `claude plugin install essentials@jshoes-claude-plugins --scope user`
 3. Hooks are now active globally
 
 ## Testing Philosophy for Hooks

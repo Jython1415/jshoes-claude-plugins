@@ -1,5 +1,10 @@
 # Changelog
 
+## [3.0.0] - 2026-03-01
+
+### Changed
+- Renamed plugin from `core-hooks` to `essentials` to better reflect the scope: essential hooks for all Claude Code users
+
 ## [2.0.0] - 2026-03-01
 
 ### Removed
