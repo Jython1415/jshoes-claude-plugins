@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.5.0] - 2026-03-06
+
+### Changed
+- `/triage` Step 4: replaced open-ended synthesis with boolean priority checklist (7 signals, 0-12 score), S/M/L effort classification with concrete criteria, and explicit dependency verification checklist
+- `/triage` Step 5: added structured output template with mandatory fields per queue item (priority score, effort, what it unblocks, bundle rationale, ranking reason)
+- `/triage` `--light`: changed from two-agent (Haiku gather + Sonnet synthesize) to single-agent fully-Haiku pipeline — boolean checklists make Sonnet unnecessary for scoring
+- `/triage` Guidelines: added "apply the checklist mechanically" principle; added explicit skip criteria (no acceptance criteria + no clarifying comments, vague future ideas, duplicates)
+
 ## [1.4.2] - 2026-03-01
 
 ### Changed
