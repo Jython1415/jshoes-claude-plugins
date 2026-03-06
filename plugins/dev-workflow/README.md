@@ -72,6 +72,11 @@ Collaborative decision-making with the user. Presents curated, high-leverage que
 
 End-of-session retrospective. Reviews what happened, extracts lessons, and proposes concrete improvements to docs, skills, and memory. Use at the end of a session, after a notable misstep or discovery, or when winding down.
 
+**Arguments:** `[--light] [--heavy]`
+
+- `--light` - Haiku scanner for cost-sensitive retrospectives; single focused pass
+- `--heavy` - Two parallel Sonnet scanners for redundancy and thoroughness. Default uses a single Sonnet scanner.
+
 **What it does:**
 - Reviews the session for missteps, discoveries, repeated patterns, and user corrections
 - Categorizes improvements into documentation, skills, or memory
