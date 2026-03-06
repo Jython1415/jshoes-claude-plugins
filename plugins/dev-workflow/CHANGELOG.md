@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.0.0] - 2026-03-06
+
+### Changed
+- `/reflect` Step 1: replaced open-ended introspection with JSONL-transcript-scanning subagent pipeline -- scanner reads session transcript directly via nonce-based session identification, jq filtering, compact-segment awareness, and 5 evidence-based boolean signal checklists (user corrections, execution failures, approach pivots, undocumented discoveries, repeated operations)
+- `/reflect`: added `--light` (1 Haiku scanner) and `--heavy` (2 parallel Sonnet scanners) modes
+- `/reflect` Principles: pruned from 6 to 5; replaced "Anchor where Claude diverges" and "Keep docs concise" with "Evidence over narrative" and "Confidence is informational"
+
 ## [1.5.0] - 2026-03-06
 
 ### Changed
