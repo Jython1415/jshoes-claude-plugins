@@ -1,5 +1,10 @@
 # Changelog
 
+## [2.1.2] - 2026-03-07
+
+### Fixed
+- Fixed atexit cleanup handler that deleted intermediate scan files before scanner agents could read them. Cleanup now only fires on abnormal exit (crashes); normal exit leaves files for scanners, with main agent running explicit cleanup after.
+
 ## [2.1.1] - 2026-03-07
 
 ### Fixed
