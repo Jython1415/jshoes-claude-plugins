@@ -1,5 +1,11 @@
 # Changelog
 
+## [2.1.1] - 2026-03-07
+
+### Fixed
+- Removed invalid `agents` field from plugin.json that prevented the plugin from loading
+- Updated SKILL.md scanner invocation to read agent instructions from file instead of referencing unsupported bundled agent
+
 ## [2.1.0] - 2026-03-07
 
 ### Changed
