@@ -1,5 +1,10 @@
 # Changelog
 
+## [2.1.3] - 2026-03-07
+
+### Fixed
+- `/reflect` SKILL.md: scanner agents now invoked via `subagent_type: "dev-workflow:reflect-scanner"` with assignment-only prompts instead of redundantly passing checklists. Ensures consistent scanner behavior.
+
 ## [2.1.2] - 2026-03-07
 
 ### Fixed
