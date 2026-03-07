@@ -8,6 +8,5 @@
   },
   "homepage": "https://github.com/Jython1415/jshoes-claude-plugins",
   "repository": "https://github.com/Jython1415/jshoes-claude-plugins",
-  "license": "MIT",
-  "agents": "./agents/"
+  "license": "MIT"
 }
