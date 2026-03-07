@@ -14,6 +14,10 @@ import sys
 from pathlib import Path
 
 
+# Flag to distinguish normal exit from crash
+_normal_exit = False
+
+
 def derive_project_dir(pwd: str) -> str:
     """Derive project directory from $PWD."""
     return os.path.join(
@@ -299,7 +303,12 @@ def extract_nonce_prefix(nonce: str) -> str:
 
 
 def cleanup_reflect_files(nonce_prefix: str):
-    """Cleanup handler: delete all .reflect-scan-* files with matching prefix."""
+    """Cleanup handler: delete all .reflect-scan-* files with matching prefix.
+    Only cleans up on abnormal exit (crash). On normal exit, files are left for
+    scanners to read; main agent cleans up after scanners complete.
+    """
+    if _normal_exit:
+        return
     pattern = f".reflect-scan-{nonce_prefix}-*.jsonl"
     for filepath in glob.glob(pattern):
         try:
@@ -405,6 +414,8 @@ def main():
         print("## Cleanup")
         print(f"rm -f .reflect-scan-{nonce_prefix}-*.jsonl")
 
+        global _normal_exit
+        _normal_exit = True
         return 0
 
     except Exception as e:
