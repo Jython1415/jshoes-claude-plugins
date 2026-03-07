@@ -362,6 +362,8 @@ def main():
         if chunks is None:
             # Single file
             scanner_jobs.append(("detail", detail_file, len(detail_lines)))
+            if args.mode == "heavy":
+                scanner_jobs.append(("detail", detail_file, len(detail_lines)))
         else:
             # Multiple chunks
             chunk_files = []
@@ -373,6 +375,8 @@ def main():
                         f.write(line)
                 chunk_files.append(chunk_file)
                 scanner_jobs.append(("detail", chunk_file, len(chunk_lines)))
+                if args.mode == "heavy":
+                    scanner_jobs.append(("detail", chunk_file, len(chunk_lines)))
 
             # 7. Summary view (only if chunking)
             summary_events = [condense_for_summary(e) for e in segment]

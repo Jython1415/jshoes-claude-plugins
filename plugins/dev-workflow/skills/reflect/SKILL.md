@@ -70,6 +70,26 @@ When deciding where a finding should go, promote as broadly as it's useful:
    - For default/`--heavy`: use Sonnet model for scanners
    - Launch all scanners in parallel where possible
 
+   **Example scanner launch for a detail scan:**
+   ```
+   Agent(
+     description: "Scan transcript chunk",
+     prompt: "Read the file at .reflect-scan-abc12345-detail-0.jsonl and perform a DETAIL scan. Apply all 4 checklists.",
+     agent: "reflect-scanner"
+   )
+   ```
+
+   **Example for a high-level scan:**
+   ```
+   Agent(
+     description: "High-level transcript scan",
+     prompt: "Read the file at .reflect-scan-abc12345-summary.jsonl and perform a HIGH-LEVEL scan. Apply checklists 1, 3, and 4 only (skip Execution Failures).",
+     agent: "reflect-scanner"
+   )
+   ```
+
+   The scanner agent definition does not specify a model. You control the model at launch time: use Haiku for `--light` mode, Sonnet for default and `--heavy` modes.
+
 5. After all scanners complete, run the cleanup command from the manifest to remove intermediate files.
 
 ## Step 2: Synthesize
