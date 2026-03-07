@@ -35,6 +35,10 @@ __pycache__/
 *.pyc
 *.pyo
 
+# Reflect skill test/scan artifacts (safety net)
+.reflect-test-*
+.reflect-scan-*
+
 # Backup files
 *.bak
 *~

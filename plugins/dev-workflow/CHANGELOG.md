@@ -1,5 +1,14 @@
 # Changelog
 
+## [2.1.0] - 2026-03-07
+
+### Changed
+- `/reflect`: rewritten as bundled filter script + scanner agent architecture. Deterministic JSONL filtering, segmentation, and chunking handled by `reflect-filter.py` (bundled via `${CLAUDE_SKILL_DIR}`). Judgment-based scanning handled by bundled `reflect-scanner` agent (read-only, 4 checklists). Main agent focuses on synthesis and presentation.
+- `/reflect`: checklists reframed from keyword-based to judgment-based; 5 checklists merged to 4 (Undocumented Discoveries and Repeated Operations merged into Codifiable Patterns)
+- `/reflect`: added `--full` flag to scan entire transcript instead of just the current segment
+- `/reflect`: SKILL.md now provides purpose/mental model context and persistence target hierarchy for the main agent
+- `/reflect`: Python-only filtering (removed jq dependency)
+
 ## [2.0.0] - 2026-03-06
 
 ### Changed
