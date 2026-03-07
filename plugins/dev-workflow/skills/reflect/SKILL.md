@@ -63,9 +63,13 @@ When deciding where a finding should go, promote as broadly as it's useful:
 
 3. Parse the manifest output. It lists scanner jobs (file paths + scan types) and a cleanup command.
 
-4. Launch scanner agents per the manifest:
-   - Each scanner is the bundled `reflect-scanner` agent
-   - Pass the file path and scan type ("detail" or "high-level") to each scanner
+4. Read the scanner agent instructions:
+   The scanner instructions are bundled at `${CLAUDE_SKILL_DIR}/../agents/reflect-scanner.md`. Read this file once — it contains the checklists and output format for all scanners.
+
+5. Launch scanner agents per the manifest:
+   - For each scanner job line, launch an Agent with:
+     - The scanner instructions from step 4 as context
+     - The file path and scan type from the manifest job line
    - For `--light`: use Haiku model for scanners
    - For default/`--heavy`: use Sonnet model for scanners
    - Launch all scanners in parallel where possible
@@ -74,8 +78,7 @@ When deciding where a finding should go, promote as broadly as it's useful:
    ```
    Agent(
      description: "Scan transcript chunk",
-     prompt: "Read the file at .reflect-scan-abc12345-detail-0.jsonl and perform a DETAIL scan. Apply all 4 checklists.",
-     agent: "reflect-scanner"
+     prompt: "[scanner instructions from step 4]\n\nYour assignment: Read the file at .reflect-scan-abc12345-detail-0.jsonl and perform a DETAIL scan."
    )
    ```
 
@@ -83,16 +86,15 @@ When deciding where a finding should go, promote as broadly as it's useful:
    ```
    Agent(
      description: "High-level transcript scan",
-     prompt: "Read the file at .reflect-scan-abc12345-summary.jsonl and perform a HIGH-LEVEL scan. Apply checklists 1, 3, and 4 only (skip Execution Failures).",
-     agent: "reflect-scanner"
+     prompt: "[scanner instructions from step 4]\n\nYour assignment: Read the file at .reflect-scan-abc12345-summary.jsonl and perform a HIGH-LEVEL scan."
    )
    ```
 
-   The scanner agent definition does not specify a model. You control the model at launch time: use Haiku for `--light` mode, Sonnet for default and `--heavy` modes.
+   The model is controlled at launch time: use Haiku for `--light` mode, Sonnet for default and `--heavy` modes.
 
-5. After all scanners complete, run the cleanup command from the manifest to remove intermediate files.
+6. After all scanners complete, run the cleanup command from the manifest to remove intermediate files.
 
-## Step 2: Synthesize
+## Step 3: Synthesize
 
 Receive all scanner outputs. Merge findings:
 - If two scanners report the same finding, keep it once with higher confidence
@@ -100,7 +102,7 @@ Receive all scanner outputs. Merge findings:
 - Drop findings that are already documented in the project's CLAUDE.md, MEMORY.md, or other docs
 - Drop findings that are generic advice rather than repo-specific insights
 
-## Step 3: Propose
+## Step 4: Propose
 
 Present findings to the user via AskUserQuestion. Pack up to **4 findings per call**. Each question is independent; the user can answer them simultaneously.
 
@@ -131,7 +133,7 @@ AskUserQuestion(questions=[
 
 Gather all answers before applying changes in Step 4.
 
-## Step 4: Apply
+## Step 5: Apply
 
 Make the approved changes:
 
