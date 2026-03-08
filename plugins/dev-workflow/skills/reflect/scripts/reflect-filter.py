@@ -515,7 +515,7 @@ def main():
 
         # 5. Size measurement and chunking
         encoding = tiktoken.get_encoding("cl100k_base")
-        max_chunk_tokens = 80_000
+        max_chunk_tokens = 20_000
         overlap_pct = 0.10
         max_line_tokens = int(max_chunk_tokens / (1 + overlap_pct))  # effective_max
         detail_lines = cap_oversized_lines(detail_lines, encoding, max_line_tokens)
@@ -530,7 +530,6 @@ def main():
 
         # 6. Handle chunking
         scanner_jobs = []
-        summary_file = None
 
         if chunks is None:
             # Single file
@@ -551,32 +550,7 @@ def main():
                 if args.mode == "heavy":
                     scanner_jobs.append(("detail", chunk_file, len(chunk_lines)))
 
-            # 7. Summary view (only if chunking)
-            summary_events = [condense_for_summary(e) for e in segment]
-            summary_file = os.path.join(pwd, f".reflect-scan-{nonce_prefix}-summary.jsonl")
-            write_summary_view(summary_events, summary_file)
-            summary_lines = read_detail_lines(summary_file)
-            summary_lines = cap_oversized_lines(summary_lines, encoding, max_line_tokens)
-            summary_tokens = count_lines_tokens(summary_lines, encoding)
-
-            if summary_tokens < max_chunk_tokens * 0.9:
-                scanner_jobs.append(("high-level", summary_file, len(summary_lines)))
-            else:
-                # Chunk the summary too
-                summary_chunks = chunk_detail_view(summary_lines, encoding, max_tokens=max_chunk_tokens, overlap_pct=overlap_pct)
-                for sc_idx, (sc_start, sc_end) in enumerate(summary_chunks):
-                    sc_file = os.path.join(pwd, f".reflect-scan-{nonce_prefix}-summary-{sc_idx}.jsonl")
-                    sc_lines = summary_lines[sc_start:sc_end]
-                    with open(sc_file, "w", encoding="utf-8") as f:
-                        for line in sc_lines:
-                            f.write(line)
-                    scanner_jobs.append(("high-level", sc_file, len(sc_lines)))
-                try:
-                    os.remove(summary_file)
-                except Exception:
-                    pass
-
-            # Clean up original detail file when chunked
+            # 7. Clean up original detail file when chunked
             try:
                 os.remove(detail_file)
             except Exception:

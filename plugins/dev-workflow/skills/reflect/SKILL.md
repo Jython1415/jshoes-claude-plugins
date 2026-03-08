@@ -80,15 +80,6 @@ When deciding where a finding should go, promote as broadly as it's useful:
    )
    ```
 
-   **Example for a high-level scan:**
-   ```
-   Agent(
-     subagent_type: "dev-workflow:reflect-scanner",
-     description: "High-level transcript scan",
-     prompt: "Your assignment: Read the file at /absolute/path/to/.reflect-scan-abc12345-summary.jsonl and perform a HIGH-LEVEL scan."
-   )
-   ```
-
    IMPORTANT: Always use absolute file paths in scanner prompts so scanners can find the files regardless of working directory.
 
 5. After all scanners complete, run the cleanup command from the manifest to remove intermediate files.
