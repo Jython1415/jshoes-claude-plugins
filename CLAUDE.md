@@ -10,6 +10,7 @@ This repository contains version-controlled configuration for **Claude Code CLI*
   - `skills/hook-development/SKILL.md` — hook authoring guide
 - `plugins/delegation-guard/` - delegation-guard hook (execution discipline)
 - `plugins/stop-momentum/` - stop-momentum hook (execution discipline)
+- `plugins/frontend-design/` - Opinionated frontend design skill
 - `plugins/dev-workflow/` - Dev workflow skills (if present)
 - Root `CLAUDE.md` - Project instructions for Claude
 - **`.claude/` is gitignored** — local runtime state only; no tracked files under `.claude/`
@@ -50,6 +51,15 @@ Each plugin has a `version` field in `plugins/<name>/.claude-plugin/plugin.json`
 5. Other plugins' READMEs that cross-reference the renamed plugin
 6. Any SKILL.md files that list plugin names
 7. `pyproject.toml` — `[project].name` if it matches the old plugin name
+
+### New Plugin Checklist
+When creating a new plugin from scratch, these files/entries are required:
+1. `plugins/<name>/skills/<skill-name>/SKILL.md` — skill with YAML frontmatter (`name`, `description`)
+2. `plugins/<name>/.claude-plugin/plugin.json` — name, description, version, author, homepage, repository, license
+3. `plugins/<name>/CHANGELOG.md` — initial `## [1.0.0]` entry
+4. `plugins/<name>/README.md` — description, installation commands, requirements
+5. `.claude-plugin/marketplace.json` — add entry with matching version, source path, category, keywords, and skills array
+6. Run code review before committing
 
 ### Writing Skills
 - Do not use `allowed-tools` in skill frontmatter
