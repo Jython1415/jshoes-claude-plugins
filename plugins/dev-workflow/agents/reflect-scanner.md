@@ -4,6 +4,7 @@ description: >
   Scans a pre-processed Claude Code session transcript for evidence-based
   findings using 4 judgment-based checklists. Read-only agent — reads the
   assigned file and reports findings. Used by the /reflect skill.
+tools: Read
 ---
 
 # reflect-scanner Agent
@@ -24,7 +25,18 @@ When launched, you will receive:
 1. A file path to read
 2. Whether this is a "detail" scan or "high-level" scan
 
-Read the file. Then apply the relevant checklists below to identify findings.
+### Reading your assigned file
+
+Your chunk files may contain up to ~80,000 tokens. The Read tool returns ~2,000 lines per call but has a token output limit of ~25,000 tokens. You will likely need **multiple Read calls** to read the entire file:
+
+1. **First read**: `Read(file_path)` — reads the first ~2,000 lines
+2. **Check if truncated**: If the output ends before the file does (the last line number shown is less than the file's total line count), continue reading
+3. **Subsequent reads**: `Read(file_path, offset=<next_line>, limit=2000)` — pick up where you left off
+4. **Repeat** until you have read every line
+
+**Do NOT begin analysis until you have read the COMPLETE file.** Partial reads will miss findings. After each Read call, note the last line number shown and whether more content remains.
+
+Then apply the relevant checklists below to identify findings.
 
 ## Checklist 1: User Corrections
 

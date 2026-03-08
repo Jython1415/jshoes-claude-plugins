@@ -1,5 +1,14 @@
 # Changelog
 
+## [2.2.0] - 2026-03-08
+
+### Changed
+- `/reflect` filter script: replaced byte-based chunking (`target_bytes=100_000`) with token-based chunking using `tiktoken` (`cl100k_base`, 80K tokens per chunk). Three-layer token budget defense: (1) intra-turn splitting at line boundaries for oversized turns, (2) `cap_oversized_lines()` binary-search truncation for individual lines, (3) hard-cap overlap trimming with partition start guard.
+- `/reflect` filter script: chunking algorithm redesigned — computes per-turn token costs, derives even partition targets with overlap headroom, then adds token-bounded overlap. Summary view is also chunked when it exceeds the threshold.
+- `/reflect` scanner agent: added `tools: Read` to YAML frontmatter to restrict scanner agents to Read-only at the system level (previously prompt-level guidance only).
+- `/reflect` scanner agent: added multi-read instructions for 80K chunks (Read tool returns ~25K tokens per call, so scanners must read in multiple passes).
+- `/reflect` SKILL.md: scanner agents now launched via `subagent_type` with assignment-only prompts; absolute file paths required.
+
 ## [2.1.3] - 2026-03-07
 
 ### Fixed

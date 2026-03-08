@@ -1,6 +1,9 @@
 #!/usr/bin/env python3
 # /// script
 # requires-python = ">=3.10"
+# dependencies = [
+#   "tiktoken>=0.7.0",
+# ]
 # ///
 
 import argparse
@@ -12,6 +15,8 @@ import os
 import subprocess
 import sys
 from pathlib import Path
+
+import tiktoken
 
 
 # Flag to distinguish normal exit from crash
@@ -184,10 +189,64 @@ def write_detail_view(events: list[dict], filepath: str) -> int:
     return char_count
 
 
+def cap_oversized_lines(
+    lines: list[str], encoding: tiktoken.Encoding, max_line_tokens: int
+) -> list[str]:
+    """Truncate any individual line that exceeds max_line_tokens.
+
+    Preserves the JSON opening structure and appends a truncation marker.
+    This ensures no single line can blow past the chunk token budget.
+    """
+    capped = []
+    for line in lines:
+        tokens = len(encoding.encode(line))
+        if tokens <= max_line_tokens:
+            capped.append(line)
+        else:
+            # Binary search for character position that fits token budget
+            # Leave room for the truncation suffix
+            suffix = '...[TRUNCATED]"}\n'
+            target_tokens = max_line_tokens - 20  # headroom for suffix
+            lo, hi = 0, len(line)
+            while lo < hi:
+                mid = (lo + hi) // 2
+                if len(encoding.encode(line[:mid])) <= target_tokens:
+                    lo = mid + 1
+                else:
+                    hi = mid
+            capped.append(line[: lo - 1] + suffix)
+    return capped
+
+
+def count_tokens(text: str, encoding: tiktoken.Encoding) -> int:
+    """Count tokens in text using tiktoken."""
+    return len(encoding.encode(text))
+
+
+def count_lines_tokens(lines: list[str], encoding: tiktoken.Encoding) -> int:
+    """Count total tokens across a list of lines."""
+    return sum(count_tokens(line, encoding) for line in lines)
+
+
 def chunk_detail_view(
-    lines: list[str], target_bytes: int = 100_000, overlap_pct: float = 0.10
+    lines: list[str],
+    encoding: tiktoken.Encoding,
+    max_tokens: int = 20_000,
+    overlap_pct: float = 0.10,
 ) -> list[tuple[int, int]]:
-    """Return list of (start_line, end_line) ranges for each chunk."""
+    """Partition lines into token-bounded chunks, split on turn boundaries.
+
+    Algorithm:
+    1. Pre-compute per-turn token counts
+    2. Split any oversized turns at line boundaries (intra-turn splitting)
+    3. Derive chunk count from total tokens and an effective max that reserves
+       room for overlap (max_tokens / (1 + overlap_pct))
+    4. Compute even target = total / num_chunks (guaranteed <= effective max)
+    5. Greedily partition turns against the even target
+    6. Add token-aware overlap: walk backward from each boundary, adding turns
+       until the overlap budget (remaining space up to max_tokens) is exhausted
+    7. Hard cap overlap: if total chunk exceeds max_tokens, trim overlap turns
+    """
     turn_starts = [
         i
         for i, line in enumerate(lines)
@@ -197,26 +256,124 @@ def chunk_detail_view(
     if not turn_starts:
         return [(0, len(lines))]
 
-    total_bytes = sum(len(line.encode("utf-8")) for line in lines)
-    chunks_needed = max(1, math.ceil(total_bytes / target_bytes))
+    # 1. Pre-compute token cost per turn (turn = assistant line + following user lines)
+    turn_tokens = []
+    for idx in range(len(turn_starts)):
+        start = turn_starts[idx]
+        end = turn_starts[idx + 1] if idx + 1 < len(turn_starts) else len(lines)
+        turn_tokens.append(count_lines_tokens(lines[start:end], encoding))
 
-    if chunks_needed > 50:
-        raise ValueError(
-            f"Chunk count {chunks_needed} exceeds max (50). Transcript too large."
-        )
+    # Include preamble (lines before first turn) in the first turn's cost
+    if turn_starts[0] > 0:
+        preamble_tokens = count_lines_tokens(lines[: turn_starts[0]], encoding)
+        turn_tokens[0] += preamble_tokens
 
-    turns_per_chunk = math.ceil(len(turn_starts) / chunks_needed)
-    overlap_turns = max(1, math.ceil(turns_per_chunk * overlap_pct))
+    # 2. Fix 1: Split oversized turns at line boundaries
+    effective_max = max_tokens / (1 + overlap_pct)
+    new_turn_starts = []
+    new_turn_tokens = []
 
+    for idx in range(len(turn_starts)):
+        turn_start_line = turn_starts[idx]
+        turn_end_line = turn_starts[idx + 1] if idx + 1 < len(turn_starts) else len(lines)
+        turn_cost = turn_tokens[idx]
+
+        if turn_cost <= effective_max:
+            # Turn fits within effective_max; keep it as-is
+            new_turn_starts.append(turn_start_line)
+            new_turn_tokens.append(turn_cost)
+        else:
+            # Turn exceeds effective_max; split at line boundaries
+            # Assistant line is at turn_start_line; subsequent lines are user events
+            sub_turns = []
+            sub_start = turn_start_line
+            sub_tokens = 0
+
+            for line_idx in range(turn_start_line, turn_end_line):
+                line_tokens = count_tokens(lines[line_idx], encoding)
+
+                if sub_tokens > 0 and sub_tokens + line_tokens > effective_max:
+                    # Emit current sub-turn
+                    sub_turns.append((sub_start, sub_tokens))
+                    sub_start = line_idx
+                    sub_tokens = line_tokens
+                else:
+                    sub_tokens += line_tokens
+
+            # Emit final sub-turn
+            if sub_tokens > 0:
+                sub_turns.append((sub_start, sub_tokens))
+
+            # Add sub-turns to the new lists
+            for sub_line_start, sub_tok in sub_turns:
+                new_turn_starts.append(sub_line_start)
+                new_turn_tokens.append(sub_tok)
+
+    turn_starts = new_turn_starts
+    turn_tokens = new_turn_tokens
+
+    # 3. Derive chunk count, reserving headroom for overlap
+    total_tokens = sum(turn_tokens)
+    effective_max = max_tokens / (1 + overlap_pct)
+    num_chunks = max(1, math.ceil(total_tokens / effective_max))
+    target_per_chunk = total_tokens / num_chunks
+
+    # 4. Greedy partition: accumulate turns, split when exceeding even target
+    partitions: list[tuple[int, int]] = []
+    current_start = 0
+    accumulated = 0
+
+    for i, tok in enumerate(turn_tokens):
+        if accumulated > 0 and accumulated + tok > target_per_chunk:
+            partitions.append((current_start, i))
+            current_start = i
+            accumulated = 0
+        accumulated += tok
+    partitions.append((current_start, len(turn_tokens)))
+
+    if len(partitions) > 200:
+        raise ValueError(f"Chunk count {len(partitions)} exceeds max (200). Transcript too large.")
+
+    # 5. Convert to line ranges with token-aware overlap
     chunks = []
-    for i in range(chunks_needed):
-        start_turn_idx = max(0, i * turns_per_chunk - (overlap_turns if i > 0 else 0))
-        end_turn_idx = min(len(turn_starts), (i + 1) * turns_per_chunk)
+    for idx, (part_start, part_end) in enumerate(partitions):
+        part_tokens = sum(turn_tokens[part_start:part_end])
+        # The partition's own start line — overlap must never trim past this
+        partition_start_line = 0 if part_start == 0 else turn_starts[part_start]
 
-        start_line = turn_starts[start_turn_idx]
-        end_line = (
-            turn_starts[end_turn_idx] if end_turn_idx < len(turn_starts) else len(lines)
-        )
+        if idx > 0:
+            # Walk backward into previous partition, bounded by token budget
+            overlap_budget = max_tokens - part_tokens
+            overlap_start = part_start
+            overlap_used = 0
+            while overlap_start > partitions[idx - 1][0]:
+                prev_cost = turn_tokens[overlap_start - 1]
+                if overlap_used + prev_cost > overlap_budget:
+                    break
+                overlap_used += prev_cost
+                overlap_start -= 1
+            start_line = 0 if overlap_start == 0 else turn_starts[overlap_start]
+        else:
+            # First chunk: include preamble
+            start_line = 0
+
+        end_line = turn_starts[part_end] if part_end < len(turn_starts) else len(lines)
+
+        # 6. Hard cap: if chunk exceeds max_tokens, trim overlap (never past partition start)
+        if start_line < partition_start_line:
+            chunk_tokens = count_lines_tokens(lines[start_line:end_line], encoding)
+            while chunk_tokens > max_tokens and start_line < partition_start_line:
+                # Advance start_line to next turn boundary within the overlap region
+                advanced = False
+                for t_idx, t_start in enumerate(turn_starts):
+                    if t_start > start_line:
+                        start_line = t_start
+                        advanced = True
+                        break
+                if not advanced or start_line >= partition_start_line:
+                    start_line = partition_start_line
+                    break
+                chunk_tokens = count_lines_tokens(lines[start_line:end_line], encoding)
 
         chunks.append((start_line, end_line))
 
@@ -302,14 +459,14 @@ def extract_nonce_prefix(nonce: str) -> str:
     return nonce[:8] if len(nonce) >= 8 else nonce
 
 
-def cleanup_reflect_files(nonce_prefix: str):
+def cleanup_reflect_files(nonce_prefix: str, base_dir: str):
     """Cleanup handler: delete all .reflect-scan-* files with matching prefix.
     Only cleans up on abnormal exit (crash). On normal exit, files are left for
     scanners to read; main agent cleans up after scanners complete.
     """
     if _normal_exit:
         return
-    pattern = f".reflect-scan-{nonce_prefix}-*.jsonl"
+    pattern = os.path.join(base_dir, f".reflect-scan-{nonce_prefix}-*.jsonl")
     for filepath in glob.glob(pattern):
         try:
             os.remove(filepath)
@@ -335,11 +492,11 @@ def main():
     args = parser.parse_args()
 
     nonce_prefix = extract_nonce_prefix(args.nonce)
-    atexit.register(cleanup_reflect_files, nonce_prefix)
+    pwd = os.getcwd()
+    atexit.register(cleanup_reflect_files, nonce_prefix, pwd)
 
     try:
         # 1. Session identification
-        pwd = os.getcwd()
         project_dir = derive_project_dir(pwd)
         session_jsonl = find_session_jsonl(project_dir, args.nonce)
 
@@ -352,17 +509,24 @@ def main():
 
         # 4. Detail view
         detail_events = transform_for_detail_view(segment)
-        detail_file = f".reflect-scan-{nonce_prefix}-detail.jsonl"
+        detail_file = os.path.join(pwd, f".reflect-scan-{nonce_prefix}-detail.jsonl")
         detail_size = write_detail_view(detail_events, detail_file)
         detail_lines = read_detail_lines(detail_file)
 
         # 5. Size measurement and chunking
-        if detail_size < 100_000:
+        encoding = tiktoken.get_encoding("cl100k_base")
+        max_chunk_tokens = 80_000
+        overlap_pct = 0.10
+        max_line_tokens = int(max_chunk_tokens / (1 + overlap_pct))  # effective_max
+        detail_lines = cap_oversized_lines(detail_lines, encoding, max_line_tokens)
+        detail_tokens = count_lines_tokens(detail_lines, encoding)
+
+        if detail_tokens < max_chunk_tokens * 0.9:
             chunks = None
             chunking_desc = "none"
         else:
-            chunks = chunk_detail_view(detail_lines)
-            chunking_desc = f"{len(chunks)} chunks with 10% overlap"
+            chunks = chunk_detail_view(detail_lines, encoding, max_tokens=max_chunk_tokens, overlap_pct=overlap_pct)
+            chunking_desc = f"{len(chunks)} chunks with {int(overlap_pct*100)}% overlap"
 
         # 6. Handle chunking
         scanner_jobs = []
@@ -377,7 +541,7 @@ def main():
             # Multiple chunks
             chunk_files = []
             for chunk_idx, (start_line, end_line) in enumerate(chunks):
-                chunk_file = f".reflect-scan-{nonce_prefix}-detail-{chunk_idx}.jsonl"
+                chunk_file = os.path.join(pwd, f".reflect-scan-{nonce_prefix}-detail-{chunk_idx}.jsonl")
                 chunk_lines = detail_lines[start_line:end_line]
                 with open(chunk_file, "w", encoding="utf-8") as f:
                     for line in chunk_lines:
@@ -389,10 +553,28 @@ def main():
 
             # 7. Summary view (only if chunking)
             summary_events = [condense_for_summary(e) for e in segment]
-            summary_file = f".reflect-scan-{nonce_prefix}-summary.jsonl"
+            summary_file = os.path.join(pwd, f".reflect-scan-{nonce_prefix}-summary.jsonl")
             write_summary_view(summary_events, summary_file)
             summary_lines = read_detail_lines(summary_file)
-            scanner_jobs.append(("high-level", summary_file, len(summary_lines)))
+            summary_lines = cap_oversized_lines(summary_lines, encoding, max_line_tokens)
+            summary_tokens = count_lines_tokens(summary_lines, encoding)
+
+            if summary_tokens < max_chunk_tokens * 0.9:
+                scanner_jobs.append(("high-level", summary_file, len(summary_lines)))
+            else:
+                # Chunk the summary too
+                summary_chunks = chunk_detail_view(summary_lines, encoding, max_tokens=max_chunk_tokens, overlap_pct=overlap_pct)
+                for sc_idx, (sc_start, sc_end) in enumerate(summary_chunks):
+                    sc_file = os.path.join(pwd, f".reflect-scan-{nonce_prefix}-summary-{sc_idx}.jsonl")
+                    sc_lines = summary_lines[sc_start:sc_end]
+                    with open(sc_file, "w", encoding="utf-8") as f:
+                        for line in sc_lines:
+                            f.write(line)
+                    scanner_jobs.append(("high-level", sc_file, len(sc_lines)))
+                try:
+                    os.remove(summary_file)
+                except Exception:
+                    pass
 
             # Clean up original detail file when chunked
             try:
@@ -404,7 +586,7 @@ def main():
         print("## Reflect Filter Report")
         print(f"- Transcript: {session_jsonl}")
         print(f"- Segment: {segment_desc}")
-        print(f"- Detail size: {detail_size} chars")
+        print(f"- Detail size: {detail_size} chars ({detail_tokens} tokens)")
         print(f"- Chunking: {chunking_desc}")
         print()
         print("## Scanner Jobs")
@@ -412,7 +594,7 @@ def main():
             print(f"{job_type} {filepath} {line_count}")
         print()
         print("## Cleanup")
-        print(f"rm -f .reflect-scan-{nonce_prefix}-*.jsonl")
+        print(f"rm -f {os.path.join(pwd, f'.reflect-scan-{nonce_prefix}-*.jsonl')}")
 
         global _normal_exit
         _normal_exit = True

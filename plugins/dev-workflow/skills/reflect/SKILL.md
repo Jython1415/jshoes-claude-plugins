@@ -63,36 +63,35 @@ When deciding where a finding should go, promote as broadly as it's useful:
 
 3. Parse the manifest output. It lists scanner jobs (file paths + scan types) and a cleanup command.
 
-4. Read the scanner agent instructions:
-   The scanner instructions are bundled at `${CLAUDE_SKILL_DIR}/../agents/reflect-scanner.md`. Read this file once — it contains the checklists and output format for all scanners.
-
-5. Launch scanner agents per the manifest:
-   - For each scanner job line, launch an Agent with:
-     - The scanner instructions from step 4 as context
-     - The file path and scan type from the manifest job line
-   - For `--light`: use Haiku model for scanners
-   - For default/`--heavy`: use Sonnet model for scanners
+4. Launch scanner agents per the manifest:
+   - For each scanner job line, launch an Agent with `subagent_type: "dev-workflow:reflect-scanner"`
+   - The scanner agent definition already includes all checklists — do NOT repeat them in the prompt
+   - The prompt should contain ONLY the assignment: file path and scan type
+   - For `--light`: pass Haiku model for scanners
+   - For default/`--heavy`: pass Sonnet model for scanners
    - Launch all scanners in parallel where possible
 
    **Example scanner launch for a detail scan:**
    ```
    Agent(
-     description: "Scan transcript chunk",
-     prompt: "[scanner instructions from step 4]\n\nYour assignment: Read the file at .reflect-scan-abc12345-detail-0.jsonl and perform a DETAIL scan."
+     subagent_type: "dev-workflow:reflect-scanner",
+     description: "Scan transcript chunk 0",
+     prompt: "Your assignment: Read the file at /absolute/path/to/.reflect-scan-abc12345-detail-0.jsonl and perform a DETAIL scan."
    )
    ```
 
    **Example for a high-level scan:**
    ```
    Agent(
+     subagent_type: "dev-workflow:reflect-scanner",
      description: "High-level transcript scan",
-     prompt: "[scanner instructions from step 4]\n\nYour assignment: Read the file at .reflect-scan-abc12345-summary.jsonl and perform a HIGH-LEVEL scan."
+     prompt: "Your assignment: Read the file at /absolute/path/to/.reflect-scan-abc12345-summary.jsonl and perform a HIGH-LEVEL scan."
    )
    ```
 
-   The model is controlled at launch time: use Haiku for `--light` mode, Sonnet for default and `--heavy` modes.
+   IMPORTANT: Always use absolute file paths in scanner prompts so scanners can find the files regardless of working directory.
 
-6. After all scanners complete, run the cleanup command from the manifest to remove intermediate files.
+5. After all scanners complete, run the cleanup command from the manifest to remove intermediate files.
 
 ## Step 3: Synthesize
 
