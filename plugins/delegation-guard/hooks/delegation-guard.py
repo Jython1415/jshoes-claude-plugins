@@ -155,7 +155,7 @@ def build_block_message() -> str:
     """Build the one-time hard-stop block message for streak=0."""
     return (
         "Delegation check: this tool call was blocked. "
-        "If this task requires more than 2-3 tool calls, delegate it to an Agent subagent. "
+        "If this task requires more than 1 tool call, delegate it to an Agent subagent. "
         f"{DELEGATION_EXAMPLES} "
         "This is a one-time block — if this call is genuinely a quick one-off, "
         "retry it and the block won't fire again. "
