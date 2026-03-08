@@ -459,14 +459,14 @@ def extract_nonce_prefix(nonce: str) -> str:
     return nonce[:8] if len(nonce) >= 8 else nonce
 
 
-def cleanup_reflect_files(nonce_prefix: str):
+def cleanup_reflect_files(nonce_prefix: str, base_dir: str):
     """Cleanup handler: delete all .reflect-scan-* files with matching prefix.
     Only cleans up on abnormal exit (crash). On normal exit, files are left for
     scanners to read; main agent cleans up after scanners complete.
     """
     if _normal_exit:
         return
-    pattern = f".reflect-scan-{nonce_prefix}-*.jsonl"
+    pattern = os.path.join(base_dir, f".reflect-scan-{nonce_prefix}-*.jsonl")
     for filepath in glob.glob(pattern):
         try:
             os.remove(filepath)
@@ -492,11 +492,11 @@ def main():
     args = parser.parse_args()
 
     nonce_prefix = extract_nonce_prefix(args.nonce)
-    atexit.register(cleanup_reflect_files, nonce_prefix)
+    pwd = os.getcwd()
+    atexit.register(cleanup_reflect_files, nonce_prefix, pwd)
 
     try:
         # 1. Session identification
-        pwd = os.getcwd()
         project_dir = derive_project_dir(pwd)
         session_jsonl = find_session_jsonl(project_dir, args.nonce)
 
@@ -509,7 +509,7 @@ def main():
 
         # 4. Detail view
         detail_events = transform_for_detail_view(segment)
-        detail_file = f".reflect-scan-{nonce_prefix}-detail.jsonl"
+        detail_file = os.path.join(pwd, f".reflect-scan-{nonce_prefix}-detail.jsonl")
         detail_size = write_detail_view(detail_events, detail_file)
         detail_lines = read_detail_lines(detail_file)
 
@@ -541,7 +541,7 @@ def main():
             # Multiple chunks
             chunk_files = []
             for chunk_idx, (start_line, end_line) in enumerate(chunks):
-                chunk_file = f".reflect-scan-{nonce_prefix}-detail-{chunk_idx}.jsonl"
+                chunk_file = os.path.join(pwd, f".reflect-scan-{nonce_prefix}-detail-{chunk_idx}.jsonl")
                 chunk_lines = detail_lines[start_line:end_line]
                 with open(chunk_file, "w", encoding="utf-8") as f:
                     for line in chunk_lines:
@@ -553,7 +553,7 @@ def main():
 
             # 7. Summary view (only if chunking)
             summary_events = [condense_for_summary(e) for e in segment]
-            summary_file = f".reflect-scan-{nonce_prefix}-summary.jsonl"
+            summary_file = os.path.join(pwd, f".reflect-scan-{nonce_prefix}-summary.jsonl")
             write_summary_view(summary_events, summary_file)
             summary_lines = read_detail_lines(summary_file)
             summary_lines = cap_oversized_lines(summary_lines, encoding, max_line_tokens)
@@ -565,7 +565,7 @@ def main():
                 # Chunk the summary too
                 summary_chunks = chunk_detail_view(summary_lines, encoding, max_tokens=max_chunk_tokens, overlap_pct=overlap_pct)
                 for sc_idx, (sc_start, sc_end) in enumerate(summary_chunks):
-                    sc_file = f".reflect-scan-{nonce_prefix}-summary-{sc_idx}.jsonl"
+                    sc_file = os.path.join(pwd, f".reflect-scan-{nonce_prefix}-summary-{sc_idx}.jsonl")
                     sc_lines = summary_lines[sc_start:sc_end]
                     with open(sc_file, "w", encoding="utf-8") as f:
                         for line in sc_lines:
@@ -594,7 +594,7 @@ def main():
             print(f"{job_type} {filepath} {line_count}")
         print()
         print("## Cleanup")
-        print(f"rm -f .reflect-scan-{nonce_prefix}-*.jsonl")
+        print(f"rm -f {os.path.join(pwd, f'.reflect-scan-{nonce_prefix}-*.jsonl')}")
 
         global _normal_exit
         _normal_exit = True
