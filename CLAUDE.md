@@ -2,6 +2,10 @@
 
 This repository contains version-controlled configuration for **Claude Code CLI**.
 
+## Orchestration
+
+Any task requiring more than 1 tool call should be delegated. If you're making sequential solo calls, stop and launch a subagent.
+
 ## Repository Structure
 - `plugins/essentials/` - Hook scripts and tests (published to marketplace)
   - `hooks/` — hook source files
