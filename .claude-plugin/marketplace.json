@@ -131,6 +131,29 @@
         "./skills/code-review",
         "./skills/solve"
       ]
+    },
+    {
+      "name": "frontend-design",
+      "description": "Opinionated frontend design skill anchored on dark-mode, information-dense, content-focused interfaces. Replaces the generic CC built-in frontend-design with concrete design tokens and component patterns derived from curated reference sites (Bluesky, GitHub, Gmail, LessWrong, Claude.ai).",
+      "version": "1.1.0",
+      "author": {
+        "name": "Jython1415",
+        "url": "https://github.com/Jython1415"
+      },
+      "source": "./plugins/frontend-design",
+      "category": "design",
+      "keywords": [
+        "frontend",
+        "design",
+        "css",
+        "ui",
+        "dark-mode",
+        "design-system",
+        "tailwind"
+      ],
+      "skills": [
+        "./skills/frontend-design"
+      ]
     }
   ]
 }
