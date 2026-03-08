@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.2.0] - 2026-03-08
+
+### Added
+- `unblocked_tools` category — tools that are never hard-blocked but still count toward the advisory streak
+- Default unblocked tools: Read, Glob, Grep (essential for code understanding)
+- Unblocked tools fire an advisory at streak=0 instead of being hard-blocked, then increment to streak=1
+- Per-project configuration for `unblocked_tools` via `.claude/delegation-guard.json` (merged with defaults, same pattern as `exempt_tools`)
+
 ## [1.1.0] - 2026-03-01
 
 ### Added

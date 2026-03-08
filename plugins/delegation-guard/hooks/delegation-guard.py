@@ -15,14 +15,16 @@ Behavior (PreToolUse):
   Subagents share the parent's session_id and state file; without this guard they
   would receive confusing "delegate to a subagent" messages during their own work.
 - When streak == 0 and block_fired is False (i.e., at the start of a potential solo run):
-  Block the incoming non-Task/Agent tool call with permissionDecision: "deny". The blocked
-  call does NOT increment the streak — only executed calls count.
-- After the block fires (block_fired=True), subsequent non-Task/Agent calls increment streak.
-  Escalating advisory messages fire at streak 2, 4, 8, 16, ... (powers of 2 >= 2).
+  - Task/Agent tools: reset streak and re-arm block (always pass through)
+  - Exempt tools (e.g. Skill, AskUserQuestion, TaskCreate, ...): neutral, no state change
+  - Unblocked tools (Read, Glob, Grep, configurable): set block_fired=True, increment
+    streak to 1, fire advisory (never hard-blocked)
+  - All other tools: hard-stop with permissionDecision: "deny"
+- After the block fires (block_fired=True), all tool calls (normal and unblocked) increment
+  streak. Escalating advisory messages fire at Fibonacci numbers >= 2 (2, 3, 5, 8, 13, 21, ...).
+  Unblocked tools also fire a distinct advisory at streak=1 (only possible on their first call).
 - A Task or Agent call resets streak to 0 and re-arms the block (block_fired=False).
   ("Agent" is the name used by Claude Code v2.1.63+; "Task" is the legacy name.)
-- Exempt tools (e.g. Skill, AskUserQuestion, TaskCreate, ...) are neutral — they neither
-  increment streak nor reset it.
 
 Behavior (SubagentStart):
 - Increments subagent_count. While count > 0, PreToolUse passes through silently.
@@ -72,11 +74,14 @@ EXEMPT_TOOLS = {
     "ExitPlanMode",
 }
 
+# Tools that are never hard-blocked on first call; instead fire advisory at streak=1
+UNBLOCKED_TOOLS = {"Read", "Glob", "Grep"}
+
 
 def load_project_config() -> dict:
     """Load per-project delegation-guard config from .claude/delegation-guard.json.
 
-    Returns a dict with optional 'exempt_tools' key (list of strings).
+    Returns a dict with optional 'exempt_tools' and 'unblocked_tools' keys (lists of strings).
     Returns empty dict on file not found, invalid JSON, or missing keys.
     """
     config_path = Path.cwd() / ".claude" / "delegation-guard.json"
@@ -125,46 +130,56 @@ def write_state(session_id: str, state: dict) -> None:
 
 
 def is_backoff_point(streak: int) -> bool:
-    """Return True if streak is a power of 2 >= 2 (i.e., 2, 4, 8, 16, ...)."""
-    return streak >= 2 and (streak & (streak - 1)) == 0
+    """Return True if streak is a Fibonacci number >= 2 (i.e., 2, 3, 5, 8, 13, 21, ...)."""
+    if streak < 2:
+        return False
+    a, b = 1, 2
+    while b < streak:
+        a, b = b, a + b
+    return b == streak
 
 
 def build_block_message() -> str:
     """Build the one-time hard-stop block message for streak=0."""
     return (
-        "Delegation check: you are about to make a solo tool call. "
-        "This is a one-time hard stop — delegate to a Task subagent instead. "
-        "After this, reminders will be advisory-only (non-blocking). "
-        "Use the Task tool to spawn a subagent, then synthesize what it returns."
+        "Delegation check: this tool call was blocked. "
+        "Consider whether this work should be delegated to an Agent subagent instead of done solo. "
+        "This is a one-time block — if this call is genuinely a quick one-off, "
+        "retry it and the block won't fire again. Future reminders are advisory-only."
+    )
+
+
+def build_streak1_message() -> str:
+    """Build the distinct advisory for unblocked tools at streak=1."""
+    return (
+        "Delegation reminder [streak=1]: this call was allowed through without blocking. "
+        "Before making more solo calls, consider whether this work should be "
+        "delegated to an Agent subagent."
     )
 
 
 def build_advisory_message(streak: int) -> str:
     """Build an escalating advisory message for the given streak level."""
     if streak <= 2:
-        tone = (
-            f"Delegation reminder [streak={streak}]: you have made {streak} consecutive "
-            f"solo tool calls. Consider delegating this work to a Task subagent."
+        return (
+            f"Delegation reminder [streak={streak}]: {streak} consecutive "
+            f"solo calls. Consider delegating to an Agent subagent."
         )
-    elif streak <= 4:
-        tone = (
-            f"Delegation advisory [streak={streak}]: {streak} consecutive solo tool calls. "
-            f"Main session context is non-renewable — push reads, research, and implementation "
-            f"to subagents. Use the Task tool."
+    elif streak <= 3:
+        return (
+            f"Delegation advisory [streak={streak}]: {streak} consecutive "
+            f"solo calls. Consider delegating to an Agent subagent."
         )
-    elif streak <= 8:
-        tone = (
-            f"Delegation warning [streak={streak}]: {streak} consecutive solo tool calls. "
-            f"Main session capacity is depleting. This work belongs in a subagent. "
-            f"Spawn a Task now and synthesize the result."
+    elif streak <= 5:
+        return (
+            f"Delegation warning [streak={streak}]: {streak} consecutive "
+            f"solo calls. Consider delegating to an Agent subagent."
         )
     else:
-        tone = (
-            f"DELEGATION CRITICAL [streak={streak}]: {streak} consecutive solo tool calls. "
-            f"You are consuming irreplaceable main session context. Stop and delegate immediately. "
-            f"Use the Task tool to spawn a subagent for any further work."
+        return (
+            f"DELEGATION CRITICAL [streak={streak}]: {streak} consecutive "
+            f"solo calls. Consider delegating to an Agent subagent."
         )
-    return tone
 
 
 def main():
@@ -209,7 +224,7 @@ def main():
             print("{}")
             sys.exit(0)
 
-        # Merge project config exempt_tools with defaults
+        # Merge project config exempt_tools and unblocked_tools with defaults
         config = load_project_config()
         extra_exempt = set(config.get("exempt_tools", []))
         exempt = EXEMPT_TOOLS | extra_exempt
@@ -223,20 +238,38 @@ def main():
             print("{}")
             sys.exit(0)
 
+        # Merge unblocked_tools defaults with project config
+        extra_unblocked = set(config.get("unblocked_tools", []))
+        unblocked = UNBLOCKED_TOOLS | extra_unblocked
+
         # Non-Task/Agent, non-exempt tool call
         if streak == 0 and not block_fired:
-            # First solo call after a Task or session start: hard stop
-            # Blocked call does NOT increment streak — only executed calls count
-            write_state(session_id, {"streak": 0, "block_fired": True, "subagent_count": subagent_count})
-            output = {
-                "hookSpecificOutput": {
-                    "hookEventName": "PreToolUse",
-                    "permissionDecision": "deny",
-                    "permissionDecisionReason": build_block_message(),
+            # First solo call after a Task or session start
+            if tool_name in unblocked:
+                # Unblocked tools: never hard-blocked, but fire advisory at streak=1
+                new_streak = 1
+                write_state(session_id, {"streak": new_streak, "block_fired": True, "subagent_count": subagent_count})
+                output = {
+                    "hookSpecificOutput": {
+                        "hookEventName": "PreToolUse",
+                        "additionalContext": build_streak1_message(),
+                    }
                 }
-            }
-            print(json.dumps(output))
-            sys.exit(0)
+                print(json.dumps(output))
+                sys.exit(0)
+            else:
+                # Normal tools: hard stop
+                # Blocked call does NOT increment streak — only executed calls count
+                write_state(session_id, {"streak": 0, "block_fired": True, "subagent_count": subagent_count})
+                output = {
+                    "hookSpecificOutput": {
+                        "hookEventName": "PreToolUse",
+                        "permissionDecision": "deny",
+                        "permissionDecisionReason": build_block_message(),
+                    }
+                }
+                print(json.dumps(output))
+                sys.exit(0)
 
         # Block already fired — this call executes; increment streak
         new_streak = streak + 1
