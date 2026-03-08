@@ -1,0 +1,12 @@
+{
+  "name": "frontend-design",
+  "description": "Opinionated frontend design skill anchored on dark-mode, information-dense, content-focused interfaces. Replaces the generic CC built-in frontend-design with concrete design tokens and component patterns derived from curated reference sites (Bluesky, GitHub, Gmail, LessWrong, Claude.ai).",
+  "version": "1.0.0",
+  "author": {
+    "name": "Jython1415",
+    "url": "https://github.com/Jython1415"
+  },
+  "homepage": "https://github.com/Jython1415/jshoes-claude-plugins",
+  "repository": "https://github.com/Jython1415/jshoes-claude-plugins",
+  "license": "MIT"
+}
