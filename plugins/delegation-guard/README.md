@@ -16,13 +16,14 @@ Intercepts every tool call before it runs. Blocks the first solo tool call after
 | 1 | Silent — first executed call after the block (or first unblocked tool call) |
 | 2 | Advisory — reminder |
 | 3 | Advisory — advisory |
-| 5 | Advisory — warning |
-| 8+ | Advisory — critical |
+| 5 | **Block** (normal tools only) — hard stop via `permissionDecision: "deny"`. Creates real friction instead of ignorable advisory. Unblocked tools fire advisory instead. |
+| 8 | **Block** (normal tools only) — hard stop via `permissionDecision: "deny"`. Unblocked tools fire advisory instead. |
+| 13+ | **Block** (normal tools only) — hard stop via `permissionDecision: "deny"`. Unblocked tools fire advisory instead. |
 | Task/Agent call | Reset — streak returns to 0 and the block re-arms |
 
-Streaks at non-Fibonacci values (4, 6, 7, 9, 10, …) pass through silently. Advisory fires at Fibonacci numbers >= 2: 2, 3, 5, 8, 13, 21, 34, …
+Streaks at non-Fibonacci values (4, 6, 7, 9, 10, …) pass through silently. Normal tools are hard-blocked at Fibonacci values >= 5: 5, 8, 13, 21, 34, …. Unblocked tools (Read, Glob, Grep) fire advisory messages at Fibonacci numbers >= 2 (2, 3, 5, 8, 13, 21, 34, …) but are never hard-blocked.
 
-The block fires once per unbroken solo run. After it fires, subsequent tool calls increment the streak and receive advisory messages — but are not blocked. A Task or Agent call resets the streak to 0 and re-arms the block so the cycle can start again.
+The initial block fires once per unbroken solo run. After it fires, normal tool calls increment the streak; at Fibonacci values >= 5, they are re-blocked (hard deny). Unblocked tools always pass through but fire advisory messages at Fibonacci values >= 2. A Task or Agent call resets the streak to 0 and re-arms the block so the cycle can start again.
 
 ## Exempt tools
 
@@ -41,9 +42,9 @@ These tools are never hard-blocked but still count toward the advisory streak:
 - `Glob` — file search (read-only)
 - `Grep` — content search (read-only)
 
-When an unblocked tool is called at streak=0 (before the block has fired), it behaves differently from normal tools: instead of being blocked, it skips the deny, sets `block_fired=True`, increments the streak to 1, and fires an advisory message. After `block_fired=True`, unblocked tools behave identically to normal tools — they pass through, increment the streak, and trigger advisories at Fibonacci values (2, 3, 5, 8, 13, 21, …).
+When an unblocked tool is called at streak=0 (before the block has fired), it behaves differently from normal tools: instead of being blocked, it skips the deny, sets `block_fired=True`, increments the streak to 1, and fires an advisory message. At all subsequent streaks, unblocked tools remain advisory-only and never trigger hard blocks, even at Fibonacci thresholds (5, 8, 13, …) where normal tools are re-blocked.
 
-This design acknowledges that read-only operations are essential for understanding code context, so they receive an advisory rather than a hard block on first use.
+This design acknowledges that read-only operations are essential for understanding code context, so they receive an advisory rather than a hard block, and remain unblocked even as the streak grows. Normal tools, by contrast, experience periodic re-blocking at higher Fibonacci values (5, 8, 13, …) to create mounting pressure toward delegation.
 
 ### Per-project configuration
 

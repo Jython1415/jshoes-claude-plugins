@@ -238,16 +238,26 @@ class TestEscalatingAdvisories:
         assert "additionalContext" in output["hookSpecificOutput"]
 
     def test_advisory_fires_at_streak_5(self):
-        """Advisory must fire when streak reaches 5 (Fibonacci)."""
+        """At streak=5, normal tools are re-blocked; unblocked tools get advisory only."""
         output = self._reach_streak(5)
         assert "hookSpecificOutput" in output
-        assert "additionalContext" in output["hookSpecificOutput"]
+        hook_out = output["hookSpecificOutput"]
+        # Normal tool (Bash) at streak 5 should be re-blocked
+        assert hook_out.get("permissionDecision") == "deny", (
+            "Normal tool at streak=5 should be re-blocked"
+        )
+        assert "permissionDecisionReason" in hook_out
 
     def test_advisory_fires_at_streak_8(self):
-        """Advisory must fire when streak reaches 8 (Fibonacci)."""
+        """At streak=8, normal tools are re-blocked; unblocked tools get advisory only."""
         output = self._reach_streak(8)
         assert "hookSpecificOutput" in output
-        assert "additionalContext" in output["hookSpecificOutput"]
+        hook_out = output["hookSpecificOutput"]
+        # Normal tool (Bash) at streak 8 should be re-blocked
+        assert hook_out.get("permissionDecision") == "deny", (
+            "Normal tool at streak=8 should be re-blocked"
+        )
+        assert "permissionDecisionReason" in hook_out
 
     def test_silent_at_streak_1(self):
         """First executed call by normal tool (streak=1) must be silent."""
@@ -284,6 +294,85 @@ class TestEscalatingAdvisories:
         output = run_hook("Bash", clear_state=False)  # streak=2 → advisory again
         assert "hookSpecificOutput" in output
         assert "additionalContext" in output["hookSpecificOutput"]
+
+
+# ---------------------------------------------------------------------------
+# Re-blocking behavior (Fibonacci >= 5 for normal tools)
+# ---------------------------------------------------------------------------
+
+class TestReblockingBehavior:
+    """At Fibonacci thresholds >= 5 (5, 8, 13, ...), normal tools are re-blocked."""
+
+    def _reach_streak(self, n: int) -> dict:
+        """Advance to the given streak level and return the output from the final call."""
+        run_hook("Bash", clear_state=True)   # block fires; streak=0
+        output = {}
+        for _ in range(n):
+            output = run_hook("Bash", clear_state=False)
+        return output
+
+    def test_reblock_at_streak_5_normal_tool(self):
+        """Normal tool at streak=5 must be re-blocked with permissionDecision: deny."""
+        output = self._reach_streak(5)
+        assert "hookSpecificOutput" in output
+        hook_out = output["hookSpecificOutput"]
+        assert hook_out.get("permissionDecision") == "deny"
+        assert "permissionDecisionReason" in hook_out
+
+    def test_reblock_at_streak_8_normal_tool(self):
+        """Normal tool at streak=8 must be re-blocked with permissionDecision: deny."""
+        output = self._reach_streak(8)
+        assert "hookSpecificOutput" in output
+        hook_out = output["hookSpecificOutput"]
+        assert hook_out.get("permissionDecision") == "deny"
+        assert "permissionDecisionReason" in hook_out
+
+    def test_reblock_at_streak_13_normal_tool(self):
+        """Normal tool at streak=13 must be re-blocked with permissionDecision: deny."""
+        output = self._reach_streak(13)
+        assert "hookSpecificOutput" in output
+        hook_out = output["hookSpecificOutput"]
+        assert hook_out.get("permissionDecision") == "deny"
+        assert "permissionDecisionReason" in hook_out
+
+    def test_unblocked_tool_not_reblocked_at_streak_5(self):
+        """Unblocked tool at streak=5 must NOT be re-blocked; advisory only."""
+        run_hook("Bash", clear_state=True)   # block fires
+        for _ in range(4):
+            run_hook("Read", clear_state=False)  # streak 1..4
+        output = run_hook("Read", clear_state=False)  # streak=5 for Read
+        assert "hookSpecificOutput" in output
+        hook_out = output["hookSpecificOutput"]
+        assert hook_out.get("permissionDecision") != "deny", (
+            "Unblocked tool should not be re-blocked at streak=5"
+        )
+        assert "additionalContext" in hook_out, (
+            "Unblocked tool should receive advisory-only"
+        )
+
+    def test_unblocked_tool_not_reblocked_at_streak_8(self):
+        """Unblocked tool at streak=8 must NOT be re-blocked; advisory only."""
+        run_hook("Bash", clear_state=True)   # block fires
+        for _ in range(7):
+            run_hook("Read", clear_state=False)  # streak 1..7
+        output = run_hook("Read", clear_state=False)  # streak=8 for Read
+        assert "hookSpecificOutput" in output
+        hook_out = output["hookSpecificOutput"]
+        assert hook_out.get("permissionDecision") != "deny", (
+            "Unblocked tool should not be re-blocked at streak=8"
+        )
+        assert "additionalContext" in hook_out
+
+    def test_streak_increments_before_reblock_check(self):
+        """After re-block at streak=5, state should show streak=5 (increment happens first)."""
+        run_hook("Bash", clear_state=True)   # block fires; streak=0
+        for _ in range(5):
+            run_hook("Bash", clear_state=False)
+        # At this point, the hook incremented streak to 5 before checking re-block
+        state = get_state()
+        assert state["streak"] == 5, (
+            "Streak should be incremented to 5 even though re-block fires"
+        )
 
 
 # ---------------------------------------------------------------------------
