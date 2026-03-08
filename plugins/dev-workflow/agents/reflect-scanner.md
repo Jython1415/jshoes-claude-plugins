@@ -23,16 +23,12 @@ You are a transcript scanner for the /reflect skill. You read a pre-processed se
 
 When launched, you will receive:
 1. A file path to read
-2. Whether this is a "detail" scan or "high-level" scan
 
 ### Reading your assigned file
 
-Your chunk files may contain up to ~80,000 tokens. The Read tool returns ~2,000 lines per call but has a token output limit of ~25,000 tokens. You will likely need **multiple Read calls** to read the entire file:
+Your chunk files contain up to ~20,000 tokens and fit in a single Read call.
 
-1. **First read**: `Read(file_path)` — reads the first ~2,000 lines
-2. **Check if truncated**: If the output ends before the file does (the last line number shown is less than the file's total line count), continue reading
-3. **Subsequent reads**: `Read(file_path, offset=<next_line>, limit=2000)` — pick up where you left off
-4. **Repeat** until you have read every line
+- **Read**: `Read(file_path)` — this reads the entire chunk in one call.
 
 **Do NOT begin analysis until you have read the COMPLETE file.** Partial reads will miss findings. After each Read call, note the last line number shown and whether more content remains.
 
@@ -85,12 +81,6 @@ Signals that a pattern was used repeatedly and could be codified.
 | Repeated user guidance | The user giving similar instructions across different parts of the session |
 | Command templates | Similar Bash commands or tool calls differing only in arguments |
 | Manual processes ripe for automation | Multi-step procedures that could be a single skill or hook |
-
-## High-level Scan Variant
-
-If told this is a "high-level" scan, you are scanning a CONDENSED SUMMARY of a session. Focus on the big picture: session flow, major direction changes, recurring themes in user guidance.
-
-Apply checklists 1, 3, and 4 only. Skip Checklist 2 (Execution Failures) — you don't have the tool output detail needed for it.
 
 ## Output Format
 

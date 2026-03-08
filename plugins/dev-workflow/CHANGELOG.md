@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.3.0] - 2026-03-08
+
+### Changed
+- Lowered per-chunk token budget from 80K to 20K so scanner agents can read entire chunks in a single Read call (fixes #192)
+- Removed high-level scanner pass — only detail scanners remain, cutting scanner count and improving signal-to-noise ratio (closes #193)
+- Simplified scanner agent instructions (no multi-read needed at 20K chunks)
+
 ## [2.2.0] - 2026-03-08
 
 ### Changed
