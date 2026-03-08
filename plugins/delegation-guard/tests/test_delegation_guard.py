@@ -8,7 +8,8 @@ Behavioral model:
 - First solo call (streak==0, block_fired==False): BLOCK via permissionDecision: "deny".
   Blocked call does NOT increment streak.
 - After block fires (block_fired=True): subsequent non-Task/Agent calls increment streak.
-  Escalating advisory fires at streak 2, 4, 8, 16, ... (powers of 2 >= 2).
+  Escalating advisory fires at Fibonacci numbers >= 2 (2, 3, 5, 8, 13, 21, ...).
+  Unblocked tools also fire a distinct advisory at streak=1 (only on their first call).
 - Task or Agent call: resets streak to 0 and re-arms block (block_fired=False).
   ("Agent" is the name used by Claude Code v2.1.63+; "Task" is the legacy name.)
 - Exempt tools (Skill, AskUserQuestion, TaskCreate, etc.): neutral, no state change.
@@ -212,7 +213,7 @@ class TestStreakCounting:
 # ---------------------------------------------------------------------------
 
 class TestEscalatingAdvisories:
-    """Advisory fires at streak 2, 4, 8, 16 (powers of 2 >= 2); silent at all others."""
+    """Advisory fires at Fibonacci numbers >= 2 (2, 3, 5, 8, 13, 21, ...); silent at all others."""
 
     def _reach_streak(self, n: int) -> dict:
         """Advance to the given streak level and return the output from the final call."""
@@ -223,51 +224,51 @@ class TestEscalatingAdvisories:
         return output
 
     def test_advisory_fires_at_streak_2(self):
-        """Advisory must fire when streak reaches 2."""
+        """Advisory must fire when streak reaches 2 (Fibonacci)."""
         output = self._reach_streak(2)
         assert "hookSpecificOutput" in output
         hook_out = output["hookSpecificOutput"]
         assert "additionalContext" in hook_out
         assert hook_out.get("permissionDecision") != "deny"
 
-    def test_advisory_fires_at_streak_4(self):
-        """Advisory must fire when streak reaches 4."""
-        output = self._reach_streak(4)
+    def test_advisory_fires_at_streak_3(self):
+        """Advisory must fire when streak reaches 3 (Fibonacci)."""
+        output = self._reach_streak(3)
+        assert "hookSpecificOutput" in output
+        assert "additionalContext" in output["hookSpecificOutput"]
+
+    def test_advisory_fires_at_streak_5(self):
+        """Advisory must fire when streak reaches 5 (Fibonacci)."""
+        output = self._reach_streak(5)
         assert "hookSpecificOutput" in output
         assert "additionalContext" in output["hookSpecificOutput"]
 
     def test_advisory_fires_at_streak_8(self):
-        """Advisory must fire when streak reaches 8."""
+        """Advisory must fire when streak reaches 8 (Fibonacci)."""
         output = self._reach_streak(8)
         assert "hookSpecificOutput" in output
         assert "additionalContext" in output["hookSpecificOutput"]
 
-    def test_advisory_fires_at_streak_16(self):
-        """Advisory must fire when streak reaches 16."""
-        output = self._reach_streak(16)
-        assert "hookSpecificOutput" in output
-        assert "additionalContext" in output["hookSpecificOutput"]
-
     def test_silent_at_streak_1(self):
-        """First executed call (streak=1) must be silent."""
+        """First executed call by normal tool (streak=1) must be silent."""
         run_hook("Bash", clear_state=True)          # block fires
         output = run_hook("Bash", clear_state=False) # streak → 1
         assert output == {}, f"Expected silent at streak=1, got: {output}"
 
-    def test_silent_at_streak_3(self):
-        """Streak=3 is not a power of 2, must be silent."""
-        output = self._reach_streak(3)
-        assert output == {}, f"Expected silent at streak=3, got: {output}"
-
-    def test_silent_at_streak_5(self):
-        """Streak=5 is not a power of 2, must be silent."""
-        output = self._reach_streak(5)
-        assert output == {}, f"Expected silent at streak=5, got: {output}"
+    def test_silent_at_streak_4(self):
+        """Streak=4 is not a Fibonacci number, must be silent."""
+        output = self._reach_streak(4)
+        assert output == {}, f"Expected silent at streak=4, got: {output}"
 
     def test_silent_at_streak_6(self):
-        """Streak=6 is not a power of 2, must be silent."""
+        """Streak=6 is not a Fibonacci number, must be silent."""
         output = self._reach_streak(6)
         assert output == {}, f"Expected silent at streak=6, got: {output}"
+
+    def test_silent_at_streak_7(self):
+        """Streak=7 is not a Fibonacci number, must be silent."""
+        output = self._reach_streak(7)
+        assert output == {}, f"Expected silent at streak=7, got: {output}"
 
     def test_advisory_fires_again_after_task_reset(self):
         """After a Task reset, advisory schedule restarts from the beginning."""
@@ -557,6 +558,93 @@ class TestStateFile:
 # Per-project config
 # ---------------------------------------------------------------------------
 
+# ---------------------------------------------------------------------------
+# Unblocked tools (never hard-blocked, fire advisory on first call)
+# ---------------------------------------------------------------------------
+
+class TestUnblockedTools:
+    """Unblocked tools are not hard-blocked on first call; instead fire advisory at streak=1."""
+
+    def test_unblocked_tool_not_blocked_on_first_call(self):
+        """Read at streak=0 should NOT get permissionDecision: deny."""
+        output = run_hook("Read", clear_state=True)
+        assert "hookSpecificOutput" in output
+        hook_out = output["hookSpecificOutput"]
+        assert hook_out.get("permissionDecision") != "deny", (
+            "Unblocked tool should not be hard-blocked"
+        )
+        assert "additionalContext" in hook_out, (
+            "Unblocked tool should get advisory instead"
+        )
+
+    def test_unblocked_tool_increments_streak_on_first_call(self):
+        """After Read at streak=0, state should have streak=1 and block_fired=True."""
+        run_hook("Read", clear_state=True)
+        state = get_state()
+        assert state["streak"] == 1, "Unblocked tool should increment streak to 1"
+        assert state["block_fired"] is True, "block_fired should be set to True"
+
+    def test_unblocked_tool_fires_advisory_at_streak_1(self):
+        """The advisory message on first unblocked call should be the distinct streak=1 message."""
+        output = run_hook("Read", clear_state=True)
+        context = output["hookSpecificOutput"].get("additionalContext", "")
+        assert "streak=1" in context, (
+            "Advisory message should reference [streak=1]"
+        )
+        assert "allowed through without blocking" in context, (
+            "Should mention that unblocked tool was allowed through"
+        )
+
+    def test_normal_tool_increments_streak_after_unblocked_first(self):
+        """After Read fires (streak=1, block_fired=True), a Bash call should increment streak to 2."""
+        run_hook("Read", clear_state=True)      # streak=1, block_fired=True
+        run_hook("Bash", clear_state=False)      # streak should → 2
+        state = get_state()
+        assert state["streak"] == 2
+
+    def test_normal_tool_fires_advisory_at_streak_2_after_unblocked(self):
+        """After Read increments to streak=1, Bash should fire advisory at streak=2."""
+        run_hook("Read", clear_state=True)      # streak=1
+        output = run_hook("Bash", clear_state=False)  # streak → 2, advisory fires
+        assert "hookSpecificOutput" in output
+        assert "additionalContext" in output["hookSpecificOutput"]
+
+    def test_unblocked_tool_increments_normally_after_block_fired(self):
+        """After block_fired=True with streak=1, another Read should increment to streak=2."""
+        run_hook("Read", clear_state=True)       # streak=1, block_fired=True
+        run_hook("Read", clear_state=False)      # streak → 2
+        state = get_state()
+        assert state["streak"] == 2
+
+    def test_glob_is_unblocked(self):
+        """Glob should behave same as Read (not blocked on first call)."""
+        output = run_hook("Glob", clear_state=True)
+        assert "hookSpecificOutput" in output
+        assert output["hookSpecificOutput"].get("permissionDecision") != "deny"
+        assert "additionalContext" in output["hookSpecificOutput"]
+
+    def test_grep_is_unblocked(self):
+        """Grep should behave same as Read (not blocked on first call)."""
+        output = run_hook("Grep", clear_state=True)
+        assert "hookSpecificOutput" in output
+        assert output["hookSpecificOutput"].get("permissionDecision") != "deny"
+        assert "additionalContext" in output["hookSpecificOutput"]
+
+    def test_bash_still_blocked(self):
+        """Bash at streak=0 should still get hard block (regression test)."""
+        output = run_hook("Bash", clear_state=True)
+        assert "hookSpecificOutput" in output
+        assert output["hookSpecificOutput"].get("permissionDecision") == "deny"
+
+    def test_task_resets_after_unblocked_streak(self):
+        """After Read increments to streak=1, a Task call should reset to streak=0, block_fired=False."""
+        run_hook("Read", clear_state=True)      # streak=1, block_fired=True
+        run_hook("Task", clear_state=False)      # reset
+        state = get_state()
+        assert state["streak"] == 0
+        assert state["block_fired"] is False
+
+
 class TestProjectConfig:
     """Per-project config file (.claude/delegation-guard.json) support."""
 
@@ -616,6 +704,25 @@ class TestProjectConfig:
 
         output_custom = run_hook("CustomTool", clear_state=False, cwd=str(tmp_path))
         assert output_custom == {}, "Config tool should be exempt"
+
+    def test_project_config_unblocked_tools(self, tmp_path):
+        """Config with unblocked_tools makes those tools behave as unblocked (not blocked on first call)."""
+        # Create config with Edit as unblocked
+        config_dir = tmp_path / ".claude"
+        config_dir.mkdir()
+        config_file = config_dir / "delegation-guard.json"
+        config_file.write_text(json.dumps({"unblocked_tools": ["Edit"]}))
+
+        # Edit should not be hard-blocked on first call
+        output = run_hook("Edit", clear_state=True, cwd=str(tmp_path))
+        assert "hookSpecificOutput" in output
+        hook_out = output["hookSpecificOutput"]
+        assert hook_out.get("permissionDecision") != "deny", (
+            "Config unblocked tool should not be hard-blocked"
+        )
+        assert "additionalContext" in hook_out, (
+            "Config unblocked tool should get advisory instead"
+        )
 
 
 # ---------------------------------------------------------------------------
