@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.3.0] - 2026-03-08
+
+### Changed
+- Strengthened block and advisory message language to be more directive while acknowledging legitimate solo work
+- Added periodic re-blocking at Fibonacci streak thresholds (5, 8, 13, ...) for normal tools; unblocked tools remain advisory-only
+
 ## [1.2.0] - 2026-03-08
 
 ### Added

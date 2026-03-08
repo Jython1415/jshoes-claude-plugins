@@ -22,6 +22,8 @@ Behavior (PreToolUse):
   - All other tools: hard-stop with permissionDecision: "deny"
 - After the block fires (block_fired=True), all tool calls (normal and unblocked) increment
   streak. Escalating advisory messages fire at Fibonacci numbers >= 2 (2, 3, 5, 8, 13, 21, ...).
+  At Fibonacci thresholds >= 5 (5, 8, 13, ...), normal tools are re-blocked (permissionDecision:
+  "deny"); unblocked tools receive advisory-only messages at all thresholds.
   Unblocked tools also fire a distinct advisory at streak=1 (only possible on their first call).
 - A Task or Agent call resets streak to 0 and re-arms the block (block_fired=False).
   ("Agent" is the name used by Claude Code v2.1.63+; "Task" is the legacy name.)
@@ -139,13 +141,25 @@ def is_backoff_point(streak: int) -> bool:
     return b == streak
 
 
+DELEGATION_EXAMPLES = (
+    "Common tasks that SHOULD be delegated: "
+    "codebase exploration (Read/Glob/Grep chains), "
+    "implementation work (Edit/Write chains), "
+    "git workflows (status/diff/log/commit sequences), "
+    "running and debugging tests, "
+    "and online research (WebSearch/WebFetch)."
+)
+
+
 def build_block_message() -> str:
     """Build the one-time hard-stop block message for streak=0."""
     return (
         "Delegation check: this tool call was blocked. "
-        "Consider whether this work should be delegated to an Agent subagent instead of done solo. "
+        "If this task requires more than 1 tool call, delegate it to an Agent subagent. "
+        f"{DELEGATION_EXAMPLES} "
         "This is a one-time block — if this call is genuinely a quick one-off, "
-        "retry it and the block won't fire again. Future reminders are advisory-only."
+        "retry it and the block won't fire again. "
+        "Re-blocking will occur at higher streaks (5, 8, 13, ...)."
     )
 
 
@@ -153,33 +167,42 @@ def build_streak1_message() -> str:
     """Build the distinct advisory for unblocked tools at streak=1."""
     return (
         "Delegation reminder [streak=1]: this call was allowed through without blocking. "
-        "Before making more solo calls, consider whether this work should be "
-        "delegated to an Agent subagent."
+        "Before continuing solo, consider whether this is part of a larger task that "
+        "should be an Agent subagent. "
+        f"{DELEGATION_EXAMPLES} "
+        "If this work genuinely cannot be delegated, continue, but re-blocking "
+        "will occur at the next threshold."
     )
 
 
 def build_advisory_message(streak: int) -> str:
     """Build an escalating advisory message for the given streak level."""
     if streak <= 2:
-        return (
-            f"Delegation reminder [streak={streak}]: {streak} consecutive "
-            f"solo calls. Consider delegating to an Agent subagent."
-        )
+        label = "reminder"
     elif streak <= 3:
-        return (
-            f"Delegation advisory [streak={streak}]: {streak} consecutive "
-            f"solo calls. Consider delegating to an Agent subagent."
-        )
+        label = "advisory"
     elif streak <= 5:
-        return (
-            f"Delegation warning [streak={streak}]: {streak} consecutive "
-            f"solo calls. Consider delegating to an Agent subagent."
-        )
+        label = "warning"
     else:
-        return (
-            f"DELEGATION CRITICAL [streak={streak}]: {streak} consecutive "
-            f"solo calls. Consider delegating to an Agent subagent."
-        )
+        label = "CRITICAL"
+
+    return (
+        f"Delegation {label} [streak={streak}]: You have made {streak} consecutive "
+        f"solo tool calls. This work should be delegated to an Agent subagent — "
+        f"stop and launch one now. {DELEGATION_EXAMPLES} "
+        f"If this work genuinely cannot be delegated, continue, but "
+        f"re-blocking will occur at the next threshold."
+    )
+
+
+def build_reblock_message(streak: int) -> str:
+    """Build the re-blocking message for Fibonacci thresholds >= 5."""
+    return (
+        f"Re-blocked at streak {streak}. You have made {streak} consecutive solo calls "
+        f"without delegating. Launch an Agent subagent for the remaining work. "
+        f"{DELEGATION_EXAMPLES} "
+        f"Retry this call only if it is a genuine one-off that cannot be delegated."
+    )
 
 
 def main():
@@ -276,14 +299,27 @@ def main():
         write_state(session_id, {"streak": new_streak, "block_fired": block_fired, "subagent_count": subagent_count})
 
         if is_backoff_point(new_streak):
-            output = {
-                "hookSpecificOutput": {
-                    "hookEventName": "PreToolUse",
-                    "additionalContext": build_advisory_message(new_streak),
+            # At Fibonacci thresholds >= 5, re-block (unless tool is in unblocked set)
+            if new_streak >= 5 and tool_name not in unblocked:
+                output = {
+                    "hookSpecificOutput": {
+                        "hookEventName": "PreToolUse",
+                        "permissionDecision": "deny",
+                        "permissionDecisionReason": build_reblock_message(new_streak),
+                    }
                 }
-            }
-            print(json.dumps(output))
-            sys.exit(0)
+                print(json.dumps(output))
+                sys.exit(0)
+            else:
+                # Fibonacci < 5 or unblocked tool: advisory-only
+                output = {
+                    "hookSpecificOutput": {
+                        "hookEventName": "PreToolUse",
+                        "additionalContext": build_advisory_message(new_streak),
+                    }
+                }
+                print(json.dumps(output))
+                sys.exit(0)
 
         print("{}")
         sys.exit(0)
