@@ -178,8 +178,8 @@ def main():
         output = {
             "hookSpecificOutput": {
                 "hookEventName": "PreToolUse",
-                "decision": "block",
-                "additionalContext": (
+                "permissionDecision": "deny",
+                "permissionDecisionReason": (
                     f"**BLOCKED: Write to external repository**\n\n"
                     f"This command targets `{repo_owner}/...` but you are "
                     f"authenticated as `{username}`. Writing to repositories "

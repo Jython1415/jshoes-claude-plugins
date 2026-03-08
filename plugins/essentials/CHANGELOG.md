@@ -1,5 +1,10 @@
 # Changelog
 
+## [3.0.1] - 2026-03-08
+
+### Fixed
+- `guard-external-repo-writes`: replaced deprecated `decision: "block"` field with `permissionDecision: "deny"` (hook was advisory-only instead of blocking)
+
 ## [3.0.0] - 2026-03-01
 
 ### Changed
