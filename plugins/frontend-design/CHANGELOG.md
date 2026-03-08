@@ -1,3 +1,12 @@
+## [1.1.0] - 2026-03-08
+
+### Changed
+- Light and dark themes are now both first-class citizens with complete token sets
+- Color palette uses `prefers-color-scheme` media query and `data-theme` attribute for system/manual switching
+- Tailwind config uses CSS variable references instead of hardcoded hex values for automatic theme support
+- Updated anti-patterns table, implementation checklist, and rules to reflect dual-theme approach
+- Removed "dark by default" language in favor of "respect system preference"
+
 ## [1.0.0] - 2026-03-08
 
 ### Added

@@ -11,7 +11,7 @@ description: >
 
 You are building frontend interfaces that feel like **professional software** — not generic AI output. Every design decision is anchored on a curated set of reference sites: Bluesky, GitHub, Gmail, LessWrong, and Claude.ai.
 
-The core aesthetic: **dark, dense, content-focused, typographically restrained, and visually quiet**. Decoration is earned, never default.
+The core aesthetic: **dense, content-focused, typographically restrained, and visually quiet** — in both dark and light modes. Decoration is earned, never default. Respect system `prefers-color-scheme`; both themes are first-class.
 
 ## Design System Tokens
 
@@ -20,7 +20,9 @@ Use these tokens as your foundation. Define them as CSS custom properties or Tai
 ### Color Palette
 
 ```css
-:root {
+/* Dark theme (default) */
+:root,
+[data-theme="dark"] {
   /* Backgrounds — layered depth via color, never shadows */
   --bg-base:       #0d1117;   /* primary surface */
   --bg-elevated:   #161b22;   /* cards, sidebars, elevated surfaces */
@@ -45,20 +47,62 @@ Use these tokens as your foundation. Define them as CSS custom properties or Tai
   --color-success: #3fb950;
   --color-warning: #d29922;
   --color-danger:  #f85149;
+}
 
-  /* Light theme override (for editorial/reading contexts like LessWrong) */
-  --bg-base-light:       #f6f5f0;
-  --bg-elevated-light:   #ffffff;
-  --text-primary-light:  #1c1917;
-  --text-secondary-light:#57534e;
-  --border-default-light:#e7e5e4;
-  --accent-primary-light:#2563eb;
+/* Light theme — respects system preference via prefers-color-scheme */
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) {
+    --bg-base:       #f6f5f0;
+    --bg-elevated:   #ffffff;
+    --bg-overlay:    #ffffff;
+    --bg-inset:      #edecea;
+
+    --text-primary:  #1c1917;
+    --text-secondary:#57534e;
+    --text-tertiary: #a8a29e;
+
+    --border-default:#e7e5e4;
+    --border-muted:  #f5f5f4;
+
+    --accent-primary:#2563eb;
+    --accent-emphasis:#1d4ed8;
+    --accent-muted:  #2563eb1a;
+
+    --color-success: #16a34a;
+    --color-warning: #ca8a04;
+    --color-danger:  #dc2626;
+  }
+}
+
+/* Explicit light theme override (user toggle) */
+[data-theme="light"] {
+  --bg-base:       #f6f5f0;
+  --bg-elevated:   #ffffff;
+  --bg-overlay:    #ffffff;
+  --bg-inset:      #edecea;
+
+  --text-primary:  #1c1917;
+  --text-secondary:#57534e;
+  --text-tertiary: #a8a29e;
+
+  --border-default:#e7e5e4;
+  --border-muted:  #f5f5f4;
+
+  --accent-primary:#2563eb;
+  --accent-emphasis:#1d4ed8;
+  --accent-muted:  #2563eb1a;
+
+  --color-success: #16a34a;
+  --color-warning: #ca8a04;
+  --color-danger:  #dc2626;
 }
 ```
 
 **Rules:**
-- Default to dark theme. Only use light theme for long-form reading or editorial contexts.
-- Off-white text (#e6edf3) is non-negotiable. Pure white (#fff) creates harsh contrast.
+- Respect `prefers-color-scheme`. Both dark and light themes are first-class citizens with complete token sets.
+- Support `data-theme` attribute for explicit user override (theme toggle).
+- Dark theme: off-white text (#e6edf3), never pure #ffffff. Light theme: warm near-black text (#1c1917), never pure #000000.
+- Both themes avoid harsh extremes — dark uses #0d1117 not #000, light uses #f6f5f0 not #fff.
 - Borders exist for structure, not decoration. If you can remove a border without losing clarity, remove it.
 - One accent color per project. Vary it contextually (blue for productivity, green for success-oriented UIs, warm tones for editorial).
 
@@ -187,7 +231,8 @@ These are the hallmarks of "LLM-default" design. Avoid all of them:
 
 | Anti-Pattern | Instead |
 |---|---|
-| Pure white text (#fff) on dark bg | Off-white (#e6edf3) |
+| Ignoring `prefers-color-scheme` | Respect system light/dark preference with complete token sets for both |
+| Pure white (#fff) or pure black (#000) text | Off-white (#e6edf3) in dark, warm near-black (#1c1917) in light |
 | Drop shadows for depth | Background color layering |
 | Border-radius > 8px (pill buttons on non-pills) | 4-6px for containers, full-round only for avatars/badges |
 | Material Design color palette | Muted, contextual single-accent palette |
@@ -206,40 +251,41 @@ These are the hallmarks of "LLM-default" design. Avoid all of them:
 
 These tokens and patterns are defaults, not shackles:
 
-- **Editorial / reading content**: Use `--font-serif`, light theme tokens, 16px+ base, generous line-height (1.625+). Think LessWrong.
+- **Editorial / reading content**: Use `--font-serif`, 16px+ base, generous line-height (1.625+). Think LessWrong. Both light and dark themes work here — let the system preference decide.
 - **Marketing / landing pages**: You may use display fonts, larger sizes, more dramatic spacing. But keep the muted palette and flat aesthetic.
 - **Data visualization**: Color palette expands for chart data. Use categorical palettes with consistent saturation/lightness.
 - **Mobile**: Sidebar becomes bottom tab bar or slide-out drawer. Touch targets: 44px minimum.
 
 ## Tailwind Configuration
 
-When the project uses Tailwind, configure it to match:
+When the project uses Tailwind, configure it with CSS variable references so both themes work automatically:
 
 ```js
 // tailwind.config.js
 module.exports = {
+  darkMode: 'class', // or 'media' for prefers-color-scheme only
   theme: {
     extend: {
       colors: {
         bg: {
-          base: '#0d1117',
-          elevated: '#161b22',
-          overlay: '#1c2128',
-          inset: '#010409',
+          base: 'var(--bg-base)',
+          elevated: 'var(--bg-elevated)',
+          overlay: 'var(--bg-overlay)',
+          inset: 'var(--bg-inset)',
         },
         text: {
-          primary: '#e6edf3',
-          secondary: '#8b949e',
-          tertiary: '#6e7681',
+          primary: 'var(--text-primary)',
+          secondary: 'var(--text-secondary)',
+          tertiary: 'var(--text-tertiary)',
         },
         border: {
-          DEFAULT: '#30363d',
-          muted: '#21262d',
+          DEFAULT: 'var(--border-default)',
+          muted: 'var(--border-muted)',
         },
         accent: {
-          DEFAULT: '#58a6ff',
-          emphasis: '#1f6feb',
-          muted: 'rgba(56,139,253,0.15)',
+          DEFAULT: 'var(--accent-primary)',
+          emphasis: 'var(--accent-emphasis)',
+          muted: 'var(--accent-muted)',
         },
       },
       fontFamily: {
@@ -301,5 +347,6 @@ Before shipping any frontend, verify:
 - [ ] Off-white text colors (#e6edf3 range)
 - [ ] Borders are subtle (#30363d range), used structurally
 - [ ] Information density is high — no excessive whitespace
-- [ ] Dark theme by default
+- [ ] Both dark and light themes implemented via `prefers-color-scheme` + `data-theme`
+- [ ] No pure extremes (#000 or #fff) as text or background colors in either theme
 - [ ] Hover states use color changes, not shadows
