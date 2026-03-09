@@ -67,7 +67,7 @@ Systematic context-building through parallel research agents. Use before design 
 - When assumptions need empirical verification
 - As part of /solve when the issue requires exploration before planning
 
-**What it does:** Identifies unknowns from the current context, launches parallel Haiku research agents to investigate specific directions (codebase state, external documentation, empirical verification, prior art, constraints, adjacent systems), synthesizes findings between rounds, and continues until the design space is clear enough for /consult. Prints the evolving knowledge map so the user can see progress and redirect as needed.
+**What it does:** Identifies unknowns from the current context, launches parallel research agents to investigate specific directions (codebase state, external documentation, empirical verification, prior art, constraints, adjacent systems), synthesizes findings between rounds, and continues until the design space is clear enough for /consult. Prints the evolving knowledge map so the user can see progress and redirect as needed.
 
 **Research directions** (light scaffolding, pick what's relevant):
 - Codebase state: existing code, patterns, related subsystems
