@@ -1,5 +1,10 @@
 # Changelog
 
+## [2.4.2] - 2026-03-09
+
+### Changed
+- `/reflect` SKILL.md: clarified that scanner count must exactly match manifest job lines to prevent accidentally skipping chunks. Added multi-scanner example to illustrate correct 5-job launch pattern.
+
 ## [2.4.1] - 2026-03-09
 
 ### Fixed
