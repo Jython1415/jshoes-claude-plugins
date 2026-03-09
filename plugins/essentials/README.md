@@ -13,12 +13,7 @@ A focused set of essential hooks for Claude Code, providing critical safety mech
 - **gh-authorship-attribution** - Reminds about attribution for AI-assisted contributions
 - **block-heredoc-in-bash** - Blocks heredoc syntax that silently fails in sandbox mode
 - **guard-external-repo-writes** - Blocks `gh` CLI write operations to repositories the user does not own
-
-**PostToolUse Hooks (After successful execution):**
-- **gpg-signing-helper** - Provides guidance for GPG signing errors in sandbox
-
-**PostToolUseFailure Hooks (After failed execution):**
-- **gpg-signing-helper** - GPG error handling
+- **gpg-signing-helper** - Proactively injects GPG signing flags to prevent sandbox failures
 
 **PermissionRequest & Notification Hooks:**
 - **log-event** - Observer-only; logs permission requests and notifications to JSONL for observability
@@ -118,10 +113,11 @@ claude --plugin-dir ./plugins/essentials
 **Output:** BLOCKS the command; provides three alternatives (multiple `-m` flags, `--body-file`, Write tool)
 
 ### gpg-signing-helper
-**Event:** PostToolUse/PostToolUseFailure (Bash)
-**Purpose:** Guide on GPG errors in sandbox
-**Triggers:** Error contains "gpg failed", "can't connect to agent", "No agent"
-**Output:** `--no-gpg-sign` guidance
+**Event:** PreToolUse (Bash)
+**Purpose:** Proactively inject GPG signing flags to prevent sandbox failures
+**Triggers:** `git commit`, `git tag`, `git merge`, `git rebase` commands
+**Injects:** `--no-gpg-sign` for commit/tag/merge; `-c commit.gpgSign=false` for rebase
+**Output:** Modified command with injected flags via `updatedInput`
 
 ### guard-external-repo-writes
 **Event:** PreToolUse (Bash)

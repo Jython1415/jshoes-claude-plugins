@@ -582,7 +582,7 @@ def main():
         print(f"- Detail size: {detail_size} chars ({detail_tokens} tokens)")
         print(f"- Chunking: {chunking_desc}")
         print()
-        print("## Scanner Jobs")
+        print(f"## Scanner Jobs ({len(scanner_jobs)} scanners to launch)")
         for job_type, filepath, line_count in scanner_jobs:
             print(f"{job_type} {filepath} {line_count}")
         print()

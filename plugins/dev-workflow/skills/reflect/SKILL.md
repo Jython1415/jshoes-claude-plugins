@@ -64,20 +64,60 @@ When deciding where a finding should go, promote as broadly as it's useful:
 3. Parse the manifest output. It lists scanner jobs (file paths + scan types) and a cleanup command.
 
 4. Launch scanner agents per the manifest:
-   - For each scanner job line, launch an Agent with `subagent_type: "dev-workflow:reflect-scanner"`
+   - The **Scanner Jobs** header includes the exact count (e.g., "7 scanners to launch"). Launch exactly that many Agent calls, numbered 0 through N-1. Missing a scanner means one chunk goes unscanned.
+   - Each agent uses `subagent_type: "dev-workflow:reflect-scanner"`
    - The scanner receives its transcript chunk automatically via the
      SubagentStart hook — do NOT include file paths in the prompt
    - The prompt should contain ONLY a brief assignment identifier
    - For `--light`: pass Haiku model for scanners
    - For default/`--heavy`: pass Sonnet model for scanners
-   - Launch all scanners in parallel where possible
+   - Launch all scanners in a single parallel tool call
 
-   **Example scanner launch:**
+   **Example — 3-job manifest means exactly 3 Agent calls:**
    ```
    Agent(
      subagent_type: "dev-workflow:reflect-scanner",
      description: "Scan transcript chunk 0",
      prompt: "Perform a DETAIL scan on the transcript chunk in your context. You are scanner 0."
+   )
+   Agent(
+     subagent_type: "dev-workflow:reflect-scanner",
+     description: "Scan transcript chunk 1",
+     prompt: "Perform a DETAIL scan on the transcript chunk in your context. You are scanner 1."
+   )
+   Agent(
+     subagent_type: "dev-workflow:reflect-scanner",
+     description: "Scan transcript chunk 2",
+     prompt: "Perform a DETAIL scan on the transcript chunk in your context. You are scanner 2."
+   )
+   ```
+
+   **Example — 5-job manifest means exactly 5 Agent calls (no skipping):**
+   ```
+   Agent(
+     subagent_type: "dev-workflow:reflect-scanner",
+     description: "Scan transcript chunk 0",
+     prompt: "Perform a DETAIL scan on the transcript chunk in your context. You are scanner 0."
+   )
+   Agent(
+     subagent_type: "dev-workflow:reflect-scanner",
+     description: "Scan transcript chunk 1",
+     prompt: "Perform a DETAIL scan on the transcript chunk in your context. You are scanner 1."
+   )
+   Agent(
+     subagent_type: "dev-workflow:reflect-scanner",
+     description: "Scan transcript chunk 2",
+     prompt: "Perform a DETAIL scan on the transcript chunk in your context. You are scanner 2."
+   )
+   Agent(
+     subagent_type: "dev-workflow:reflect-scanner",
+     description: "Scan transcript chunk 3",
+     prompt: "Perform a DETAIL scan on the transcript chunk in your context. You are scanner 3."
+   )
+   Agent(
+     subagent_type: "dev-workflow:reflect-scanner",
+     description: "Scan transcript chunk 4",
+     prompt: "Perform a DETAIL scan on the transcript chunk in your context. You are scanner 4."
    )
    ```
 

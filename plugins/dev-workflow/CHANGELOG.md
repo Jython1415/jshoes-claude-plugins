@@ -1,5 +1,16 @@
 # Changelog
 
+## [2.4.3] - 2026-03-09
+
+### Changed
+- `/reflect` filter script: Scanner Jobs header now includes explicit count (e.g., "7 scanners to launch") for clearer orchestration
+- `/reflect` SKILL.md: Updated scanner launch instructions to reference the count in the header instead of asking orchestrators to count manifest lines manually
+
+## [2.4.2] - 2026-03-09
+
+### Changed
+- `/reflect` SKILL.md: clarified that scanner count must exactly match manifest job lines to prevent accidentally skipping chunks. Added multi-scanner example to illustrate correct 5-job launch pattern.
+
 ## [2.4.1] - 2026-03-09
 
 ### Fixed

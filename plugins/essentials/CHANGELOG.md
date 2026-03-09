@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.1.0] - 2026-03-09
+
+### Changed
+- Refactored `gpg-signing-helper` from reactive PostToolUseFailure to proactive PreToolUse with `updatedInput`
+- Now injects `--no-gpg-sign` (or `-c commit.gpgSign=false` for rebase) before execution instead of advising after failure
+- Expanded command coverage: commit, rebase, tag, and merge
+
 ## [3.0.1] - 2026-03-08
 
 ### Fixed
