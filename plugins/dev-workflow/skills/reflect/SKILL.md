@@ -64,7 +64,7 @@ When deciding where a finding should go, promote as broadly as it's useful:
 3. Parse the manifest output. It lists scanner jobs (file paths + scan types) and a cleanup command.
 
 4. Launch scanner agents per the manifest:
-   - Count the number of lines in the **Scanner Jobs** section. Launch exactly that many Agent calls — one per line, numbered 0 through N-1. Missing a scanner means one chunk goes unscanned. This count must match the number of manifest job lines exactly.
+   - The **Scanner Jobs** header includes the exact count (e.g., "7 scanners to launch"). Launch exactly that many Agent calls, numbered 0 through N-1. Missing a scanner means one chunk goes unscanned.
    - Each agent uses `subagent_type: "dev-workflow:reflect-scanner"`
    - The scanner receives its transcript chunk automatically via the
      SubagentStart hook — do NOT include file paths in the prompt
