@@ -65,22 +65,21 @@ When deciding where a finding should go, promote as broadly as it's useful:
 
 4. Launch scanner agents per the manifest:
    - For each scanner job line, launch an Agent with `subagent_type: "dev-workflow:reflect-scanner"`
-   - The scanner agent definition already includes all checklists — do NOT repeat them in the prompt
-   - The prompt should contain ONLY the assignment: file path and scan type
+   - The scanner receives its transcript chunk automatically via the
+     SubagentStart hook — do NOT include file paths in the prompt
+   - The prompt should contain ONLY a brief assignment identifier
    - For `--light`: pass Haiku model for scanners
    - For default/`--heavy`: pass Sonnet model for scanners
    - Launch all scanners in parallel where possible
 
-   **Example scanner launch for a detail scan:**
+   **Example scanner launch:**
    ```
    Agent(
      subagent_type: "dev-workflow:reflect-scanner",
      description: "Scan transcript chunk 0",
-     prompt: "Your assignment: Read the file at /absolute/path/to/.reflect-scan-abc12345-detail-0.jsonl and perform a DETAIL scan."
+     prompt: "Perform a DETAIL scan on the transcript chunk in your context. You are scanner 0."
    )
    ```
-
-   IMPORTANT: Always use absolute file paths in scanner prompts so scanners can find the files regardless of working directory.
 
 5. After all scanners complete, run the cleanup command from the manifest to remove intermediate files.
 
