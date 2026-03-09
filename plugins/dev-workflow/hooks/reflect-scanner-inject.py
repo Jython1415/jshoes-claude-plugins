@@ -28,7 +28,7 @@ def main():
 
     # Check if this is a reflect-scanner agent
     agent_type = input_data.get("agent_type", "")
-    if agent_type != "reflect-scanner":
+    if agent_type != "dev-workflow:reflect-scanner":
         # Not our agent type, pass through
         print("{}", file=sys.stdout)
         return

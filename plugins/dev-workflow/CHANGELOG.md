@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.4.1] - 2026-03-09
+
+### Fixed
+- `/reflect` SubagentStart hook matcher: changed from `"reflect-scanner"` to `"dev-workflow:reflect-scanner"` to match the full subagent_type string the CLI queries with (hook was never firing due to mismatch)
+- `/reflect` filter script: queue file (`.reflect-scan-{nonce}-queue.txt`) is now written for all cases (single-chunk and multi-chunk), not just the multi-chunk branch
+- `/reflect` scanner-inject hook: agent type check changed from `"reflect-scanner"` to `"dev-workflow:reflect-scanner"` for consistency with hook matcher
+
 ## [2.4.0] - 2026-03-09
 
 ### Changed

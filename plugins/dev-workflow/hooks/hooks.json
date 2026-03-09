@@ -2,7 +2,7 @@
   "hooks": {
     "SubagentStart": [
       {
-        "matcher": "reflect-scanner",
+        "matcher": "dev-workflow:reflect-scanner",
         "hooks": [
           {
             "type": "command",

@@ -556,12 +556,13 @@ def main():
             except Exception:
                 pass
 
-            # 7b. Write queue file after chunk files
-            queue_file = os.path.join(pwd, f".reflect-scan-{nonce_prefix}-queue.txt")
-            with open(queue_file, "w") as f:
-                for job_type, filepath, line_count in scanner_jobs:
-                    f.write(filepath + "\n")
+        # 7b. Write queue file for all cases (hook reads from this)
+        queue_file = os.path.join(pwd, f".reflect-scan-{nonce_prefix}-queue.txt")
+        with open(queue_file, "w") as f:
+            for job_type, filepath, line_count in scanner_jobs:
+                f.write(filepath + "\n")
 
+        if chunks is not None:
             # 7c. Post-creation validation
             for chunk_idx, (start_line, end_line) in enumerate(chunks):
                 chunk_file = os.path.join(pwd, f".reflect-scan-{nonce_prefix}-detail-{chunk_idx}.jsonl")
