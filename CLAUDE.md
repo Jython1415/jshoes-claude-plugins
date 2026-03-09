@@ -45,7 +45,7 @@ Each plugin has a `version` field in `plugins/<name>/.claude-plugin/plugin.json`
 
 **Changelog**: Every minor or major version bump must include a `CHANGELOG.md` entry in `plugins/<name>/CHANGELOG.md`. Create the file if it doesn't exist. Format: `## [x.y.z] - YYYY-MM-DD` followed by a `### Added`/`### Changed`/`### Fixed` section.
 
-**Consumer documentation**: When shipping a configurable feature (new env var, new opt-in behavior), include README documentation for plugin consumers in the same commit. Docs are part of the feature — not a follow-up.
+**Consumer documentation**: When shipping a configurable feature (new env var, new opt-in behavior), include README documentation for plugin consumers in the same commit. Docs are part of the feature — not a follow-up. This requirement also applies to new agents — document how to invoke and use them in the README.
 
 **Renaming a plugin**: When renaming a plugin directory, all of these must be updated in the same PR:
 1. `marketplace.json` — entry `name` and `version` fields
@@ -64,6 +64,10 @@ When creating a new plugin from scratch, these files/entries are required:
 4. `plugins/<name>/README.md` — description, installation commands, requirements
 5. `.claude-plugin/marketplace.json` — add entry with matching version, source path, category, keywords, and skills array
 6. Run code review before committing
+
+When adding new capabilities (agents or skills) to an existing plugin:
+- Update the `description` field in both `plugins/<name>/.claude-plugin/plugin.json` and `.claude-plugin/marketplace.json` to mention the new capabilities
+- Add consumer README documentation for all new agents (not just skills)
 
 ### Writing Skills
 - Do not use `allowed-tools` in skill frontmatter
