@@ -1,5 +1,10 @@
 # Changelog
 
+## [2.7.0] - 2026-03-09
+
+### Added
+- `/solve` Phase 9: re-read project convention docs before presenting PR for merge. Catches pre-merge, pre-deploy, and smoke-test requirements that were discovered during exploration but not re-verified before merge.
+
 ## [2.6.0] - 2026-03-09
 
 ### Added
