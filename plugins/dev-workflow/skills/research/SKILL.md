@@ -3,7 +3,7 @@ name: research
 description: >
   Systematic context-building through parallel research agents. Use before
   design decisions, implementation, or anytime you need to ground your
-  understanding of a problem space. Launches parallel Haiku research agents,
+  understanding of a problem space. Launches parallel research agents,
   synthesizes findings, identifies gaps, and repeats until the design space
   is clear enough for /consult.
 ---
