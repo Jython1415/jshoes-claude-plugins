@@ -1,5 +1,10 @@
 # Changelog
 
+## [2.5.0] - 2026-03-09
+
+### Added
+- `worktree-implementor` agent: isolated worktree execution agent designed for Haiku-tier models. Enforces commit-before-exit protocol to prevent work loss on worktree cleanup. Includes structured exit reporting (status, commit hash, files changed, warnings) for mechanical verification by the coordinator.
+
 ## [2.4.3] - 2026-03-09
 
 ### Changed

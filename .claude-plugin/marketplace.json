@@ -106,8 +106,8 @@
     },
     {
       "name": "dev-workflow",
-      "description": "Development workflow skills for GitHub-based repos. Includes /session (full dev lifecycle), /triage (issue prioritization), /solve (issue-to-PR), /code-review (multi-agent PR review), /consult (structured decisions), /reflect (session retrospective), and /issue (file well-researched issues).",
-      "version": "2.4.3",
+      "description": "Development workflow skills and agents for GitHub-based repos. Includes /session (full dev lifecycle), /triage (issue prioritization), /solve (issue-to-PR), /code-review (multi-agent PR review), /consult (structured decisions), /reflect (session retrospective), /issue (file well-researched issues), and the worktree-implementor agent (isolated worktree execution).",
+      "version": "2.5.0",
       "author": {
         "name": "Jython1415",
         "url": "https://github.com/Jython1415"

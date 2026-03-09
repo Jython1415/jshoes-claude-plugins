@@ -95,6 +95,31 @@ Files a well-researched GitHub issue from a brief description. Use when asked to
 - Drafts a structured issue with Problem, Current state, and Desired outcome sections
 - Files via `gh issue create` (or body file for multi-line bodies)
 
+## Agents
+
+### worktree-implementor
+
+An isolated worktree execution agent designed for Haiku-tier models implementing code changes with built-in commit discipline.
+
+**What it is:** A standalone agent that creates a git worktree and enforces a commit-before-exit discipline for code changes.
+
+**What it does:**
+- Creates an isolated worktree based on the current HEAD
+- Implements code changes within the worktree
+- Enforces structured commit discipline (must commit or explicitly abandon changes before exiting)
+- Generates exit reporting with implementation summary, commit hashes, and outcomes
+
+**How to invoke it:**
+```
+Agent(subagent_type: "dev-workflow:worktree-implementor", prompt: "...")
+```
+
+**Key features:**
+- Structured exit reporting: returns implementation summary, all commit SHAs, and success/failure status
+- Procedural, Haiku-ready instructions: step-by-step procedures avoid open-ended judgment
+- Sandbox-aware git protocol: handles authentication, GPG signing constraints, and git worktree lifecycle
+- Isolation baked in: worktree creation is mandatory, not optional — every invocation gets a fresh, isolated work context
+
 ## Installation
 
 ### From GitHub Marketplace
