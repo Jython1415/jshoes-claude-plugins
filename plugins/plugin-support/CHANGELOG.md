@@ -1,5 +1,10 @@
 # Changelog
 
+## [2.0.1] - 2026-03-09
+
+### Changed
+- `hook-development` skill: added `SubagentStart` matcher namespace requirement documentation — the `SubagentStart` matcher requires `namespace` to be specified for proper hook filtering, and omitting it will silently disable the hook.
+
 ## [2.0.0] - 2026-03-01
 
 ### Removed
