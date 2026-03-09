@@ -466,7 +466,7 @@ def cleanup_reflect_files(nonce_prefix: str, base_dir: str):
     """
     if _normal_exit:
         return
-    pattern = os.path.join(base_dir, f".reflect-scan-{nonce_prefix}-*.jsonl")
+    pattern = os.path.join(base_dir, f".reflect-scan-{nonce_prefix}-*")
     for filepath in glob.glob(pattern):
         try:
             os.remove(filepath)
@@ -515,8 +515,8 @@ def main():
 
         # 5. Size measurement and chunking
         encoding = tiktoken.get_encoding("cl100k_base")
-        max_chunk_tokens = 20_000
-        overlap_pct = 0.10
+        max_chunk_tokens = 80_000
+        overlap_pct = 0.05
         max_line_tokens = int(max_chunk_tokens / (1 + overlap_pct))  # effective_max
         detail_lines = cap_oversized_lines(detail_lines, encoding, max_line_tokens)
         detail_tokens = count_lines_tokens(detail_lines, encoding)
@@ -556,6 +556,24 @@ def main():
             except Exception:
                 pass
 
+            # 7b. Write queue file after chunk files
+            queue_file = os.path.join(pwd, f".reflect-scan-{nonce_prefix}-queue.txt")
+            with open(queue_file, "w") as f:
+                for job_type, filepath, line_count in scanner_jobs:
+                    f.write(filepath + "\n")
+
+            # 7c. Post-creation validation
+            for chunk_idx, (start_line, end_line) in enumerate(chunks):
+                chunk_file = os.path.join(pwd, f".reflect-scan-{nonce_prefix}-detail-{chunk_idx}.jsonl")
+                chunk_lines = detail_lines[start_line:end_line]
+                chunk_tokens = count_lines_tokens(chunk_lines, encoding)
+                if chunk_tokens > max_chunk_tokens:
+                    print(
+                        f"WARNING: chunk {chunk_idx} is {chunk_tokens} tokens "
+                        f"(budget: {max_chunk_tokens})",
+                        file=sys.stderr,
+                    )
+
         # 8. Output manifest
         print("## Reflect Filter Report")
         print(f"- Transcript: {session_jsonl}")
@@ -567,8 +585,13 @@ def main():
         for job_type, filepath, line_count in scanner_jobs:
             print(f"{job_type} {filepath} {line_count}")
         print()
+        if chunks is not None:
+            queue_file = os.path.join(pwd, f".reflect-scan-{nonce_prefix}-queue.txt")
+            print("## Queue File")
+            print(f"{queue_file}")
+            print()
         print("## Cleanup")
-        print(f"rm -f {os.path.join(pwd, f'.reflect-scan-{nonce_prefix}-*.jsonl')}")
+        print(f"rm -f {os.path.join(pwd, f'.reflect-scan-{nonce_prefix}-*')}")
 
         global _normal_exit
         _normal_exit = True

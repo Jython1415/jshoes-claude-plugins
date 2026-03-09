@@ -1,5 +1,20 @@
 # Changelog
 
+## [2.4.0] - 2026-03-09
+
+### Changed
+- `/reflect` filter script: increased per-chunk token budget from 20K to 80K tokens
+- `/reflect` filter script: reduced overlap from 10% to 5% (at 80K chunks, 5% overlap provides sufficient cross-chunk context)
+- `/reflect` filter script: added queue file output (`.reflect-scan-{nonce}-queue.txt`) listing chunk paths for scanner consumption
+- `/reflect` filter script: added post-creation validation warnings for chunks exceeding budget
+- `/reflect` scanner agent: converted to zero-tool agent (no tool access). Transcript chunks now injected via SubagentStart hook instead of Read tool
+- `/reflect` scanner agent: removed Read tool instructions; added context-injection awareness and error detection for missing transcript data
+- `/reflect` SKILL.md: updated scanner launch instructions to remove file path references (data delivery now handled by SubagentStart hook)
+
+### Added
+- `/reflect` SubagentStart hook (`reflect-scanner-inject.py`): pops chunk paths from queue file using file locking, reads chunks via Python I/O, injects content as additionalContext into scanner agents
+- `/reflect` hook registration (`hooks.json`): registers SubagentStart hook for `reflect-scanner` agent type
+
 ## [2.3.0] - 2026-03-08
 
 ### Changed
