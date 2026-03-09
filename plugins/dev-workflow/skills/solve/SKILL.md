@@ -84,7 +84,10 @@ fully determined (no sub-choices, no trade-offs worth surfacing), proceed
 directly to Phase 4 and note your approach in passing. If the approach
 contains any implementation sub-choices (even with clear recommendations
 for each), invoke `/consult` via the Skill tool -- never collapse
-sub-choices into a binary confirm/reject.
+sub-choices into a binary confirm/reject. If a detailed spec file was
+collaboratively designed in a prior session and is referenced by the
+issue, treat the issue as well-scoped — skip directly to Phase 4 and note
+the spec path when proceeding.
 
 **Needs design decisions** -- There are open questions about approach,
 trade-offs, or how the solution fits into the existing architecture.
