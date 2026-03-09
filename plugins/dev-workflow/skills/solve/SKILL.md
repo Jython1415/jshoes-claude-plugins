@@ -199,15 +199,21 @@ After code review and CI pass, run a quick check-in before presenting the
 PR for merge. Implementation and review surface decisions and
 considerations that weren't visible during planning:
 
-1. Review the diff (`gh pr diff`) and code review feedback for anything
+1. Re-read project convention documents (CLAUDE.md, README.md,
+   CONTRIBUTING.md, DEVELOPMENT.md, and similar files) in the repo root
+   and in directories containing modified files. Scan for pre-merge,
+   pre-deploy, or smoke-test requirements. Verify each requirement is
+   satisfied before proceeding. If any requirement is unmet, fix it
+   (commit and push) or flag it for the user.
+2. Review the diff (`gh pr diff`) and code review feedback for anything
    that diverged from the original plan or introduced new trade-offs
-2. If there are meaningful decisions or considerations that emerged,
+3. If there are meaningful decisions or considerations that emerged,
    present them to the user via AskUserQuestion:
    - Lead with what changed vs. the plan and why
    - Surface trade-offs the user should know about before merging
    - If everything went exactly to plan with no surprises, briefly
      confirm that and skip the interactive check-in
-3. If the user requests changes, implement them, re-run code review and
+4. If the user requests changes, implement them, re-run code review and
    CI, then return to this phase
 
 ## Phase 10: Present
