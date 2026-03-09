@@ -139,6 +139,20 @@ Omitting `"matcher"` is a silent failure: no error is reported, the hook appears
 - `decision: "block"` is parsed but NOT acted upon by the system
 - Use `additionalContext` for guidance instead of `decision`
 
+### SubagentStart Matcher Notes
+
+SubagentStart matchers match against the full `subagent_type` string including plugin namespace (e.g., `dev-workflow:reflect-scanner`). Using the bare agent name (e.g., `reflect-scanner`) will silently fail to match.
+
+Example matcher configuration:
+```json
+"SubagentStart": [
+  {
+    "matcher": "dev-workflow:reflect-scanner",
+    "hooks": [{ "type": "command", "command": "uv run --script ..." }]
+  }
+]
+```
+
 ## Transcript Parsing
 
 Some hooks receive a `transcript_path` field in their input — the path to the session's JSONL transcript file. When parsing it, **tool calls are nested inside `type: "assistant"` entries**, not at the top level:
