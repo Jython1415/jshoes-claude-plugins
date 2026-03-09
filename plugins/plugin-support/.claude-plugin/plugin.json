@@ -1,7 +1,7 @@
 {
   "name": "plugin-support",
   "description": "Hook authoring guide and reference for Claude Code development",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "author": {
     "name": "Jython1415",
     "url": "https://github.com/Jython1415"
