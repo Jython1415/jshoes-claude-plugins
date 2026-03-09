@@ -57,6 +57,26 @@ Multi-agent code review for pull requests. Use after creating or updating a PR, 
 
 **Heavy mode (`--heavy`):** 4 parallel agents check convention compliance (2 Sonnet agents) and bugs (2 Opus agents), with a validation pass per finding.
 
+### /research
+
+Systematic context-building through parallel research agents. Use before design decisions, implementation, or anytime you need to ground your understanding of a problem space.
+
+**When to use:**
+- Before implementing a complex feature
+- When you encounter unfamiliar APIs, tools, or platform behaviors
+- When assumptions need empirical verification
+- As part of /solve when the issue requires exploration before planning
+
+**What it does:** Identifies unknowns from the current context, launches parallel Haiku research agents to investigate specific directions (codebase state, external documentation, empirical verification, prior art, constraints, adjacent systems), synthesizes findings between rounds, and continues until the design space is clear enough for /consult. Prints the evolving knowledge map so the user can see progress and redirect as needed.
+
+**Research directions** (light scaffolding, pick what's relevant):
+- Codebase state: existing code, patterns, related subsystems
+- External documentation: official docs, limitations, community patterns
+- Empirical verification: direct testing of assumptions
+- Prior art: how others solved similar problems
+- Constraints & gotchas: platform limitations, edge cases
+- Adjacent context: related systems, dependencies, integration points
+
 ### /consult
 
 Collaborative decision-making with the user. Presents curated, high-leverage questions that demonstrate deep codebase understanding. Use any time you need the user's input on design decisions.
@@ -65,6 +85,7 @@ Collaborative decision-making with the user. Presents curated, high-leverage que
 - Design decisions with multiple valid approaches
 - Trade-offs where user priorities change the answer
 - Before significant work where understanding needs confirming
+- After /research has mapped the design space
 
 **What it does:** Curates questions ruthlessly (only high-leverage decisions), leads with a recommendation for each, surfaces weaknesses in the recommendation, and groups related questions (up to 4 per `AskUserQuestion` call).
 
