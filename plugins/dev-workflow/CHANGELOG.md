@@ -1,5 +1,10 @@
 # Changelog
 
+## [2.6.0] - 2026-03-09
+
+### Added
+- `/research` skill: systematic context-building through parallel research agents. Guides the orchestrator through multi-round research with light scaffolding for direction-finding, synthesis between rounds, and heuristic stop conditions. Feeds into /consult for design decisions.
+
 ## [2.5.0] - 2026-03-09
 
 ### Added
