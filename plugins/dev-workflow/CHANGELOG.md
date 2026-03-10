@@ -1,5 +1,14 @@
 # Changelog
 
+## [2.10.0] - 2026-03-10
+
+### Added
+
+- `/spec` skill for writing lightweight specs on complex issues. Produces a temporary spec file (Problem, Definition of Done, Decisions, Approach) that survives conversation compaction. Auto-invoked by `/solve` Phase 3 when an issue is classified as "Needs design decisions". Also usable standalone.
+- `/solve` Phase 3 now routes "Needs design decisions" issues through `/spec` instead of directly to `/consult`
+- `/solve` Phase 4 uses spec file as primary planning input when available
+- `/solve` Phase 5 deletes spec file in final commit (working artifact, not permanent docs)
+
 ## [2.9.0] - 2026-03-09
 
 ### Changed

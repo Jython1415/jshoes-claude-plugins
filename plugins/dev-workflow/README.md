@@ -77,6 +77,24 @@ Systematic context-building through parallel research agents. Use before design 
 - Constraints & gotchas: platform limitations, edge cases
 - Adjacent context: related systems, dependencies, integration points
 
+### /spec
+
+Write lightweight specs on complex issues. Produces a temporary spec file that survives conversation compaction and guides planning. Use when an issue requires significant design decisions before implementation.
+
+**When to use:**
+- During `/solve` for issues classified as "Needs design decisions"
+- Standalone when you need to document design trade-offs
+- Before major refactors or architectural changes
+- When multiple implementation approaches are viable
+
+**What it does:** Generates a structured temporary spec file with Problem statement, Definition of Done, key Decisions, and Approach. The spec is saved to the working directory, used by `/solve` Phase 4 for planning, and deleted in Phase 5 as a working artifact (not permanent documentation).
+
+**Spec sections:**
+- Problem: clear statement of what needs solving
+- Definition of Done: acceptance criteria and success metrics
+- Decisions: key design trade-offs and choices made
+- Approach: implementation strategy and phases
+
 ### /consult
 
 Collaborative decision-making with the user. Presents curated, high-leverage questions that demonstrate deep codebase understanding. Use any time you need the user's input on design decisions.

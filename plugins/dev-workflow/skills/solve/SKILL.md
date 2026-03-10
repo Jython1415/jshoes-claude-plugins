@@ -84,27 +84,23 @@ fully determined (no sub-choices, no trade-offs worth surfacing), proceed
 directly to Phase 4 and note your approach in passing. If the approach
 contains any implementation sub-choices (even with clear recommendations
 for each), invoke `/consult` via the Skill tool -- never collapse
-sub-choices into a binary confirm/reject. If a detailed spec file was
-collaboratively designed in a prior session and is referenced by the
-issue, treat the issue as well-scoped — skip directly to Phase 4 and note
-the spec path when proceeding.
+sub-choices into a binary confirm/reject. If a spec file produced by /spec
+(or collaboratively designed in a prior session) already exists and is
+referenced by the issue, treat the issue as well-scoped — skip directly to
+Phase 4 and note the spec path when proceeding.
 
 **Needs design decisions** -- There are open questions about approach,
 trade-offs, or how the solution fits into the existing architecture.
-Invoke `/consult` via the Skill tool to handle this phase -- do not call
-AskUserQuestion directly. The Skill tool ensures the full consult discipline
-is applied:
-
-- Present only high-leverage decisions where the user's input changes the
-  outcome
-- Lead with a recommendation, but surface the weakest parts of that
-  recommendation
-- Options must demonstrate deep codebase understanding -- never generic
-- Group related questions (up to 4) into a single AskUserQuestion call
-- Progress from high-level architectural decisions down to implementation
-  details
+Invoke `/spec` via the Skill tool. /spec handles Definition of Done
+confirmation, /consult rounds for design decisions, and writes a spec file.
+Do not invoke `/consult` directly — /spec manages the design workflow and
+produces a durable artifact.
 
 ## Phase 4: Plan
+
+If /spec produced a spec file in Phase 3, use it as the primary input for
+planning. The spec's Definition of Done defines acceptance criteria; the
+Approach section frames the design direction.
 
 Write a concrete implementation plan:
 
@@ -134,6 +130,10 @@ Execute the approved plan:
    - Has a clear title (under 72 characters)
    - Summarizes the changes in the body
    - Includes `Closes #N` for each issue being resolved
+
+If a spec file was created by /spec, delete it in the final commit before
+creating the PR. Spec files are working artifacts, not permanent
+documentation.
 
 ## Phase 6: Verify
 
