@@ -1,5 +1,11 @@
 # Changelog
 
+## [2.9.0] - 2026-03-09
+
+### Changed
+
+- /code-review --light: consolidate two-stage Haiku+Sonnet pipeline into single Haiku agent (#217)
+
 ## [2.8.0] - 2026-03-09
 
 ### Changed
