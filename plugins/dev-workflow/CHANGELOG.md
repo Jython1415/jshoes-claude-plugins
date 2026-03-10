@@ -1,5 +1,11 @@
 # Changelog
 
+## [2.8.0] - 2026-03-09
+
+### Changed
+
+- /solve Phase 9: mandate /consult instead of conditional AskUserQuestion for pre-merge check-in (#216)
+
 ## [2.7.0] - 2026-03-09
 
 ### Added

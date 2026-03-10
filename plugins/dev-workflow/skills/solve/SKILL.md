@@ -207,12 +207,12 @@ considerations that weren't visible during planning:
    (commit and push) or flag it for the user.
 2. Review the diff (`gh pr diff`) and code review feedback for anything
    that diverged from the original plan or introduced new trade-offs
-3. If there are meaningful decisions or considerations that emerged,
-   present them to the user via AskUserQuestion:
-   - Lead with what changed vs. the plan and why
-   - Surface trade-offs the user should know about before merging
-   - If everything went exactly to plan with no surprises, briefly
-     confirm that and skip the interactive check-in
+3. Invoke `/consult` via the Skill tool with whatever decisions,
+   trade-offs, or considerations emerged during implementation and
+   review. /consult will apply its own discipline (recommendations,
+   trade-offs, codebase-informed options). If truly nothing changed
+   vs. the plan, /consult will be quick — the cost of a trivial
+   /consult is far lower than missing a real decision.
 4. If the user requests changes, implement them, re-run code review and
    CI, then return to this phase
 
