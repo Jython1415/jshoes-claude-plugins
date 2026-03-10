@@ -20,8 +20,8 @@ for the flag passed.
 
 ## Arguments
 
-- `--light`: Two-stage Haiku+Sonnet pipeline. Mechanical checklist only —
-  no bug detection requiring reasoning. Use for cost-sensitive or
+- `--light`: Single Haiku agent. Mechanical checklist plus convention
+  check — no bug detection requiring reasoning. Use for cost-sensitive or
   high-frequency reviews.
 - `--heavy`: Full multi-agent Opus pipeline. Use for high-stakes PRs where
   maximum coverage matters. Adds Steps 1–3 (6–8 parallel agents); Steps
@@ -33,23 +33,26 @@ for the flag passed.
 
 Skip if `--light` was NOT passed.
 
-Two sequential agents: Haiku performs a mechanical checklist scan and returns
-structured JSON; Sonnet filters false positives, adds convention violations,
-and produces the final output. No reasoning over complex logic. No Opus.
-
-### Stage 1: Haiku checklist scan
+Single Haiku agent: performs a mechanical checklist scan, checks convention
+documents, filters false positives, and produces the final output. No
+reasoning over complex logic. No Opus.
 
 Launch **one Haiku agent** with the PR number and these exact instructions:
 
 ---
 
-You are performing a mechanical code review. Follow these steps exactly.
-Do not add analysis or judgment beyond what is specified.
+You are performing a lightweight code review. Follow these steps exactly.
 
-**Step 1: Get the diff.**
+**Step 1: Get the diff and PR context.**
 Run: `gh pr diff <PR_NUMBER>`
+Run: `gh pr view <PR_NUMBER>` to get the PR title and description.
 
-**Step 2: Enumerate changed files.**
+**Step 2: Read convention documents.**
+Read `CLAUDE.md` in the repo root (if it exists). Skim for short,
+directly checkable rules (e.g. "never commit X", "always use Y").
+Ignore aspirational guidelines and prose that requires interpretation.
+
+**Step 3: Enumerate changed files.**
 List every file path that appears after `diff --git` in the diff output.
 For each file, record:
 - `language`: the file extension (e.g. `.py`, `.ts`, `.sh`, `.json`, `.md`)
@@ -57,7 +60,7 @@ For each file, record:
   (check the diff header line: `new file mode` → new-file; `deleted file
   mode` → deleted; `rename from` → renamed; anything else → modified)
 
-**Step 3: Run the checklist.**
+**Step 4: Run the checklist.**
 For each added line (lines starting with `+` but NOT `+++`), check each
 item below. A line is a *comment line* if the first non-whitespace character
 after `+` is `#`, `//`, or `*`.
@@ -89,59 +92,24 @@ Convention checks:
   - Rule: if the majority of existing files in that directory use
     `snake_case`, `camelCase`, or `kebab-case`, the new file must match.
   - If the directory has fewer than two other files, skip this check.
+- **C2** — Does any added line directly violate a rule from the convention
+  documents read in Step 2? Only flag clear, unambiguous violations where
+  you can quote the exact rule.
 
-**Step 4: Return structured JSON — output ONLY this JSON, nothing else.**
+**Step 5: Filter false positives.**
+For each finding from Step 4: read 5 lines of context around the flagged
+line in the diff. A finding is a false positive if the flagged pattern is
+clearly safe in context (e.g., S1 flags a `password` variable in a test
+fixture with fake data; Q2 flags a `print()` inside `if DEBUG:`). Drop
+false positives. Keep everything else.
 
-```json
-{
-  "pr_number": <number>,
-  "changed_files": [
-    {"path": "<file path>", "language": "<extension>", "change_type": "<type>"}
-  ],
-  "findings": [
-    {
-      "file": "<file path>",
-      "line": <line number or null>,
-      "check": "<check ID, e.g. S1>",
-      "snippet": "<exact text of the flagged line, without the leading +>"
-    }
-  ],
-  "stats": {
-    "total_files": <number>,
-    "flagged_files": <number>,
-    "findings_count": <number>
-  }
-}
-```
+**Step 6: Return findings.**
+Return each surviving finding with: file path, line number, check ID,
+one-sentence description, severity (`critical` / `major` / `minor`).
 
-If there are no findings, return `"findings": []`.
+If there are no findings:
 
----
-
-### Stage 2: Sonnet synthesis
-
-After the Haiku agent returns, launch **one Sonnet agent** with the PR number,
-the Haiku JSON, and these instructions:
-
----
-
-You are synthesizing a lightweight code review from a pre-screened set of
-mechanical findings. Work through these steps:
-
-1. Run `gh pr view <PR_NUMBER>` to get the PR title and description.
-2. Read `CLAUDE.md` in the repo root (if it exists). Skim for short,
-   directly checkable rules (e.g. "never commit X", "always use Y").
-   Ignore aspirational guidelines and prose that requires interpretation.
-3. For each finding in the JSON: read 5 lines of context around the flagged
-   line from the diff. Ask one question: **Is this a false positive?** A
-   finding is a false positive if the flagged pattern is clearly safe in
-   context (e.g., S1 flags a `password` variable in a test fixture with
-   fake data; Q2 flags a `print()` inside `if DEBUG:`). Drop false positives.
-   Keep everything else.
-4. Scan the diff for direct violations of the CLAUDE.md rules from step 2.
-   Add any violations you find with `check: "convention"`.
-5. Return findings in this format: file path, line number, check ID,
-   one-sentence description, severity (`critical` / `major` / `minor`).
+    No issues found.
 
 ---
 
