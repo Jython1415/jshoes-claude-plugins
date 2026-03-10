@@ -134,6 +134,38 @@ Files a well-researched GitHub issue from a brief description. Use when asked to
 - Drafts a structured issue with Problem, Current state, and Desired outcome sections
 - Files via `gh issue create` (or body file for multi-line bodies)
 
+## Architecture
+
+### Design Philosophy
+
+Skills are **concern-oriented** — each solves one problem — with **conditional routing**, not pipeline-oriented. This keeps skills reusable: `/consult` can be invoked standalone, by `/solve` for scoping decisions, or by `/spec` for design questions. Similarly, `/research` is optionally invoked by `/solve` Phase 2 when the issue involves unfamiliar APIs, external systems, or explicit investigation needs.
+
+### Skill Dependency Graph
+
+```
+/session → /triage → /solve → /reflect
+                       ↓
+              /spec ←→ /consult
+                       ↓
+                   /code-review
+```
+
+- `/session` coordinates the full dev lifecycle: triage, solve, reflect
+- `/solve` assesses issue complexity and routes to `/spec` (for design-heavy issues) or direct implementation
+- `/spec` wraps `/consult` to produce durable spec artifacts; `/consult` provides reusable decision-making
+- `/solve` optionally invokes `/research` in Phase 2 for unfamiliar territory
+- `/code-review` is the final approval gate (standalone or called by `/solve` Phase 8)
+
+### Routing Model
+
+`/solve` classifies the issue on intake and conditionally invokes the right skill:
+- **Well-scoped issues** (clear acceptance criteria, determined approach) → skip directly to implementation
+- **Issues needing design decisions** (multiple approaches, significant trade-offs) → route through `/spec` + `/consult`
+- **Unfamiliar territory** (unknown APIs, external systems) → invoke `/research` in Phase 2
+- **Complex scoping** (unclear boundaries, ambiguous requirements) → invoke `/consult` to refine the problem
+
+This is different from pipeline models (like ed3d-plan-and-execute) where every issue flows through design → plan → execute sequentially. The conditional routing keeps the common path fast.
+
 ## Agents
 
 ### worktree-implementor

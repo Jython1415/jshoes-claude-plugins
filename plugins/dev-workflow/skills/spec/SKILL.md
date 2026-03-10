@@ -110,3 +110,23 @@ deleted in the final commit before the PR is presented.
   issue body, say so and skip spec generation. Not every "needs design
   decisions" issue needs a full spec — sometimes one `/consult` round is
   enough and the decisions can be noted inline.
+
+## Role in the skill collection
+
+`/spec` is a **workflow that produces a durable artifact** (the spec file).
+It uses `/consult` internally for design decisions but adds:
+
+- **Definition of Done** — locks in success criteria before exploring
+  approaches (prevents goal drift)
+- **Spec file** — a working document that survives context compaction and
+  guides implementation
+
+The relationship: `/consult` is a reusable decision primitive (stateless,
+artifact-free). `/spec` is a workflow that wraps `/consult` and produces a
+file. This is analogous to a function vs. a program that calls it.
+
+**When /solve routes to /spec vs /consult directly:**
+- `/spec` — "Needs design decisions" issues where the complexity warrants
+  a durable artifact (DoD + decisions + approach captured in a file)
+- `/consult` — Well-scoped issues with implementation sub-choices, or
+  post-implementation trade-offs in Phase 9 (decisions don't need a file)

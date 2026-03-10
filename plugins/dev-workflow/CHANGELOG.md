@@ -1,5 +1,17 @@
 # Changelog
 
+## [2.11.0] - 2026-03-10
+
+### Added
+- /solve Phase 2 now conditionally invokes /research for issues involving unfamiliar APIs, external systems, or explicit investigation needs
+- Architecture overview section in README documenting skill dependency graph and design philosophy
+
+### Changed
+- /solve Phase 3 routing criteria tightened with concrete, checkable conditions (replaces vague "obvious" and "low-risk" language)
+- /consult SKILL.md documents its role as the reusable decision-making primitive
+- /spec SKILL.md documents its relationship to /consult and when /solve routes to each
+- dev-workflow description updated to emphasize concern-oriented design with conditional routing
+
 ## [2.10.0] - 2026-03-10
 
 ### Added
