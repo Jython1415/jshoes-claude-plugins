@@ -33,6 +33,7 @@ These tools neither increment nor reset the streak:
 - `AskUserQuestion` — clarification request (not task work)
 - `TaskCreate`, `TaskUpdate`, `TaskGet`, `TaskList` — task list management
 - `EnterPlanMode`, `ExitPlanMode` — planning mode transitions
+- `ToolSearch` — loads deferred tools (prerequisite for other tools; cannot be delegated)
 
 ## Unblocked tools
 

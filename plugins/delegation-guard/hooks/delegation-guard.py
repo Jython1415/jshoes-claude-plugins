@@ -74,6 +74,7 @@ EXEMPT_TOOLS = {
     "TaskList",
     "EnterPlanMode",
     "ExitPlanMode",
+    "ToolSearch",
 }
 
 # Tools that are never hard-blocked on first call; instead fire advisory at streak=1

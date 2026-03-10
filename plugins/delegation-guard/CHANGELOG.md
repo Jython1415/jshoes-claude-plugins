@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.3.1] - 2026-03-09
+
+### Fixed
+
+- Exempt `ToolSearch` from streak counting — it's a prerequisite tool that loads deferred tools and cannot be delegated (#215)
+
 ## [1.3.0] - 2026-03-08
 
 ### Changed
