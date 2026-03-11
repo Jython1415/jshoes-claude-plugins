@@ -121,3 +121,19 @@ Acknowledge their choice briefly and adapt your plan. If they chose
 something you didn't recommend, adjust without resistance -- they have
 context you don't. If their choice invalidates downstream decisions
 you were going to ask about, update those before presenting them.
+
+## Role in the skill collection
+
+`/consult` is the **reusable decision-making primitive** in the dev-workflow
+plugin. It handles structured user interaction for design choices — any skill
+that needs collaborative decisions should invoke `/consult` rather than
+calling `AskUserQuestion` directly for design questions.
+
+Current consumers:
+- `/solve` — Phases 3 (well-scoped sub-choices), 4 (plan approval with
+  design choices), and 9 (post-implementation trade-offs)
+- `/spec` — Step 2 (resolving design decisions within the spec workflow)
+
+`/consult` is deliberately stateless and artifact-free. It asks questions,
+gets answers, and returns. Skills that need durable artifacts (like spec
+files) wrap `/consult` rather than extending it.

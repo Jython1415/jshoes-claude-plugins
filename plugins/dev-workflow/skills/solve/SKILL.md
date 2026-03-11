@@ -58,7 +58,13 @@ research directly:
    When the codebase has infrastructure, plugins, or related subsystems,
    check whether an established pattern already handles the problem you're
    solving. Adopting an existing pattern is preferable to reinventing it.
-6. **Follow every link in the issue.** If the issue references papers,
+6. **Invoke `/research` for unfamiliar territory.** If the issue involves
+   external APIs, systems you haven't worked with in this codebase, or
+   explicitly calls for investigation, invoke `/research` via the Skill
+   tool to systematically map the design space before proceeding. Most
+   issues won't need this — targeted exploration (steps 1-5) is sufficient
+   when the domain is familiar.
+7. **Follow every link in the issue.** If the issue references papers,
    docs, blog posts, or external resources, fetch and read them with
    WebFetch before moving on. If it references specific code or files,
    read them. If it says "investigation required," complete that
@@ -74,13 +80,14 @@ and signal that you haven't done the work.
 
 Triage the issue(s) into one of three categories:
 
-**Trivial** -- The fix is obvious, mechanical, and low-risk (typo, config
-change, single-line fix). Skip directly to Phase 4 without user
-interaction.
+**Trivial** -- ALL of these are true: (1) the fix touches 1-2 files,
+(2) the change is mechanical (typo, config value, version bump, rename),
+(3) no behavioral change that could break callers. Skip directly to
+Phase 4 without user interaction.
 
-**Well-scoped** -- The issue clearly describes what to build and the
-implementation path is clear from your exploration. If the approach is
-fully determined (no sub-choices, no trade-offs worth surfacing), proceed
+**Well-scoped** -- The issue describes what to build and the exploration
+in Phase 2 reveals a clear implementation path. If the approach is fully
+determined (no sub-choices, no trade-offs worth surfacing), proceed
 directly to Phase 4 and note your approach in passing. If the approach
 contains any implementation sub-choices (even with clear recommendations
 for each), invoke `/consult` via the Skill tool -- never collapse
@@ -89,12 +96,15 @@ sub-choices into a binary confirm/reject. If a spec file produced by /spec
 referenced by the issue, treat the issue as well-scoped — skip directly to
 Phase 4 and note the spec path when proceeding.
 
-**Needs design decisions** -- There are open questions about approach,
-trade-offs, or how the solution fits into the existing architecture.
-Invoke `/spec` via the Skill tool. /spec handles Definition of Done
-confirmation, /consult rounds for design decisions, and writes a spec file.
-Do not invoke `/consult` directly — /spec manages the design workflow and
-produces a durable artifact.
+**Needs design decisions** -- ANY of these are true: (1) the issue has
+open questions about approach with multiple viable options, (2) the
+solution involves trade-offs the user should weigh, (3) the change
+affects architecture or interfaces that other code depends on, (4) you
+cannot write a concrete plan without making assumptions the user should
+validate. Invoke `/spec` via the Skill tool. /spec handles Definition of
+Done confirmation, /consult rounds for design decisions, and writes a spec
+file. Do not invoke `/consult` directly — /spec manages the design workflow
+and produces a durable artifact.
 
 ## Phase 4: Plan
 
