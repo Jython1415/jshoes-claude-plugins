@@ -131,7 +131,7 @@ calling `AskUserQuestion` directly for design questions.
 
 Current consumers:
 - `/solve` — Phases 3 (well-scoped sub-choices), 4 (plan approval with
-  design choices), and 9 (post-implementation trade-offs)
+  design choices), and 10 (post-implementation trade-offs)
 - `/spec` — Step 2 (resolving design decisions within the spec workflow)
 
 `/consult` is deliberately stateless and artifact-free. It asks questions,

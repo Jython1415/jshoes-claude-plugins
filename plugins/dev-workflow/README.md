@@ -39,7 +39,7 @@ Turns one or more GitHub issues into a reviewed pull request. Use when asked to 
 - `--light` - Use the Haiku-first checklist review instead of the default single-Sonnet agent
 - `--heavy` - Use the full multi-agent Opus review instead of the default single-Sonnet agent
 
-**Phases:** Intake → Explore → Scope (with `/consult` if needed) → Plan → Implement → Verify → Review → Confirm CI → Pre-merge check-in → Present
+**Phases:** Intake → Explore → Scope (with `/consult` if needed) → Plan → Implement → Verify → Review → Confirm CI → Impact analysis → Pre-merge check-in → Present
 
 ### /code-review
 
