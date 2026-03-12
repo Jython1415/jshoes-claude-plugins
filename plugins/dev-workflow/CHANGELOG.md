@@ -1,5 +1,15 @@
 # Changelog
 
+## [2.12.0] - 2026-03-12
+
+### Added
+- `/solve` Phase 9 (Impact Analysis): checks dependent issues, scans for ripple effects (docs, shared code, config, versions), and categorizes findings as fix-in-PR, follow-up issue, or no action. Catches project-wide impact that code review and CI miss.
+
+### Changed
+- `/solve` phases renumbered: Pre-merge Check-in is now Phase 10 (was 9), Present is now Phase 11 (was 10)
+- `/solve` Phase 10 (Pre-merge Check-in): /consult now includes impact analysis findings alongside implementation and review considerations
+- `/consult` consumer documentation updated with new /solve phase numbers
+
 ## [2.11.0] - 2026-03-10
 
 ### Added

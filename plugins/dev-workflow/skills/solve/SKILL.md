@@ -203,9 +203,47 @@ loop, but the CI run is the source of truth.
 
 If the project has no CI, skip this phase.
 
-## Phase 9: Pre-merge Check-in
+## Phase 9: Impact Analysis
 
-After code review and CI pass, run a quick check-in before presenting the
+Before the pre-merge check-in, assess the broader impact of the change
+on the project. Code review checks the diff; CI runs existing tests.
+This phase catches what both miss: ripple effects beyond the changed
+files.
+
+1. **Check dependent issues.** Run `gh issue list --search "linked:<issue>"`
+   or search for issues that reference the one being solved. For each
+   related issue:
+   - Has this change unblocked it, partially addressed it, or
+     invalidated its assumptions?
+   - Does its description or acceptance criteria need updating?
+   - Note findings for /consult in Phase 10.
+
+2. **Scan for ripple effects.** Review the PR diff and check whether any
+   of these need updates:
+   - Documentation (README, CLAUDE.md, CONTRIBUTING.md, inline docs)
+     that references changed behavior, interfaces, or file paths
+   - Shared code (utilities, types, constants) consumed by files
+     outside the PR's diff
+   - Configuration files, CI workflows, or build scripts affected by
+     renamed or restructured code
+   - Version strings, changelogs, or marketplace metadata that the
+     project's conventions require updating alongside code changes
+
+3. **Collect findings.** Categorize each finding as:
+   - **Fix in this PR** — small enough to address now (doc updates,
+     version bumps, issue description edits)
+   - **File follow-up issue** — too large for this PR but should be
+     tracked
+   - **No action needed** — noted but not actionable
+
+   Apply "fix in this PR" items immediately (commit and push). For
+   "file follow-up issue" items, draft issue descriptions to present
+   in Phase 10. If no actionable findings emerge, proceed directly
+   to Phase 10 — do not fabricate issues.
+
+## Phase 10: Pre-merge Check-in
+
+After code review, CI, and impact analysis, run a quick check-in before presenting the
 PR for merge. Implementation and review surface decisions and
 considerations that weren't visible during planning:
 
@@ -218,15 +256,15 @@ considerations that weren't visible during planning:
 2. Review the diff (`gh pr diff`) and code review feedback for anything
    that diverged from the original plan or introduced new trade-offs
 3. Invoke `/consult` via the Skill tool with whatever decisions,
-   trade-offs, or considerations emerged during implementation and
-   review. /consult will apply its own discipline (recommendations,
+   trade-offs, or considerations emerged during implementation,
+   review, and impact analysis. /consult will apply its own discipline (recommendations,
    trade-offs, codebase-informed options). If truly nothing changed
    vs. the plan, /consult will be quick — the cost of a trivial
    /consult is far lower than missing a real decision.
 4. If the user requests changes, implement them, re-run code review and
    CI, then return to this phase
 
-## Phase 10: Present
+## Phase 11: Present
 
 Give the user:
 
