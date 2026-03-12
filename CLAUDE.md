@@ -13,7 +13,7 @@ Any task requiring more than 1 tool call should be delegated. If you're making s
 - `plugins/plugin-support/` - Hook development skill and hook reference docs
   - `skills/hook-development/SKILL.md` — hook authoring guide
 - `plugins/delegation-guard/` - delegation-guard hook (execution discipline)
-- `plugins/stop-momentum/` - stop-momentum hook (execution discipline)
+- `plugins/stop-advisory/` - stop-advisory hook (execution discipline)
 - `plugins/frontend-design/` - Opinionated frontend design skill
 - `plugins/dev-workflow/` - Dev workflow skills (if present)
 - Root `CLAUDE.md` - Project instructions for Claude
