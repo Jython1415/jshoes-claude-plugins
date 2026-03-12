@@ -1,7 +1,7 @@
 {
-  "name": "stop-momentum",
-  "description": "Stop hook that prevents premature session stops via an ack-token handshake.",
-  "version": "1.0.0",
+  "name": "stop-advisory",
+  "description": "Stop hook that provides configurable advisory guidance before session stops, with an ack-token handshake for deliberate confirmation.",
+  "version": "2.0.0",
   "author": {
     "name": "Jython1415",
     "url": "https://github.com/Jython1415"

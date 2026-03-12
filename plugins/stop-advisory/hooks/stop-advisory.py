@@ -3,17 +3,18 @@
 # requires-python = ">=3.9"
 # ///
 """
-stop-momentum: Enforce execution momentum via an ack token handshake.
+stop-advisory: Stop interceptor with configurable advisory guidance and ack token handshake.
 
 Event: Stop
 
-Purpose: Prevents Claude from stopping prematurely by requiring deliberate
-acknowledgment before allowing a session stop. On each Stop event, the hook
-checks whether the last assistant message contains the expected ack token. If
-not, it blocks the stop and asks Claude to confirm with a newly generated token.
+Purpose: Provides an optional advisory prompt before session stops via an ack token
+handshake. If guidance is configured, the hook enforces deliberate acknowledgment
+before allowing a stop. If no guidance is configured, the hook is a no-op.
 
 Behavior:
 - If stop_hook_active is True → allow immediately (prevents infinite loops)
+- Load guidance from STOP_HOOK_GUIDANCE env var or .claude/stop-guidance.md file
+- If NO guidance configured → allow silently (no-op)
 - If last assistant message contains the current ack token → allow, delete state
 - Otherwise → block with guidance and a new ack token
 
@@ -28,9 +29,10 @@ State management:
 - State files stored in: ~/.claude/hook-state/stop-ack-{session_id}
 - Override location: CLAUDE_HOOK_STATE_DIR environment variable
 
-Custom guidance:
-- If .claude/momentum-guide.md exists in the project's cwd, its contents are
-  used as the guidance block instead of the built-in default message.
+Guidance configuration:
+- Priority 1: STOP_HOOK_GUIDANCE environment variable (raw text content)
+- Priority 2: .claude/stop-guidance.md file in project cwd
+- If neither exists: hook is a no-op (allows all stops silently)
 """
 import json
 import os
@@ -42,12 +44,6 @@ from pathlib import Path
 # State directory location
 _state_dir_env = os.environ.get("CLAUDE_HOOK_STATE_DIR")
 STATE_DIR = Path(_state_dir_env) if _state_dir_env else Path.home() / ".claude" / "hook-state"
-
-DEFAULT_GUIDANCE = """EXECUTION MOMENTUM CHECK: Before stopping, consider:
-- Have you completed what the user actually asked for, or just a sub-task within a larger request?
-- If you have a question, status update, or finding to share, prefer /consult over stopping — it gives the user a structured way to respond without treating this as a session boundary.
-- If this is a genuine session end (user's request fully fulfilled, or an explicit checkpoint they asked for), you may stop deliberately."""
-
 
 def generate_token() -> str:
     """Generate a random ack token."""
@@ -86,15 +82,30 @@ def delete_state(session_id: str) -> None:
         pass
 
 
-def load_custom_guidance(cwd: str) -> str | None:
-    """Load custom guidance from .claude/momentum-guide.md in the project cwd."""
+def load_guidance(cwd: str) -> str | None:
+    """
+    Load advisory guidance from configured sources.
+
+    Priority:
+    1. STOP_HOOK_GUIDANCE environment variable (raw text content)
+    2. .claude/stop-guidance.md file in the project cwd
+
+    Returns None if no guidance is configured.
+    """
+    # Priority 1: Check environment variable
+    env_guidance = os.environ.get("STOP_HOOK_GUIDANCE")
+    if env_guidance:
+        return env_guidance.strip()
+
+    # Priority 2: Check file in project cwd
     try:
-        guide_path = Path(cwd) / ".claude" / "momentum-guide.md"
+        guide_path = Path(cwd) / ".claude" / "stop-guidance.md"
         if guide_path.exists():
             return guide_path.read_text().strip()
-        return None
     except Exception:
-        return None
+        pass
+
+    return None
 
 
 def build_block_message(guidance: str, token: str) -> str:
@@ -118,22 +129,26 @@ def main():
         last_message = input_data.get("last_assistant_message", "")
         cwd = input_data.get("cwd", "")
 
-        # Step 2: Check for existing ack token in state
+        # Step 2: Load guidance from configured sources
+        guidance = load_guidance(cwd)
+
+        # Step 3: If NO guidance configured, allow silently (no-op)
+        if guidance is None:
+            print("{}")
+            sys.exit(0)
+
+        # Step 4: Check for existing ack token in state
         existing_token = read_token(session_id)
 
-        # Step 3: If token exists and is found in last message → allow
+        # Step 5: If token exists and is found in last message → allow and delete state
         if existing_token and existing_token in last_message:
             delete_state(session_id)
             print("{}")
             sys.exit(0)
 
-        # Step 4: Block — generate new token, write state, build message
+        # Step 6: Block — generate new token, write state, build message
         new_token = generate_token()
         write_token(session_id, new_token)
-
-        # Load custom or default guidance
-        custom_guidance = load_custom_guidance(cwd)
-        guidance = custom_guidance if custom_guidance is not None else DEFAULT_GUIDANCE
 
         message = build_block_message(guidance, new_token)
 
@@ -145,7 +160,7 @@ def main():
         sys.exit(0)
 
     except Exception as e:
-        print(f"Error in stop-momentum hook: {e}", file=sys.stderr)
+        print(f"Error in stop-advisory hook: {e}", file=sys.stderr)
         print("{}")
         sys.exit(1)
 
