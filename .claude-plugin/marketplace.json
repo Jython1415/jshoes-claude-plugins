@@ -9,6 +9,29 @@
   },
   "plugins": [
     {
+      "name": "alt-text",
+      "description": "Guidance for writing effective image alt-text grounded in accessibility standards and screen reader user research. Provides a classification framework, image-type specific rules, identity description decision tree, and quality checklist.",
+      "version": "1.0.0",
+      "author": {
+        "name": "Jython1415",
+        "url": "https://github.com/Jython1415"
+      },
+      "source": "./plugins/alt-text",
+      "category": "accessibility",
+      "keywords": [
+        "alt-text",
+        "accessibility",
+        "a11y",
+        "images",
+        "screen-reader",
+        "wcag",
+        "guidance"
+      ],
+      "skills": [
+        "./skills/alt-text"
+      ]
+    },
+    {
       "name": "essentials",
       "description": "Essential hooks for Claude Code: safety guards, attribution reminders, GPG assistance, heredoc prevention, and event logging",
       "version": "3.1.0",
