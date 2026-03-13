@@ -63,7 +63,8 @@ When creating a new plugin from scratch, these files/entries are required:
 3. `plugins/<name>/CHANGELOG.md` — initial `## [1.0.0]` entry
 4. `plugins/<name>/README.md` — description, installation commands, requirements
 5. `.claude-plugin/marketplace.json` — add entry with matching version, source path, category, keywords, and skills array
-6. Run code review before committing
+6. Verify marketplace.json entry: version matches plugin.json, skill paths are correct, entry is in alphabetical order by name
+7. Run code review before committing
 
 When adding new capabilities (agents or skills) to an existing plugin:
 - Update the `description` field in both `plugins/<name>/.claude-plugin/plugin.json` and `.claude-plugin/marketplace.json` to mention the new capabilities
