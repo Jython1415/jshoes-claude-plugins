@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.1.0] - 2026-03-25
+
+### Added
+- `/reflect` Step 1: added "Wins" to the session scan checklist — approaches that worked, tools used effectively, patterns that paid off
+- `/reflect` Step 2: added "approaches that worked well" as a memory persistence target
+- `/reflect` Principles: added "Wins are signal, not decoration" — persist confirmations alongside corrections to prevent drift toward over-caution
+
 ## [3.0.0] - 2026-03-25
 
 ### Changed
