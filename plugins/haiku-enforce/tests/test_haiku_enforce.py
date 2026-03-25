@@ -91,11 +91,13 @@ class TestAgentOverride:
         hook_out = output["hookSpecificOutput"]
         assert hook_out["updatedInput"]["model"] == "haiku"
 
-    def test_updated_input_only_contains_model(self):
-        """updatedInput must only contain the model field (merge, don't replace)."""
-        output = run_hook("Agent", tool_input={"prompt": "test", "description": "test"})
+    def test_updated_input_preserves_original_fields(self):
+        """updatedInput must preserve all original tool_input fields alongside model override."""
+        output = run_hook("Agent", tool_input={"prompt": "test prompt", "description": "test desc"})
         hook_out = output["hookSpecificOutput"]
-        assert hook_out["updatedInput"] == {"model": "haiku"}
+        assert hook_out["updatedInput"]["model"] == "haiku"
+        assert hook_out["updatedInput"]["prompt"] == "test prompt"
+        assert hook_out["updatedInput"]["description"] == "test desc"
 
 
 # ---------------------------------------------------------------------------
