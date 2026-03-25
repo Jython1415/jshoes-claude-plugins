@@ -1,147 +1,94 @@
 ---
 name: reflect
 description: >
-  End-of-session retrospective. Scans JSONL transcript via a bundled filter
-  script and scanner agents using evidence-based checklists to identify session
-  learnings — user corrections, execution failures, approach pivots, and
-  codifiable patterns — then proposes concrete improvements to docs, skills,
-  and memory. Use at the end of a session or after notable missteps or discoveries.
-argument-hint: "[--light] [--heavy] [--full]"
+  End-of-session retrospective. Reviews what happened, extracts lessons,
+  and proposes concrete improvements to docs, skills, and memory to
+  make future sessions better. Use at the end of a session, after a
+  notable misstep or discovery, or when the user asks to wrap up or
+  reflect. Run before context is lost.
 ---
 
 # Reflect
 
-Extract lessons from the current session and turn them into durable improvements. This skill scans the session transcript via a bundled filter script and scanner agents with evidence-based checklists, identifying findings that should be persisted to docs, skills, and memory.
-
-## Why this exists
-
-Sessions produce learnings that prevent repeated mistakes, codify patterns, and improve future sessions. Without explicit reflection, insights are lost when context resets. The /reflect skill turns ephemeral session knowledge into durable project improvements.
-
-## Your role
-
-You are the editor — scanners are evidence gatherers. They extract raw findings from the transcript. You decide what matters, where it goes, and how to present it to the user. This requires understanding the project, its docs, and what's already documented.
-
-A good finding is: specific to this repo (not generic advice), actionable (can be written into a doc or skill), and durable (will matter in future sessions, not just this one).
+Extract lessons from the current session and turn them into durable
+improvements. This skill exists because context disappears between
+sessions -- if a learning isn't persisted, it's lost.
 
 ## When to use this
 
-- End of a productive session, before context is lost
+- End of a productive session, before context compaction
 - After a session with notable missteps or discoveries
 - When you notice patterns that should be codified
 - The user asks you to wrap up or reflect
 
-## Arguments
+## Step 1: Review the session
 
-- `--light`: Haiku scanners. Lower cost, still effective for straightforward sessions.
-- `--heavy`: Double the detail scanners (2x Sonnet). Redundancy catches more findings.
-- `--full`: Scan entire transcript, not just the current segment. Useful for long sessions with important early context.
-- Default (no flag): Single Sonnet scanner per chunk.
+Scan the current conversation for:
 
-## Persistence target hierarchy
+- **Missteps**: Where did you go wrong? What caused it? Could better
+  docs, skills, or memory have prevented it?
+- **Discoveries**: What did you learn about the codebase, tools, APIs,
+  or workflows that wasn't documented?
+- **Patterns**: What did you do repeatedly that could be codified into
+  a convention, skill, or checklist?
+- **User corrections**: Where did the user redirect you? These are the
+  highest-signal improvements -- the user spent their time correcting
+  something that should be self-correcting.
+- **Tool/workflow friction**: Where did tooling slow you down or cause
+  confusion? Are there gotchas worth recording?
 
-When deciding where a finding should go, promote as broadly as it's useful:
+Be honest. The value of this skill is proportional to your willingness
+to identify what went wrong, not just what went well.
 
-1. **Project documentation** (README, CONTRIBUTING, DEVELOPMENT, etc.) — Findings that benefit all contributors. Architecture decisions, conventions, gotchas.
-2. **Plugin/agent architecture** (SKILL.md files, agent definitions, hook code) — Findings that improve the tools themselves. Workflow improvements, skill refinements.
-3. **CLAUDE.md / AGENTS.md** — Findings that affect how Claude operates in this repo. Workflow rules, safety constraints, behavioral guidelines.
-4. **MEMORY.md / topic files** — Project-specific quirks, user preferences, tool behavior discoveries. The most narrow scope.
+## Step 2: Categorize improvements
 
-**Skip**: One-time fixes, already-documented items, transient debugging insights for bugs that are now fixed.
+Sort findings into where they should be persisted:
 
-## Step 1: Filter and scan
+### Documentation (CLAUDE.md, DEVELOPMENT.md, etc.)
+- Architecture decisions and their rationale (especially WHERE Claude
+  tends to diverge from the correct approach)
+- Conventions that were discovered or clarified during the session
+- Gotchas and footguns that cost time
+- Module reference updates (new files, changed interfaces)
 
-1. Generate a nonce:
-   ```bash
-   echo "REFLECT_SCAN_MARKER_$(uuidgen)"
-   ```
+### Skills (.claude/skills/)
+- Workflow patterns that were used successfully and should be repeatable
+- Existing skills that need updates based on how they performed
+- New skills that would codify a multi-step process you did manually
 
-2. Run the bundled filter script:
-   ```bash
-   uv run --script ${CLAUDE_SKILL_DIR}/scripts/reflect-filter.py --nonce $NONCE --mode $MODE [--full]
-   ```
-   Where `$MODE` is `light`, `default`, or `heavy` based on the flag passed.
+### Memory (MEMORY.md, topic files)
+- Project-specific learnings and gotchas
+- User preferences discovered during the session
+- Tool behavior quirks
+- Open issues tracking updates
 
-3. Parse the manifest output. It lists scanner jobs (file paths + scan types) and a cleanup command.
+### Nothing
+Some findings don't need to be persisted. Don't force it. If a learning
+is obvious, transient, or already documented, skip it.
 
-4. Launch scanner agents per the manifest:
-   - The **Scanner Jobs** header includes the exact count (e.g., "7 scanners to launch"). Launch exactly that many Agent calls, numbered 0 through N-1. Missing a scanner means one chunk goes unscanned.
-   - Each agent uses `subagent_type: "dev-workflow:reflect-scanner"`
-   - The scanner receives its transcript chunk automatically via the
-     SubagentStart hook — do NOT include file paths in the prompt
-   - The prompt should contain ONLY a brief assignment identifier
-   - For `--light`: pass Haiku model for scanners
-   - For default/`--heavy`: pass Sonnet model for scanners
-   - Launch all scanners in a single parallel tool call
+## Step 3: Propose changes
 
-   **Example — 3-job manifest means exactly 3 Agent calls:**
-   ```
-   Agent(
-     subagent_type: "dev-workflow:reflect-scanner",
-     description: "Scan transcript chunk 0",
-     prompt: "Perform a DETAIL scan on the transcript chunk in your context. You are scanner 0."
-   )
-   Agent(
-     subagent_type: "dev-workflow:reflect-scanner",
-     description: "Scan transcript chunk 1",
-     prompt: "Perform a DETAIL scan on the transcript chunk in your context. You are scanner 1."
-   )
-   Agent(
-     subagent_type: "dev-workflow:reflect-scanner",
-     description: "Scan transcript chunk 2",
-     prompt: "Perform a DETAIL scan on the transcript chunk in your context. You are scanner 2."
-   )
-   ```
-
-   **Example — 5-job manifest means exactly 5 Agent calls (no skipping):**
-   ```
-   Agent(
-     subagent_type: "dev-workflow:reflect-scanner",
-     description: "Scan transcript chunk 0",
-     prompt: "Perform a DETAIL scan on the transcript chunk in your context. You are scanner 0."
-   )
-   Agent(
-     subagent_type: "dev-workflow:reflect-scanner",
-     description: "Scan transcript chunk 1",
-     prompt: "Perform a DETAIL scan on the transcript chunk in your context. You are scanner 1."
-   )
-   Agent(
-     subagent_type: "dev-workflow:reflect-scanner",
-     description: "Scan transcript chunk 2",
-     prompt: "Perform a DETAIL scan on the transcript chunk in your context. You are scanner 2."
-   )
-   Agent(
-     subagent_type: "dev-workflow:reflect-scanner",
-     description: "Scan transcript chunk 3",
-     prompt: "Perform a DETAIL scan on the transcript chunk in your context. You are scanner 3."
-   )
-   Agent(
-     subagent_type: "dev-workflow:reflect-scanner",
-     description: "Scan transcript chunk 4",
-     prompt: "Perform a DETAIL scan on the transcript chunk in your context. You are scanner 4."
-   )
-   ```
-
-5. After all scanners complete, run the cleanup command from the manifest to remove intermediate files.
-
-## Step 3: Synthesize
-
-Receive all scanner outputs. Merge findings:
-- If two scanners report the same finding, keep it once with higher confidence
-- If findings conflict, use your judgment
-- Drop findings that are already documented in the project's CLAUDE.md, MEMORY.md, or other docs
-- Drop findings that are generic advice rather than repo-specific insights
-
-## Step 4: Propose
-
-Present findings to the user via AskUserQuestion. Pack up to **4 findings per call**. Each question is independent; the user can answer them simultaneously.
+Pack all proposed changes into a **single AskUserQuestion call** with up
+to 4 questions — one question per proposed change. Each question is its
+own independent panel; the user can answer them simultaneously rather
+than sequentially.
 
 For each question:
-- **question text**: One sentence naming the insight and why it matters. No file paths or diffs — keep it scannable.
-- **header**: 2-4 word tag (e.g., "Push rule", "Recovery note")
-- **Options are persistence destinations**, not approve/skip. The recommended destination goes first (add "(Recommended)" to its label). Remaining alternatives follow. "File a GitHub issue" is valid when the insight needs design work.
-- **option description**: Include the literal change (absolute file path + section + text to add/replace). This is where detail lives.
 
-Include this example:
+- **question text**: One sentence naming the insight and why it matters.
+  No file paths, no literal diff text — keep it scannable.
+- **header**: 2-4 word tag (e.g., "Push rule", "Recovery note")
+- **Options are the possible destinations**, not approve/skip. The
+  recommended option goes first (add "(Recommended)" to its label) —
+  that may be a specific file, a GitHub issue, or "Skip — not worth
+  persisting" if that's genuinely the right call. List remaining
+  alternatives after. "File a GitHub issue" is a valid option when the
+  insight needs design work before it can be documented
+- **option description**: Include the literal change (absolute file
+  path + section + text to add or replace). This is where the detail
+  lives — not the question text.
+
+Example call structure for two insights:
 
 ```
 AskUserQuestion(questions=[
@@ -150,19 +97,31 @@ AskUserQuestion(questions=[
     header: "Push rule",
     options: [
       {
-        label: "Save to CLAUDE.md (Recommended)",
-        description: "CLAUDE.md, Workflow section — add: 'After committing directly to main, push immediately.'"
+        label: "Save to reflect SKILL.md (Recommended)",
+        description: "plugins/dev-workflow/skills/reflect/SKILL.md, Step 4 — add: 'Commit directly to main and push immediately.'"
       },
-      { label: "Save to MEMORY.md", description: "MEMORY.md, Workflow Notes — add the same." },
+      { label: "Save to CLAUDE.md", description: "~/.claude/CLAUDE.md — add under Workflow section." },
       { label: "Skip — not worth persisting", description: "One-time event, not a recurring pattern." }
+    ]
+  },
+  {
+    question: "Run git show before git reset --hard to verify the squash captured the diverged commit.",
+    header: "Recovery note",
+    options: [
+      {
+        label: "Save to MEMORY.md (Recommended)",
+        description: "MEMORY.md, Workflow Notes — add: '- git show <sha> --stat before git reset --hard origin/main'"
+      },
+      { label: "Save to CLAUDE.md", description: "~/.claude/CLAUDE.md — add under Safety section." },
+      { label: "Skip — not worth persisting", description: "Already obvious from context." }
     ]
   }
 ])
 ```
 
-Gather all answers before applying changes in Step 4.
+Gather all answers before applying any changes in Step 4.
 
-## Step 5: Apply
+## Step 4: Apply
 
 Make the approved changes:
 
@@ -175,8 +134,25 @@ Make the approved changes:
 
 ## Principles
 
-- **Evidence over narrative.** Every finding must cite a specific transcript event. "I think we learned X" without evidence is not a finding.
-- **Repo-specific over generic.** Generic advice ("use descriptive variable names") is useless. Only persist specific gotchas that prevent real mistakes.
-- **Document the WHY, not just the WHAT.** "Don't use method X" is less useful than "Don't use method X because it silently drops errors in production." The reasoning prevents rules from being blindly overridden later.
-- **Confidence is informational.** The scanner marks confidence but never drops findings. You decide what to surface. Low-confidence findings may still be worth persisting if the reasoning is sound.
-- **Don't hoard.** Not everything is worth persisting. A one-time debugging insight for a bug that's now fixed doesn't need to live forever. Prune aggressively.
+- **Repo-specific over generic.** Generic advice ("use descriptive
+  variable names") is useless. Specific gotchas ("the API returns
+  null for deleted records, not 404 -- check for null before accessing
+  .data") prevent real mistakes. Only persist the latter.
+- **Document the WHY, not just the WHAT.** "Don't use method X" is
+  less useful than "Don't use method X because it silently drops
+  errors in production." The reasoning prevents the rule from being
+  blindly overridden later.
+- **Anchor where Claude diverges.** The highest-value documentation
+  captures places where the model predictably makes the wrong choice.
+  If you went down a wrong path, document why the right path is right
+  and why the wrong path looks tempting.
+- **Keep docs concise.** Root CLAUDE.md should stay short and reference
+  detailed files. MEMORY.md has a 200-line effective limit. Use
+  progressive disclosure -- detailed notes go in topic files, summaries
+  go in the index.
+- **User corrections are gold.** If the user had to redirect you, that
+  correction must be persisted. It's the clearest signal of a gap in
+  your guidance.
+- **Don't hoard.** Not everything is worth persisting. A one-time
+  debugging insight for a bug that's now fixed doesn't need to live
+  forever. Prune aggressively.
