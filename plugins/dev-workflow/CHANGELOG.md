@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.0.0] - 2026-03-25
+
+### Changed
+- Reverted `/reflect` to simple self-reflection without subagent delegation
+- Removed `reflect-scanner` agent and `reflect-filter.py` script
+- `/reflect` now scans the conversation directly instead of chunking transcripts through scanner subagents
+
 ## [2.12.0] - 2026-03-12
 
 ### Added
