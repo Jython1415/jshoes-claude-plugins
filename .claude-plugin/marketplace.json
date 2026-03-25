@@ -52,8 +52,8 @@
     },
     {
       "name": "plugin-support",
-      "description": "Miscellaneous skills and documentation for Claude Code development: hook authoring guide and hook reference",
-      "version": "2.0.1",
+      "description": "Hook authoring guide, Claude Code settings/CLI/permissions/hooks reference for Claude Code development",
+      "version": "2.1.0",
       "author": {
         "name": "Jython1415",
         "url": "https://github.com/Jython1415"
@@ -64,10 +64,15 @@
         "hooks",
         "development",
         "skills",
-        "documentation"
+        "documentation",
+        "settings",
+        "cli",
+        "permissions",
+        "reference"
       ],
       "skills": [
-        "./skills/hook-development"
+        "./skills/hook-development",
+        "./skills/claude-code-reference"
       ]
     },
     {
