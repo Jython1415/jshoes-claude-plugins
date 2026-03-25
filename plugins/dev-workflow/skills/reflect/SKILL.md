@@ -36,9 +36,12 @@ Scan the current conversation for:
   something that should be self-correcting.
 - **Tool/workflow friction**: Where did tooling slow you down or cause
   confusion? Are there gotchas worth recording?
+- **Wins**: What went well? Approaches that worked on the first try,
+  tools used effectively, patterns that paid off. Wins are signal --
+  they tell you what to repeat, not just what to avoid.
 
-Be honest. The value of this skill is proportional to your willingness
-to identify what went wrong, not just what went well.
+Be honest in both directions. The value of this skill is proportional
+to your willingness to identify what went wrong AND what went right.
 
 ## Step 2: Categorize improvements
 
@@ -61,6 +64,7 @@ Sort findings into where they should be persisted:
 - User preferences discovered during the session
 - Tool behavior quirks
 - Open issues tracking updates
+- Approaches that worked well and should be repeated (feedback memories)
 
 ### Nothing
 Some findings don't need to be persisted. Don't force it. If a learning
@@ -153,6 +157,10 @@ Make the approved changes:
 - **User corrections are gold.** If the user had to redirect you, that
   correction must be persisted. It's the clearest signal of a gap in
   your guidance.
+- **Wins are signal, not decoration.** Persisting what worked prevents
+  drift away from validated approaches. A session that only records
+  mistakes will grow overly cautious. Record both corrections and
+  confirmations.
 - **Don't hoard.** Not everything is worth persisting. A one-time
   debugging insight for a bug that's now fixed doesn't need to live
   forever. Prune aggressively.

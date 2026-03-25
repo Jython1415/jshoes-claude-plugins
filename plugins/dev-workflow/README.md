@@ -117,7 +117,7 @@ End-of-session retrospective. Reviews what happened, extracts lessons, and propo
 - `--heavy` - Two parallel Sonnet scanners for redundancy and thoroughness. Default uses a single Sonnet scanner.
 
 **What it does:**
-- Reviews the session for missteps, discoveries, repeated patterns, and user corrections
+- Reviews the session for missteps, discoveries, repeated patterns, user corrections, and wins
 - Categorizes improvements into documentation, skills, or memory
 - Packs proposed changes into a single `AskUserQuestion` call (up to 4 questions)
 - Applies approved changes and commits directly to main
