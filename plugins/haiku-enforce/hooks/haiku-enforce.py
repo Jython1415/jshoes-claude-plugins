@@ -31,14 +31,13 @@ def main():
             print("{}")
             sys.exit(0)
 
+        original_input = input_data.get("tool_input", {})
         output = {
             "hookSpecificOutput": {
                 "hookEventName": "PreToolUse",
                 "permissionDecision": "allow",
                 "permissionDecisionReason": "Haiku model enforced by haiku-enforce plugin",
-                "updatedInput": {
-                    "model": "haiku"
-                },
+                "updatedInput": {**original_input, "model": "haiku"},
                 "additionalContext": (
                     "haiku-enforce: This Agent call has been overridden to use the Haiku model. "
                     "To remove this constraint, uninstall the haiku-enforce plugin."
