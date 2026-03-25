@@ -1,8 +1,29 @@
 # plugin-support Plugin
 
-Comprehensive guide to authoring, testing, and maintaining Claude Code hooks.
+Reference documentation and development guides for Claude Code.
 
 ## Skills
+
+### /claude-code-reference
+
+Authoritative reference for Claude Code settings.json schema, CLI flags, permission system, and hook configuration. Use when editing settings.json, writing permission rules, configuring hooks, or generating CLI commands.
+
+Covers:
+- All `settings.json` fields with types and descriptions
+- Configuration scopes and precedence rules
+- CLI commands and flags
+- Permission rule syntax (Bash, Read/Edit, WebFetch, MCP, Agent patterns)
+- Permission modes and evaluation order
+- Hook events, configuration schema, input/output formats, and exit codes
+
+Sourced from official documentation at code.claude.com (March 2026).
+
+Invoke with:
+```
+/claude-code-reference
+```
+
+Or read directly: `plugins/plugin-support/skills/claude-code-reference/SKILL.md`
 
 ### /hook-development
 

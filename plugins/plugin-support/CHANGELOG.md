@@ -1,5 +1,10 @@
 # Changelog
 
+## [2.1.0] - 2026-03-25
+
+### Added
+- `/claude-code-reference` skill: authoritative reference for Claude Code settings.json schema, CLI flags, permission system, and hook configuration. Sourced from official documentation at code.claude.com. Structured for lookup (tables, not prose) so Claude can quickly answer specific configuration questions instead of guessing from training data.
+
 ## [2.0.1] - 2026-03-09
 
 ### Changed
